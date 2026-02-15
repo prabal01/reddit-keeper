@@ -1,0 +1,45 @@
+{
+  "name": "reddit-dl",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "reddit-dl": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "build:cli": "tsup --watch",
+    "start": "node dist/index.js",
+    "dev:server": "npx tsx server.ts",
+    "dev:web": "cd web && npm run dev",
+    "dev": "npx concurrently \"npm run dev:server\" \"npm run dev:web\""
+  },
+  "keywords": [
+    "reddit",
+    "downloader",
+    "cli",
+    "ai",
+    "comments"
+  ],
+  "author": "",
+  "license": "MIT",
+  "description": "Download complete Reddit threads (post + all comments) in AI-friendly formats",
+  "dependencies": {
+    "chalk": "^5.6.2",
+    "clipboardy": "^5.3.0",
+    "commander": "^14.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "firebase-admin": "^13.6.1",
+    "ora": "^9.3.0",
+    "p-queue": "^9.1.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.2.3",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
+  }
+}
