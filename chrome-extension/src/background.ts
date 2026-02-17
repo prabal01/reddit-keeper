@@ -127,4 +127,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             });
         return true;
     }
+
+    if (request.action === 'PING_BACKGROUND') {
+        sendResponse({ status: 'success', version: '1.0.0' });
+        return true;
+    }
+
+    return true; // Keep channel open for any other potential listeners
 });

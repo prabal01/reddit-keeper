@@ -20,16 +20,25 @@ window.addEventListener("message", (event) => {
         // Safety check for extension context
         if (!chrome.runtime?.id) {
             console.warn("[OpinionDeck] Extension context invalidated - Please refresh the page.");
+            document.body.insertAdjacentHTML('afterbegin', `
+                <div id="extension-update-banner" style="background: #ef4444; color: white; padding: 10px; text-align: center; font-size: 13px; font-weight: bold; position: sticky; top: 0; z-index: 999999;">
+                    Extension Updated: Please refresh this page to continue.
+                </div>
+            `);
             return;
         }
 
         if (token) {
-            chrome.storage.local.set({ 'opinion_deck_token': token }, () => {
-                console.log("[OpinionDeck] Extension Auth Sync: Success (Token Stored)");
+            chrome.storage.local.set({
+                'opinion_deck_token': token,
+                'opinion_deck_api_url': event.data.apiUrl,
+                'opinion_deck_dashboard_url': event.data.dashboardUrl
+            }, () => {
+                console.log("[OpinionDeck] Extension Auth Sync: Success (Token, API & Dashboard URL Stored)");
             });
         } else if (token === null) {
-            chrome.storage.local.remove('opinion_deck_token', () => {
-                console.log("[OpinionDeck] Extension Auth Sync: Logged Out (Token Removed)");
+            chrome.storage.local.remove(['opinion_deck_token', 'opinion_deck_api_url', 'opinion_deck_dashboard_url'], () => {
+                console.log("[OpinionDeck] Extension Auth Sync: Logged Out (Cleaned)");
             });
         }
     }
@@ -44,6 +53,17 @@ window.addEventListener("message", (event) => {
         }
 
         chrome.runtime.sendMessage({ action: 'FETCH_REDDIT_JSON', url }, (response) => {
+            if (chrome.runtime.lastError) {
+                console.error("[OpinionDeck] Fetch Error - Extension background inactive:", chrome.runtime.lastError.message);
+                window.postMessage({
+                    type: "OPINION_DECK_FETCH_RESPONSE",
+                    id,
+                    success: false,
+                    error: "Extension background inactive. Please reload the extension and refresh this page."
+                }, window.location.origin);
+                return;
+            }
+
             window.postMessage({
                 type: "OPINION_DECK_FETCH_RESPONSE",
                 id,
@@ -56,7 +76,16 @@ window.addEventListener("message", (event) => {
 
     // Ping/Pong for instant detection
     if (event.data && event.data.type === "OPINION_DECK_PING") {
-        window.postMessage({ type: "OPINION_DECK_PONG" }, window.location.origin);
+        // Verify background is also alive before ponging
+        if (chrome.runtime?.id) {
+            chrome.runtime.sendMessage({ action: 'PING_BACKGROUND' }, (res) => {
+                if (chrome.runtime.lastError) {
+                    console.warn("[OpinionDeck] Background not responding to ping");
+                } else {
+                    window.postMessage({ type: "OPINION_DECK_PONG" }, window.location.origin);
+                }
+            });
+        }
     }
 });
 

@@ -19,7 +19,13 @@ import type {
     RedditMoreData,
     Comment,
 } from "./reddit/types.js";
-import { initFirebase, incrementFetchCount, getPlanConfig, logFetchEvent } from "./server/firestore.js";
+import {
+    initFirebase,
+    incrementFetchCount,
+    getPlanConfig,
+    logFetchEvent,
+    SavedThread
+} from "./server/firestore.js";
 import { authMiddleware, getEffectiveConfig } from "./server/middleware/auth.js";
 import { rateLimiterMiddleware } from "./server/middleware/rateLimiter.js";
 import { initPayments, createCheckoutUrl } from "./server/stripe.js";
@@ -348,8 +354,33 @@ app.get("/api/folders/:id/threads", async (req: express.Request, res: express.Re
         return;
     }
     try {
-        const threads = await getThreadsInFolder(req.user.uid, req.params.id as string);
-        res.json(threads);
+        if (req.params.id === 'inbox') {
+            console.log(`GET /api/folders/inbox/threads - Fetching uncategorized extractions`);
+            const extractions = await listExtractions(req.user.uid);
+
+            // Map ExtractedData -> SavedThread
+            const threads: SavedThread[] = extractions.map(ext => ({
+                id: ext.id,
+                folderId: 'inbox',
+                uid: req.user!.uid,
+                title: ext.title,
+                author: ext.content.post?.author || ext.content.author || 'Unknown',
+                subreddit: ext.content.post?.subreddit || ext.source,
+                savedAt: ext.extractedAt,
+                data: {
+                    post: ext.content.post || { title: ext.title },
+                    content: ext.content,
+                    metadata: {
+                        fetchedAt: ext.extractedAt,
+                        source: ext.source
+                    }
+                }
+            }));
+            res.json(threads);
+        } else {
+            const threads = await getThreadsInFolder(req.user.uid, req.params.id as string);
+            res.json(threads);
+        }
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }

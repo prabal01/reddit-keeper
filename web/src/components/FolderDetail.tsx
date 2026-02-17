@@ -24,7 +24,10 @@ export const FolderDetail: React.FC = () => {
     const { folders, getFolderThreads, deleteFolder, analyzeFolder, loading: foldersLoading } = useFolders();
     const { refreshStats } = useAuth();
 
-    const folder = folders.find(f => f.id === folderId);
+    // Handle "inbox" virtual folder
+    const folder = folderId === 'inbox'
+        ? { id: 'inbox', name: 'Inbox', description: 'Unorganized threads', createdAt: new Date().toISOString(), threadCount: 0, uid: '' }
+        : folders.find(f => f.id === folderId);
 
     const [threads, setThreads] = useState<SavedThread[]>([]);
     const [loading, setLoading] = useState(true);

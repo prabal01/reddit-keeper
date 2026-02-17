@@ -1,6 +1,19 @@
 /// <reference types="chrome"/>
 import { ExtractedData } from '../types';
 
+const RENDER_API = 'https://opinion-deck.onrender.com/api';
+const PROD_DASHBOARD = 'https://app.opiniondeck.com';
+
+async function getApiBase() {
+    const record = await chrome.storage.local.get('opinion_deck_api_url');
+    return record.opinion_deck_api_url || RENDER_API;
+}
+
+async function getDashboardBase() {
+    const record = await chrome.storage.local.get('opinion_deck_dashboard_url');
+    return record.opinion_deck_dashboard_url || PROD_DASHBOARD;
+}
+
 async function checkAuth() {
     const authRecord = await chrome.storage.local.get('opinion_deck_token');
     const token = authRecord.opinion_deck_token;
@@ -39,7 +52,8 @@ async function updateHistory() {
 
     // Fetch from Server instead of Local DB
     try {
-        const response = await fetch('https://opinion-deck.onrender.com/api/extractions', {
+        const apiBase = await getApiBase();
+        const response = await fetch(`${apiBase}/extractions`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!response.ok) throw new Error('Failed to fetch from dashboard');
@@ -58,17 +72,26 @@ async function updateHistory() {
         </div>
       `).join('') + (extractions.length > 5 ? `
         <div style="text-align: center; margin-top: 10px;">
-          <a href="https://app.opiniondeck.com" target="_blank" style="color: #6366f1; font-size: 0.75rem; text-decoration: none; font-weight: 500;">View All in Dashboard →</a>
+          <a href="#" class="view-all-link" style="color: #6366f1; font-size: 0.75rem; text-decoration: none; font-weight: 500;">View All in Dashboard →</a>
         </div>
       ` : '') || '<p style="font-size: 0.7rem; color: #666;">No extractions yet.</p>';
 
         // Add click listener for navigation
-        historyList.addEventListener('click', (e) => {
-            const item = (e.target as HTMLElement).closest('.insight-item-wrapper') as HTMLElement;
+        historyList.addEventListener('click', async (e) => {
+            const target = e.target as HTMLElement;
+            if (target.classList.contains('view-all-link')) {
+                e.preventDefault();
+                const base = await getDashboardBase();
+                chrome.tabs.create({ url: base });
+                return;
+            }
+
+            const item = target.closest('.insight-item-wrapper') as HTMLElement;
             if (item) {
                 const folderId = item.dataset.folderId;
                 const threadId = item.dataset.id;
-                const url = `https://app.opiniondeck.com/folders/${folderId}/threads/${threadId}`;
+                const base = await getDashboardBase();
+                const url = `${base}/folders/${folderId}/threads/${threadId}`;
                 chrome.tabs.create({ url });
             }
         });
@@ -85,7 +108,8 @@ async function fetchFolders() {
     if (!token) return;
 
     try {
-        const response = await fetch('https://opinion-deck.onrender.com/api/folders', {
+        const apiBase = await getApiBase();
+        const response = await fetch(`${apiBase}/folders`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!response.ok) return;
@@ -194,7 +218,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         createFolderBtn.innerText = '...';
         try {
-            const response = await fetch('https://opinion-deck.onrender.com/api/folders', {
+            const apiBase = await getApiBase();
+            const response = await fetch(`${apiBase}/folders`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -262,8 +287,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
 
-    document.getElementById('login-btn')?.addEventListener('click', () => {
-        chrome.tabs.create({ url: 'https://app.opiniondeck.com' });
+    document.getElementById('login-btn')?.addEventListener('click', async () => {
+        const base = await getDashboardBase();
+        chrome.tabs.create({ url: base });
     });
 
     const performSave = async (shouldRedirect: boolean) => {
@@ -301,8 +327,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     if (shouldRedirect) {
                         // Redirect to the deep-linked thread view
-                        const fid = folderId === 'default' ? 'inbox' : folderId;
-                        const dashboardUrl = `https://app.opiniondeck.com/folders/${fid}/threads/${response.data.id}`;
+                        const fid = (extractionData.folderId && extractionData.folderId !== 'default') ? extractionData.folderId : 'inbox';
+                        const tid = response.data.id;
+
+                        console.log("[OpinionDeck] Redirecting to:", { fid, tid });
+
+                        const base = await getDashboardBase();
+                        const dashboardUrl = `${base}/folders/${fid}/threads/${tid}`;
                         chrome.tabs.create({ url: dashboardUrl });
                     }
                 } else {
@@ -313,7 +344,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         } catch (err: any) {
             if (errorEl) {
-                errorEl.innerText = err.message;
+                let msg = err.message;
+                if (msg.includes("Could not establish connection") || msg.includes("Receiving end does not exist")) {
+                    msg = "Communication break: Please refresh the Reddit/G2 tab and try again.";
+                }
+                errorEl.innerText = msg;
                 errorEl.style.display = 'block';
             }
         } finally {
