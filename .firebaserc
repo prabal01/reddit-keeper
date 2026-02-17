@@ -1,5 +1,15 @@
-{
   "projects": {
     "default": "redditkeeperprod"
+  },
+  "targets": {
+    "redditkeeperprod": {
+      "hosting": {
+        "marketing": [
+          "redditkeeperprod"
+        ],
+        "app": [
+          "opiniondeck-app"
+        ]
+      }
+    }
   }
-}
