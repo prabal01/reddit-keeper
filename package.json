@@ -7,7 +7,7 @@
     "reddit-dl": "dist/index.js"
   },
   "scripts": {
-    "build": "tsup",
+    "build": "npx tsup",
     "build:cli": "tsup --watch",
     "start": "node dist/index.js",
     "dev:server": "npx tsx --watch server.ts",
