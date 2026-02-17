@@ -1,0 +1,70 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout>
+    <section class="legal-section">
+        <div class="container">
+            <h1 class="legal-title">Terms of Service</h1>
+            <div class="legal-content">
+                <p>Last updated: February 17, 2026</p>
+                
+                <div class="policy-block">
+                    <h2>1. Acceptance of Terms</h2>
+                    <p>By accessing or using OpinionDeck, you agree to be bound by these Terms of Service. If you do not agree, please do not use the service.</p>
+                </div>
+
+                <div class="policy-block">
+                    <h2>2. Description of Service</h2>
+                    <p>OpinionDeck provides a software tool to extract and analyze publicly available data from social platforms (Reddit, Hacker News, G2, etc.) for research and market intelligence purposes.</p>
+                </div>
+
+                <div class="policy-block">
+                    <h2>3. User Responsibilities</h2>
+                    <p>You are responsible for ensuring your use of the extracted data complies with the specific platform's Terms of Service and all applicable data privacy laws (e.g., GDPR, CCPA). OpinionDeck is a conduit for data extraction; we do not own or license the data fetched from source platforms.</p>
+                </div>
+
+                <div class="policy-block">
+                    <h2>4. Account Security</h2>
+                    <p>You must use Google Sign-In to access the app. You are responsible for maintaining the security of your account and any activities that occur under your credentials.</p>
+                </div>
+
+                <div class="policy-block">
+                    <h2>5. Intellectual Property</h2>
+                    <p>The OpinionDeck software, designs, and AI prompts are the intellectual property of OpinionDeck. You may not reverse engineer or attempt to extract our source code.</p>
+                </div>
+
+                <div class="policy-block">
+                    <h2>6. Limitation of Liability</h2>
+                    <p>OpinionDeck is provided "as is". We are not liable for any damages arising from your use of the tool or the accuracy of the AI-generated analysis.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+</Layout>
+
+<style>
+    .legal-section {
+        padding: 80px 0;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .legal-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 40px;
+        text-align: center;
+    }
+    .legal-content {
+        line-height: 1.6;
+        color: var(--text-secondary);
+    }
+    .policy-block {
+        margin-bottom: 32px;
+    }
+    .policy-block h2 {
+        font-size: 1.5rem;
+        color: var(--text-primary);
+        margin-bottom: 12px;
+    }
+</style>

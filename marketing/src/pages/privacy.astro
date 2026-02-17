@@ -1,0 +1,65 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout>
+    <section class="legal-section">
+        <div class="container">
+            <h1 class="legal-title">Privacy Policy</h1>
+            <div class="legal-content">
+                <p>Last updated: February 17, 2026</p>
+                
+                <div class="policy-block">
+                    <h2>1. Data Collection</h2>
+                    <p>We use Firebase Authentication (Google) to manage your account. We only store your email address, profile picture (optional), and subscription status. We do not sell or share your personal data with third parties.</p>
+                </div>
+
+                <div class="policy-block">
+                    <h2>2. Extract Data Handling</h2>
+                    <p>OpinionDeck operates as a "Browser Bridge". The content of the threads or reviews you fetch is processed in your browser and sent to our AI processing layer via secure API. We do not store the raw content of your research threads permanently on our servers unless you explicitly save them to a Folder.</p>
+                </div>
+
+                <div class="policy-block">
+                    <h2>3. Cookies</h2>
+                    <p>We use essential cookies required for authentication and session management. We do not use third-party tracking or advertising cookies.</p>
+                </div>
+
+                <div class="policy-block">
+                    <h2>4. Security</h2>
+                    <p>Your data is stored securely in Google Firebase and encrypted in transit via SSL/TLS.</p>
+                </div>
+
+                <div class="policy-block">
+                    <h2>5. Your Rights</h2>
+                    <p>You can request to delete your account and all associated data at any time by contacting us at hello@opiniondeck.com.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+</Layout>
+
+<style>
+    .legal-section {
+        padding: 80px 0;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .legal-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 40px;
+        text-align: center;
+    }
+    .legal-content {
+        line-height: 1.6;
+        color: var(--text-secondary);
+    }
+    .policy-block {
+        margin-bottom: 32px;
+    }
+    .policy-block h2 {
+        font-size: 1.5rem;
+        color: var(--text-primary);
+        margin-bottom: 12px;
+    }
+</style>

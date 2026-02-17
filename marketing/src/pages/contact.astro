@@ -1,0 +1,68 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout>
+    <section class="legal-section">
+        <div class="container">
+            <h1 class="legal-title">Contact Us</h1>
+            <div class="legal-content">
+                <p>We're here to help with any questions, technical issues, or partnership inquiries.</p>
+                
+                <div class="contact-card">
+                    <h2>Support Email</h2>
+                    <p><a href="mailto:hello@opiniondeck.com">hello@opiniondeck.com</a></p>
+                    
+                    <h2>Response Time</h2>
+                    <p>We typically respond within 24-48 business hours.</p>
+
+                    <h2>Business Hours</h2>
+                    <p>Monday – Friday: 9:00 AM – 6:00 PM (IST)</p>
+                </div>
+
+                <div class="company-info">
+                   <p>OpinionDeck is a product designed to streamline market intelligence and research through automated data extraction and AI analysis.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+</Layout>
+
+<style>
+    .legal-section {
+        padding: 80px 0;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .legal-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 40px;
+        text-align: center;
+    }
+    .legal-content {
+        line-height: 1.6;
+        color: var(--text-secondary);
+    }
+    .contact-card {
+        background: var(--bg-secondary);
+        padding: 32px;
+        border-radius: var(--radius-xl);
+        border: 1px solid var(--border);
+        margin: 40px 0;
+    }
+    .contact-card h2 {
+        font-size: 1.25rem;
+        color: var(--text-primary);
+        margin-top: 24px;
+        margin-bottom: 8px;
+    }
+    .contact-card h2:first-child {
+        margin-top: 0;
+    }
+    .contact-card a {
+        color: var(--bg-accent);
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+</style>

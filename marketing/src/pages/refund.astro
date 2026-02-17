@@ -1,0 +1,77 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout>
+    <section class="legal-section">
+        <div class="container">
+            <h1 class="legal-title">Refund & Payment Policy</h1>
+            <div class="legal-content">
+                <p>Last updated: February 17, 2026</p>
+                
+                <div class="policy-block">
+                    <h2>1. Payment Terms</h2>
+                    <p>OpinionDeck Pro is a subscription-based service. Payments are processed securely via Stripe. By subscribing, you authorize us to charge your payment method on a recurring monthly or yearly basis until you cancel.</p>
+                </div>
+
+                <div class="policy-block">
+                    <h2>2. 7-Day Money Back Guarantee</h2>
+                    <p>We want you to be absolutely satisfied. If OpinionDeck Pro doesn't meet your needs, you can request a full refund within <strong>7 days</strong> of your initial purchase. No questions asked.</p>
+                </div>
+
+                <div class="policy-block">
+                    <h2>3. How to Request a Refund</h2>
+                    <p>To request a refund, please email us at <a href="mailto:hello@opiniondeck.com">hello@opiniondeck.com</a> with:</p>
+                    <ul>
+                        <li>Your account email address</li>
+                        <li>Your transaction ID or receipt</li>
+                    </ul>
+                </div>
+
+                <div class="policy-block">
+                    <h2>4. Subscription Cancellation</h2>
+                    <p>You can cancel your subscription at any time through your Dashboard settings. Upon cancellation, you will continue to have access to Pro features until the end of your current billing period.</p>
+                </div>
+
+                <div class="policy-block">
+                    <h2>5. Exceptions</h2>
+                    <p>Refunds are only applicable to your <em>first</em> subscription payment. Subsequent renewals are non-refundable unless there was a documented technical failure on our part that prevented use of the service.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+</Layout>
+
+<style>
+    .legal-section {
+        padding: 80px 0;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .legal-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 40px;
+        text-align: center;
+    }
+    .legal-content {
+        line-height: 1.6;
+        color: var(--text-secondary);
+    }
+    .policy-block {
+        margin-bottom: 32px;
+    }
+    .policy-block h2 {
+        font-size: 1.5rem;
+        color: var(--text-primary);
+        margin-bottom: 12px;
+    }
+    .policy-block ul {
+        margin-top: 12px;
+        padding-left: 20px;
+    }
+    .policy-block a {
+        color: var(--bg-accent);
+        font-weight: 600;
+    }
+</style>
