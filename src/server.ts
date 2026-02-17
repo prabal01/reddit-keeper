@@ -207,7 +207,7 @@ function truncateComments(comments: Comment[], limit: number): Comment[] {
 
 import { getUserStats, updateStats } from "./server/firestore.js";
 
-app.get("/api/user/stats", async (req, res) => {
+app.get("/api/user/stats", async (req: express.Request, res: express.Response) => {
     if (!req.user) {
         res.status(401).json({ error: "Unauthorized" });
         return;
@@ -222,7 +222,7 @@ app.get("/api/user/stats", async (req, res) => {
 
 // ── User Plan endpoint ─────────────────────────────────────────────
 
-app.get("/api/user/plan", async (req, res) => {
+app.get("/api/user/plan", async (req: express.Request, res: express.Response) => {
     try {
         if (!req.user) {
             const freeConfig = await getPlanConfig("free");
@@ -247,7 +247,7 @@ app.get("/api/user/plan", async (req, res) => {
 
 // ── Upgrade (stub — no payment provider yet) ───────────────────────
 
-app.post("/api/create-checkout-session", async (req, res) => {
+app.post("/api/create-checkout-session", async (req: express.Request, res: express.Response) => {
     if (!req.user) {
         res.status(401).json({ error: "Please sign in to upgrade." });
         return;
@@ -268,7 +268,7 @@ app.post("/api/create-checkout-session", async (req, res) => {
 
 // ── Folder Routes ──────────────────────────────────────────────────
 
-app.get("/api/folders", async (req, res) => {
+app.get("/api/folders", async (req: express.Request, res: express.Response) => {
     console.log("GET /api/folders - Request received", { user: req.user?.uid });
     if (!req.user) {
         console.warn("GET /api/folders - Unauthorized");
@@ -285,7 +285,7 @@ app.get("/api/folders", async (req, res) => {
     }
 });
 
-app.post("/api/folders", async (req, res) => {
+app.post("/api/folders", async (req: express.Request, res: express.Response) => {
     // console.log("POST /api/folders - Request received", { user: req.user?.uid, body: req.body });
     if (!req.user) {
         res.status(401).json({ error: "Unauthorized" });
@@ -305,7 +305,7 @@ app.post("/api/folders", async (req, res) => {
     }
 });
 
-app.delete("/api/folders/:id", async (req, res) => {
+app.delete("/api/folders/:id", async (req: express.Request, res: express.Response) => {
     if (!req.user) {
         res.status(401).json({ error: "Unauthorized" });
         return;
@@ -320,7 +320,7 @@ app.delete("/api/folders/:id", async (req, res) => {
 
 // ── Saved Thread Routes ───────────────────────────────────────────
 
-app.post("/api/folders/:id/threads", async (req, res) => {
+app.post("/api/folders/:id/threads", async (req: express.Request, res: express.Response) => {
     if (!req.user) {
         res.status(401).json({ error: "Unauthorized" });
         return;
@@ -338,7 +338,7 @@ app.post("/api/folders/:id/threads", async (req, res) => {
     }
 });
 
-app.get("/api/folders/:id/threads", async (req, res) => {
+app.get("/api/folders/:id/threads", async (req: express.Request, res: express.Response) => {
     if (!req.user) {
         res.status(401).json({ error: "Unauthorized" });
         return;
@@ -353,7 +353,7 @@ app.get("/api/folders/:id/threads", async (req, res) => {
 
 // ── AI Analysis Route ─────────────────────────────────────────────
 
-app.post("/api/folders/:id/analyze", async (req, res) => {
+app.post("/api/folders/:id/analyze", async (req: express.Request, res: express.Response) => {
     if (!req.user) {
         res.status(401).json({ error: "Unauthorized" });
         return;
@@ -417,7 +417,7 @@ app.post("/api/folders/:id/analyze", async (req, res) => {
     }
 });
 
-app.get("/api/folders/:id/analysis", async (req, res) => {
+app.get("/api/folders/:id/analysis", async (req: express.Request, res: express.Response) => {
     if (!req.user) {
         res.status(401).json({ error: "Unauthorized" });
         return;
@@ -440,7 +440,7 @@ app.get("/api/folders/:id/analysis", async (req, res) => {
 
 import { saveExtractedData, listExtractions } from "./server/firestore.js";
 
-app.post("/api/extractions", async (req, res) => {
+app.post("/api/extractions", async (req: express.Request, res: express.Response) => {
     if (!req.user) {
         res.status(401).json({ error: "Unauthorized" });
         return;
@@ -514,7 +514,7 @@ app.post("/api/extractions", async (req, res) => {
     }
 });
 
-app.get("/api/extractions", async (req, res) => {
+app.get("/api/extractions", async (req: express.Request, res: express.Response) => {
     if (!req.user) {
         res.status(401).json({ error: "Unauthorized" });
         return;
@@ -529,7 +529,7 @@ app.get("/api/extractions", async (req, res) => {
 
 // ── Health Check ───────────────────────────────────────────────────
 
-app.get("/api/health", (_req, res) => {
+app.get("/api/health", (_req: express.Request, res: express.Response) => {
     res.json({
         status: "ok",
         version: TOOL_VERSION,
