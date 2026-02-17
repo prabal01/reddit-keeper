@@ -125,6 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         const syncTokenToExtension = async () => {
             const apiBase = API_BASE.startsWith('http') ? API_BASE : window.location.origin + API_BASE;
+            console.log("[AuthContext] Syncing to extension. API_BASE:", API_BASE, "Resolved:", apiBase);
 
             if (!firebaseUser) {
                 // Send null token to clear extension state on logout
