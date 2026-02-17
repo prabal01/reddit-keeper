@@ -16,7 +16,7 @@ async function saveToBackend(data: any) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                ...(token ? { 'Authorization': `Bearer ${token}` } : { 'X-Omni-Dev': 'true' })
+                ...(token ? { 'Authorization': `Bearer ${token}` } : { 'X-OpinionDeck-Dev': 'true' })
             },
             body: JSON.stringify({ data })
         });

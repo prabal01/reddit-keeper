@@ -12,7 +12,7 @@ export const PremiumLoader: React.FC<LoaderProps> = ({
     size = 'medium'
 }) => {
     const loaderContent = (
-        <div className="omni-loader-container">
+        <div className="opinion-deck-loader-container">
             <div className={`spinner-premium ${size === 'small' ? 'spinner-small-premium' : ''}`} />
             {text && <p className="loader-text-premium">{text}</p>}
         </div>
@@ -20,7 +20,7 @@ export const PremiumLoader: React.FC<LoaderProps> = ({
 
     if (fullPage) {
         return (
-            <div className="omni-loader-overlay">
+            <div className="opinion-deck-loader-overlay">
                 {loaderContent}
             </div>
         );

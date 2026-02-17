@@ -36,7 +36,7 @@ export async function authMiddleware(
     req.user = null;
 
     const authHeader = req.headers.authorization;
-    const devBypass = req.headers['x-omni-dev'] === 'true';
+    const devBypass = req.headers['x-opiniondeck-dev'] === 'true';
 
     if (!authHeader?.startsWith("Bearer ") && !devBypass) {
         return next();

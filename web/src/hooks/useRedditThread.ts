@@ -28,14 +28,18 @@ export function useRedditThread(): UseRedditThreadReturn {
         const requestId = Math.random().toString(36).substring(7);
 
         const extensionFetch = new Promise<FetchResult>((resolve, reject) => {
+            let received = false;
             const timeout = setTimeout(() => {
-                window.removeEventListener('message', listener);
-                reject(new Error("Extension not found. Please install the OpinionDeck extension to extract threads."));
-            }, 2000);
+                if (!received) {
+                    window.removeEventListener('message', listener);
+                    reject(new Error("Extension not found. Please install the OpinionDeck extension to extract threads."));
+                }
+            }, 2500);
 
             const listener = (event: MessageEvent) => {
                 if (event.origin !== window.location.origin) return;
-                if (event.data.type === 'OMNI_FETCH_RESPONSE' && event.data.id === requestId) {
+                if (event.data.type === 'OPINION_DECK_FETCH_RESPONSE' && event.data.id === requestId) {
+                    received = true;
                     clearTimeout(timeout);
                     window.removeEventListener('message', listener);
                     if (event.data.success) {
@@ -150,7 +154,7 @@ export function useRedditThread(): UseRedditThreadReturn {
             };
 
             window.addEventListener('message', listener);
-            window.postMessage({ type: 'OMNI_FETCH_REQUEST', url: options.url, id: requestId }, window.location.origin);
+            window.postMessage({ type: 'OPINION_DECK_FETCH_REQUEST', url: options.url, id: requestId }, window.location.origin);
         });
 
         try {

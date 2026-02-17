@@ -9,7 +9,7 @@ export const ExtensionModal: React.FC<ExtensionModalProps> = ({ isOpen, onClose 
     if (!isOpen) return null;
 
     return (
-        <div className="omni-loader-overlay" style={{ backdropFilter: 'blur(12px)', zIndex: 10001 }}>
+        <div className="opinion-deck-loader-overlay" style={{ backdropFilter: 'blur(12px)', zIndex: 10001 }}>
             <div className="glass-card" style={{
                 maxWidth: '450px',
                 width: '90%',

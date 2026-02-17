@@ -37,6 +37,12 @@ window.addEventListener("message", (event) => {
     // New: Handle Dashboard Fetch Requests
     if (event.data && event.data.type === "OPINION_DECK_FETCH_REQUEST") {
         const { url, id } = event.data;
+
+        if (!chrome.runtime?.id) {
+            window.postMessage({ type: "OPINION_DECK_FETCH_RESPONSE", id, success: false, error: "Extension context invalidated" }, window.location.origin);
+            return;
+        }
+
         chrome.runtime.sendMessage({ action: 'FETCH_REDDIT_JSON', url }, (response) => {
             window.postMessage({
                 type: "OPINION_DECK_FETCH_RESPONSE",
@@ -46,6 +52,11 @@ window.addEventListener("message", (event) => {
                 error: response?.error
             }, window.location.origin);
         });
+    }
+
+    // Ping/Pong for instant detection
+    if (event.data && event.data.type === "OPINION_DECK_PING") {
+        window.postMessage({ type: "OPINION_DECK_PONG" }, window.location.origin);
     }
 });
 
