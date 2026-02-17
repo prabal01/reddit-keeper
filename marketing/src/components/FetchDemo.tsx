@@ -120,8 +120,8 @@ export function FetchDemo() {
                         <div className="cta-content">
                             <p>Want to analyze more threads?</p>
                             <div className="cta-buttons">
-                                <a href="/app" className="btn btn-primary">Save Thread</a>
-                                <a href="/app" className="btn btn-secondary">Analyze Thread (AI)</a>
+                                <a href={import.meta.env.PUBLIC_DASHBOARD_URL || '/app'} className="btn btn-primary">Save Thread</a>
+                                <a href={import.meta.env.PUBLIC_DASHBOARD_URL || '/app'} className="btn btn-secondary">Analyze Thread (AI)</a>
                             </div>
                         </div>
                     </div>

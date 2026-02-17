@@ -1,5 +1,6 @@
 ---
 import '../styles/theme.css';
+const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
 ---
 
 <!doctype html>
@@ -22,8 +23,8 @@ import '../styles/theme.css';
 					<span class="logo-tagline">Strategic Market Intelligence</span>
 				</a>
 				<div class="header-actions">
-                    <a href="/app" class="btn btn-secondary">Go to App</a>
-					<a href="/app" class="btn btn-primary">Sign In</a>
+                    <a href={dashboardUrl} class="btn btn-secondary">Go to App</a>
+					<a href={dashboardUrl} class="btn btn-primary">Sign In</a>
 				</div>
 			</div>
 		</header>
@@ -38,7 +39,7 @@ import '../styles/theme.css';
 					&copy; {new Date().getFullYear()} OpinionDeck. All rights reserved.
 				</p>
 				<nav class="footer-links">
-					<a href="/app">Dashboard</a>
+					<a href={dashboardUrl}>Dashboard</a>
 					<a href="#">Contact</a>
 					<a href="#">Terms</a>
 				    <a href="#">Privacy</a>

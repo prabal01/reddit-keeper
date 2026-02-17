@@ -44,6 +44,9 @@ export const Sidebar: React.FC = () => {
                 <NavLink to="/settings" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'} style={{ padding: '8px 0' }}>
                     ⚙️ Settings
                 </NavLink>
+                <a href={BRANDING.LANDING_PAGE_URL} className="nav-link" style={{ padding: '8px 0', opacity: 0.7 }}>
+                    🌐 Back to Home
+                </a>
             </div>
         </aside>
     );

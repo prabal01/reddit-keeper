@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { FetchDemo } from '../components/FetchDemo';
+const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
 ---
 
 <Layout>
@@ -113,7 +114,7 @@ import { FetchDemo } from '../components/FetchDemo';
                         <li>Max <strong>50</strong> comments / thread</li>
                         <li>Unlimited Thread Exports</li>
                     </ul>
-                    <a href="/app" class="btn btn-secondary btn-block">Start Free</a>
+                    <a href={dashboardUrl} class="btn btn-secondary btn-block">Start Free</a>
                 </div>
 
                 <!-- Pro Plan -->
@@ -141,7 +142,8 @@ import { FetchDemo } from '../components/FetchDemo';
                         <li class="highlight">Lead Extraction ✅</li>
                         <li class="highlight">Priority Support</li>
                     </ul>
-                    <a href="/app?billing=year" class="btn btn-primary btn-block">Upgrade to Pro</a>
+                    <a href={`${dashboardUrl}?billing=year`} class="btn btn-primary btn-block">Upgrade to Pro</a>
+                </div>
                 </div>
             </div>
         </div>
@@ -177,7 +179,7 @@ import { FetchDemo } from '../components/FetchDemo';
         <div class="container">
             <div class="cta-content">
                 <h2>Ready to streamline your research?</h2>
-                <a href="/app" class="btn btn-primary btn-xl">Get Started Now</a>
+                <a href={dashboardUrl} class="btn btn-primary btn-xl">Get Started Now</a>
             </div>
         </div>
     </section>

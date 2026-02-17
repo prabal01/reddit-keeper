@@ -28,6 +28,7 @@ jobs:
         run: cd web && npm run build
         env:
           VITE_API_URL: https://opinion-deck.onrender.com
+          VITE_MARKETING_URL: https://opiniondeck.com
 
       - name: Deploy to Firebase (App)
         uses: w9jds/firebase-action@master

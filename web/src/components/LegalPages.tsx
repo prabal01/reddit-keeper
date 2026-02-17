@@ -1,4 +1,5 @@
 import React from "react";
+import { BRANDING } from "../constants/branding";
 import "./LegalPages.css";
 
 interface LegalModalProps {
@@ -32,7 +33,7 @@ export function ContactUs({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
             <p>We're here to help with any questions or technical issues.</p>
             <div className="contact-info">
                 <h3>Support Email</h3>
-                <p><a href="mailto:support@omniresearch.com">support@omniresearch.com</a></p>
+                <p><a href="mailto:hello@opiniondeck.com">hello@opiniondeck.com</a></p>
 
                 <h3>Response Time</h3>
                 <p>We typically respond within 24-48 business hours.</p>
@@ -57,7 +58,7 @@ export function RefundPolicy({ isOpen, onClose }: { isOpen: boolean; onClose: ()
 
                 <h3>How to Request a Refund</h3>
                 <p>
-                    Please email us at <a href="mailto:support@opiniondeck.com">support@opiniondeck.com</a>
+                    Please email us at <a href="mailto:hello@opiniondeck.com">hello@opiniondeck.com</a>
                     with your account email and transaction ID.
                 </p>
 
@@ -76,7 +77,7 @@ export function TermsOfService({ isOpen, onClose }: { isOpen: boolean; onClose: 
         <LegalModal title="Terms of Service" isOpen={isOpen} onClose={onClose}>
             <div className="policy-section">
                 <h3>1. Acceptance of Terms</h3>
-                <p>By using OmniResearch, you agree to these terms.</p>
+                <p>By using {BRANDING.NAME}, you agree to these terms.</p>
 
                 <h3>2. Usage License</h3>
                 <p>
