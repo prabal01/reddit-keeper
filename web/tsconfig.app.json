@@ -41,6 +41,7 @@
     "../src"
   ],
   "exclude": [
-    "../src/output/*"
+    "../src/output/*",
+    "../src/cli.ts"
   ]
 }
