@@ -18,7 +18,10 @@
             <h1 style="margin: 0; font-size: 1.2rem;">OpinionDeck <span
                     style="font-size: 0.6em; opacity: 0.6; vertical-align: middle;">BETA</span></h1>
         </div>
-        <button id="refresh-auth-btn" class="icon-btn" title="Refresh Sync" style="font-size: 1rem;">↻</button>
+        <div style="display: flex; gap: 8px;">
+            <button id="open-dashboard-btn" class="icon-btn" title="Open Dashboard" style="font-size: 1rem;">🏠</button>
+            <button id="refresh-auth-btn" class="icon-btn" title="Refresh Sync" style="font-size: 1rem;">↻</button>
+        </div>
     </header>
 
     <div class="glass-card" id="login-required" style="display: none; text-align: center;">
@@ -37,7 +40,11 @@
             </div>
             <div id="new-folder-input-group" style="display: none; margin-bottom: 10px;">
                 <input type="text" id="new-folder-name" placeholder="Folder name..." class="glass-input">
-                <button id="create-folder-btn" class="secondary-btn">Create</button>
+                <div style="display: flex; gap: 8px;">
+                    <button id="create-folder-btn" class="secondary-btn" style="flex: 1; padding: 8px;">Create</button>
+                    <button id="cancel-folder-btn" class="secondary-btn" style="width: auto; padding: 8px 12px;"
+                        title="Cancel">✕</button>
+                </div>
             </div>
             <select id="folder-select">
                 <option value="default">Default Inbox</option>

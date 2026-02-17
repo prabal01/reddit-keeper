@@ -2,6 +2,9 @@
 
 chrome.runtime.onInstalled.addListener(() => {
     console.log('[OpinionDeck] Extension Installed');
+    // Open side panel on icon click
+    chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })
+        .catch((error) => console.error(error));
 });
 
 // Helper to save to backend
@@ -32,6 +35,25 @@ async function saveToBackend(data: any) {
         throw err;
     }
 }
+
+// Handle external messages from Web App (Auth Sync)
+chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => {
+    if (request.type === 'OPINION_DECK_AUTH_TOKEN') {
+        const { token, apiUrl, dashboardUrl } = request;
+
+        console.log('[OpinionDeck] Received Auth Token from Web App');
+
+        chrome.storage.local.set({
+            'opinion_deck_token': token,
+            'opinion_deck_api_url': apiUrl,
+            'opinion_deck_dashboard_url': dashboardUrl
+        }, () => {
+            console.log("[OpinionDeck] Extension Auth Sync: Success");
+            sendResponse({ status: 'success' });
+        });
+        return true; // async response
+    }
+});
 
 // Handle data analysis requests
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {

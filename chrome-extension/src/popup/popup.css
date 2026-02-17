@@ -55,7 +55,8 @@
 }
 
 body {
-    width: 350px;
+    width: 100%;
+    min-height: 100vh;
     background-color: var(--bg-dark);
     background-image:
         radial-gradient(at 0% 0%, rgba(255, 69, 0, 0.1) 0px, transparent 50%),
@@ -227,6 +228,15 @@ select {
 .secondary-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+.btn-success {
+    background: #2ecc71 !important;
+    border-color: #2ecc71 !important;
+    color: white !important;
+    transform: scale(1.02);
+    box-shadow: 0 0 15px rgba(46, 204, 113, 0.4) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .snapshot-preview {

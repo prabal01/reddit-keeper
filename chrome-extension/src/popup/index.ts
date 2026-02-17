@@ -205,8 +205,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const newFolderNameInput = document.getElementById('new-folder-name') as HTMLInputElement;
 
     addFolderToggle?.addEventListener('click', () => {
-        newFolderGroup!.style.display = newFolderGroup!.style.display === 'none' ? 'flex' : 'none';
-        if (newFolderGroup!.style.display === 'flex') newFolderNameInput.focus();
+        newFolderGroup!.style.display = newFolderGroup!.style.display === 'none' ? 'block' : 'none';
+        if (newFolderGroup!.style.display === 'block') newFolderNameInput.focus();
+    });
+
+    document.getElementById('cancel-folder-btn')?.addEventListener('click', () => {
+        newFolderGroup!.style.display = 'none';
+        newFolderNameInput.value = '';
     });
 
     createFolderBtn?.addEventListener('click', async () => {
@@ -252,7 +257,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await checkAuth(); // Ensure visibility is set immediately
     await fetchFolders();
+    await fetchFolders();
     await updateHistory();
+
+    document.getElementById('open-dashboard-btn')?.addEventListener('click', async () => {
+        const base = await getDashboardBase();
+        chrome.tabs.create({ url: base });
+    });
 
     document.getElementById('refresh-auth-btn')?.addEventListener('click', async () => {
         const btn = document.getElementById('refresh-auth-btn') as HTMLButtonElement;
@@ -325,6 +336,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (statusEl) statusEl.innerText = 'Saved to Cloud!';
                     await updateHistory();
 
+                    // Success Animation
+                    activeBtn.classList.add('btn-success');
+                    activeBtn.innerText = '✓ Saved!';
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+
                     if (shouldRedirect) {
                         // Redirect to the deep-linked thread view
                         const fid = (extractionData.folderId && extractionData.folderId !== 'default') ? extractionData.folderId : 'inbox';
@@ -355,6 +371,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             saveOnlyBtn.disabled = false;
             saveAnalyseBtn.disabled = false;
             activeBtn.innerText = originalText;
+            activeBtn.classList.remove('btn-success');
         }
     };
 
