@@ -1,6 +1,6 @@
 import type { ThreadData } from "@core/reddit/types.js";
 
-const API_BASE = "/api";
+const API_BASE = import.meta.env.VITE_API_URL || "/api";
 
 // ── Plan config type (matches server PlanConfig) ───────────────────
 
