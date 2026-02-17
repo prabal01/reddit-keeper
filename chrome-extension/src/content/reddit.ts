@@ -62,7 +62,7 @@ async function extractRedditThread() {
                     isSelf: postData?.is_self,
                     url: postData?.url
                 },
-                flattenedComments: comments, // Explicitly named for dashboard recognition
+                comments: comments, // Standardized key
                 raw_json_dump: JSON.stringify(data) // 100% fidelity backup
             },
             extractedAt: new Date().toISOString(),

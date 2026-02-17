@@ -21,8 +21,11 @@ function extractG2Reviews() {
         url,
         title,
         content: {
-            product: title,
-            reviews
+            post: {
+                title: title,
+                productId
+            },
+            comments: reviews
         },
         extractedAt: new Date().toISOString(),
         isAnalyzed: false

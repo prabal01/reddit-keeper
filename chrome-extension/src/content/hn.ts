@@ -38,14 +38,22 @@ function extractHNThread() {
 
     return {
         id: new URLSearchParams(window.location.search).get('id') || '',
+        source: 'hn',
+        url: window.location.href,
         title,
-        author,
-        selftext: selfText,
-        score,
-        num_comments: comments.length,
-        created_utc: Date.now() / 1000,
-        permalink: window.location.pathname + window.location.search,
-        comments
+        extractedAt: new Date().toISOString(),
+        content: {
+            post: {
+                title,
+                author,
+                selftext: selfText,
+                score,
+                num_comments: comments.length,
+                created_utc: Date.now() / 1000,
+                permalink: window.location.pathname + window.location.search,
+            },
+            comments
+        }
     };
 }
 

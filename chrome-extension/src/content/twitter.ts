@@ -57,7 +57,7 @@ async function extractTwitterThread() {
                     isSelf: true,
                     url: url
                 },
-                flattenedComments: replies,
+                comments: replies,
                 raw_json_dump: JSON.stringify({ url, tweetCount: articles.length })
             },
             extractedAt: new Date().toISOString(),

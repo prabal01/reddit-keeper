@@ -303,7 +303,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const response = await chrome.tabs.sendMessage(activeTab.id, { action: 'EXTRACT_DATA' });
             if (response && response.data) {
                 const data = response.data;
-                const md = `# ${data.title}\nSource: ${data.url}\n\n## Post\n${data.content.post.title}\n\n## Insights\n${data.content.comments.map((c: any) => `### ${c.author} (${c.score})\n${c.body}`).join('\n\n')}`;
+                const comments = data.content?.comments || data.comments || [];
+                const md = `# ${data.title || 'Untitled'}\nSource: ${data.url}\n\n## Post\n${data.content?.post?.title || 'No Title'}\n\n## Insights\n${comments.map((c: any) => `### ${c.author || 'Anonymous'} (${c.score || 0})\n${c.body || ''}`).join('\n\n')}`;
 
                 await navigator.clipboard.writeText(md);
                 copyBtn.innerText = '📋 Copied to Clipboard!';
