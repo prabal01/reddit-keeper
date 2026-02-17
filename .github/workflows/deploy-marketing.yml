@@ -1,0 +1,39 @@
+name: Deploy Marketing Site
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'marketing/**'
+      - '.github/workflows/deploy-marketing.yml'
+      - 'firebase.json'
+
+jobs:
+  deploy_marketing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: cd marketing && npm ci
+
+      - name: Build Astro Site
+        run: cd marketing && npm run build
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_OPINIONDECK }}'
+          channelId: live
+          projectId: opiniondeck
+          target: marketing
+        env:
+          FIREBASE_CLI_PREVIEWS: none
