@@ -27,10 +27,33 @@ jobs:
           docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/opiniondeck-backend:${{ github.sha }} .
           docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/opiniondeck-backend:${{ github.sha }}
 
+      - name: Create Env File
+        env:
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_OPINIONDECK }}
+        run: |-
+          node -e '
+            const fs = require("fs");
+            const env = {
+              NODE_ENV: "production",
+              ALLOWED_ORIGINS: "https://app.opiniondeck.com;https://opiniondeck.com;https://www.opiniondeck.com;https://redditkeeperprod.web.app;https://opiniondeck-app.web.app",
+              REDIS_URL: process.env.REDIS_URL,
+              GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+              FIREBASE_SERVICE_ACCOUNT: process.env.FIREBASE_SERVICE_ACCOUNT,
+              FIREBASE_STORAGE_BUCKET: "redditkeeperprod.appspot.com"
+            };
+            fs.writeFileSync("env.json", JSON.stringify(env));
+          '
+
       - name: Deploy to Cloud Run
         run: |-
           gcloud run deploy opiniondeck-backend \
             --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/opiniondeck-backend:${{ github.sha }} \
             --region us-east1 \
-            --set-env-vars "^|^NODE_ENV=production|ALLOWED_ORIGINS=https://app.opiniondeck.com;https://opiniondeck.com;https://www.opiniondeck.com;https://redditkeeperprod.web.app;https://opiniondeck-app.web.app|REDIS_URL=${{ secrets.REDIS_URL }}|GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}|FIREBASE_SERVICE_ACCOUNT=${{ secrets.FIREBASE_SERVICE_ACCOUNT_OPINIONDECK }}|FIREBASE_STORAGE_BUCKET=redditkeeperprod.appspot.com" \
+            --env-vars-file env.json \
             --allow-unauthenticated --quiet
+
+      - name: Cleanup
+        if: always()
+        run: rm -f env.json
