@@ -296,7 +296,7 @@ export async function findUserByStripeCustomerId(
 // ── Folder Management ──────────────────────────────────────────────
 
 export async function getFolders(uid: string): Promise<Folder[]> {
-    if (!db) return [];
+    if (!db) throw new Error("Firebase DB not initialized. Cannot get folders.");
     try {
         const snapshot = await db.collection("folders")
             .where("uid", "==", uid)
@@ -395,7 +395,7 @@ export async function saveThreadToFolder(uid: string, folderId: string, threadDa
 }
 
 export async function getThreadsInFolder(uid: string, folderId: string): Promise<SavedThread[]> {
-    if (!db) return [];
+    if (!db) throw new Error("Firebase DB not initialized. Cannot get threads.");
     try {
         const snapshot = await db.collection("saved_threads")
             .where("uid", "==", uid)
@@ -443,8 +443,7 @@ export async function saveAnalysis(uid: string, folderId: string, data: any, mod
 
 export async function getLatestAnalysis(uid: string, folderId: string): Promise<AnalysisDoc | null> {
     if (!db) {
-        console.warn("[FIRESTORE] DB not initialized. Cannot fetch analysis.");
-        return null;
+        throw new Error("[FIRESTORE] DB not initialized. Cannot fetch analysis.");
     }
     try {
         console.log(`[FIRESTORE] Fetching latest analysis for folder ${folderId}`);
@@ -473,7 +472,7 @@ export async function getLatestAnalysis(uid: string, folderId: string): Promise<
 }
 
 export async function getFolderAnalyses(uid: string, folderId: string): Promise<AnalysisDoc[]> {
-    if (!db) return [];
+    if (!db) throw new Error("Firebase DB not initialized. Cannot get analyses.");
     try {
         const snapshot = await db.collection("folder_analyses")
             .where("uid", "==", uid)
@@ -506,7 +505,7 @@ export interface FetchLogEntry {
 }
 
 export async function logFetchEvent(entry: Omit<FetchLogEntry, "timestamp">): Promise<void> {
-    if (!db) return;
+    if (!db) throw new Error("Firebase DB not initialized. Cannot log fetch event.");
 
     try {
         const { FieldValue } = await import("firebase-admin/firestore");
@@ -546,7 +545,7 @@ export async function saveExtractedData(uid: string, data: Omit<ExtractedData, "
 }
 
 export async function listExtractions(uid: string): Promise<ExtractedData[]> {
-    if (!db) return [];
+    if (!db) throw new Error("Firebase DB not initialized. Cannot list extractions.");
     const snapshot = await db.collection("users").doc(uid).collection("extractions")
         .orderBy("extractedAt", "desc")
         .limit(50)
@@ -568,7 +567,7 @@ export interface UserStats {
 
 export async function getUserStats(uid: string): Promise<UserStats> {
     if (!db) {
-        return { threadsSaved: 0, reportsGenerated: 0, leadsIdentified: 0, hoursSaved: 0, intelligenceScanned: 0, commentsAnalyzed: 0 };
+        throw new Error("Firebase DB not initialized. Cannot get user stats.");
     }
     const doc = await db.collection("users").doc(uid).collection("stats").doc("summary").get();
     if (doc.exists) {
@@ -578,7 +577,7 @@ export async function getUserStats(uid: string): Promise<UserStats> {
 }
 
 export async function updateStats(uid: string, updates: Partial<UserStats>): Promise<void> {
-    if (!db) return;
+    if (!db) throw new Error("Firebase DB not initialized. Cannot update stats.");
     try {
         const { FieldValue } = await import("firebase-admin/firestore");
         const ref = db.collection("users").doc(uid).collection("stats").doc("summary");
