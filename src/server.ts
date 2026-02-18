@@ -76,7 +76,7 @@ process.on("uncaughtException", (err: Error) => {
 const allowedOrigins = [
     "http://localhost:5173",
     "http://localhost:4321",
-    ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(",") : [
+    ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(/[;,]/) : [
         "https://redditkeeperprod.web.app",
         "https://opiniondeck-app.web.app",
         "https://opiniondeck.com",
