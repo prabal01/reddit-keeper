@@ -28,16 +28,9 @@ jobs:
           docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/opiniondeck-backend:${{ github.sha }}
 
       - name: Deploy to Cloud Run
-        uses: google-github-actions/deploy-cloudrun@v2
-        with:
-          service: opiniondeck-backend
-          image: gcr.io/${{ secrets.GCP_PROJECT_ID }}/opiniondeck-backend:${{ github.sha }}
-          region: us-east1
-          env_vars:
-            - NODE_ENV=production
-            - ALLOWED_ORIGINS=https://app.opiniondeck.com;https://opiniondeck.com;https://www.opiniondeck.com;https://redditkeeperprod.web.app;https://opiniondeck-app.web.app
-            - REDIS_URL=${{ secrets.REDIS_URL }}
-            - GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
-            - FIREBASE_SERVICE_ACCOUNT=${{ secrets.FIREBASE_SERVICE_ACCOUNT_OPINIONDECK }}
-            - FIREBASE_STORAGE_BUCKET=redditkeeperprod.appspot.com
-          flags: '--allow-unauthenticated'
+        run: |-
+          gcloud run deploy opiniondeck-backend \
+            --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/opiniondeck-backend:${{ github.sha }} \
+            --region us-east1 \
+            --set-env-vars "^|^NODE_ENV=production|ALLOWED_ORIGINS=https://app.opiniondeck.com;https://opiniondeck.com;https://www.opiniondeck.com;https://redditkeeperprod.web.app;https://opiniondeck-app.web.app|REDIS_URL=${{ secrets.REDIS_URL }}|GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}|FIREBASE_SERVICE_ACCOUNT=${{ secrets.FIREBASE_SERVICE_ACCOUNT_OPINIONDECK }}|FIREBASE_STORAGE_BUCKET=redditkeeperprod.appspot.com" \
+            --allow-unauthenticated --quiet
