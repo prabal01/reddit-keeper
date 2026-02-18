@@ -34,7 +34,7 @@ export function UrlInput({ onFetch, loading }: UrlInputProps) {
                     id="reddit-url"
                     type="url"
                     className="url-input"
-                    placeholder="Paste Reddit, HackerNews, or X/Twitter thread URL..."
+                    placeholder="Paste Reddit, HN, X/Twitter, or G2 URL..."
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
                     disabled={loading}

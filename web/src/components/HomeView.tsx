@@ -17,6 +17,7 @@ import { PremiumLoader, ButtonLoader } from "./PremiumLoader";
 import { FolderList } from "./FolderList";
 import { ExtensionModal } from "./ExtensionModal";
 import { BRANDING } from "../constants/branding";
+import { AlertTriangle, Check, X, Activity, FolderOpen, FileText, Clock } from 'lucide-react';
 
 import { fetchUserStats } from "../lib/api";
 
@@ -146,7 +147,7 @@ export function HomeView() {
 
             {error && (
                 <div className="error-banner" role="alert">
-                    <span className="error-icon" aria-hidden="true">⚠️</span>
+                    <span className="error-icon" aria-hidden="true"><AlertTriangle size={20} /></span>
                     <p>{error}</p>
                 </div>
             )}
@@ -195,7 +196,7 @@ export function HomeView() {
                                             disabled={!newFolderName.trim() || saveStatus === 'saving'}
                                             aria-label="Create folder and save thread"
                                         >
-                                            {saveStatus === 'saving' ? <ButtonLoader /> : '✓'}
+                                            {saveStatus === 'saving' ? <ButtonLoader /> : <Check size={16} />}
                                         </button>
                                         <button
                                             className="new-folder-cancel-btn"
@@ -203,12 +204,12 @@ export function HomeView() {
                                             disabled={saveStatus === 'saving'}
                                             aria-label="Cancel creating folder"
                                         >
-                                            ✕
+                                            <X size={16} />
                                         </button>
                                     </div>
                                 )}
-                                {saveStatus === 'success' && <span className="save-indicator success">✓ Saved</span>}
-                                {saveStatus === 'error' && <span className="save-indicator error">Failed</span>}
+                                {saveStatus === 'success' && <span className="save-indicator success"><Check size={14} /> Saved</span>}
+                                {saveStatus === 'error' && <span className="save-indicator error"><X size={14} /> Failed</span>}
                             </div>
                         </div>
                     </div>
@@ -231,22 +232,28 @@ export function HomeView() {
                         <p className="subtitle">Your Strategic Market Intelligence Hub</p>
                     </header>
 
-                    <div className="impact-metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', margin: '30px 0' }}>
-                        <div className="metric-card" style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '16px', border: '1px solid var(--border-light)' }}>
-                            <div className="label" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Intelligence Scanned</div>
-                            <div className="value" style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--primary-color)' }}>{stats?.intelligenceScanned || 0} <span style={{ fontSize: '0.8rem', opacity: 0.6 }}>points</span></div>
+                    <div className="impact-metrics-grid" style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                        gap: '20px',
+                        margin: '30px 0',
+                        width: '100%'
+                    }}>
+                        <div className="metric-card" style={{ background: 'var(--card-bg)', padding: '24px', borderRadius: '16px', border: '1px solid var(--border-light)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div className="label" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}><Activity size={14} /> Intelligence Scanned</div>
+                            <div className="value" style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--primary-color)' }}>{stats?.intelligenceScanned || 0} <span style={{ fontSize: '0.9rem', opacity: 0.6, fontWeight: 'normal' }}>points</span></div>
                         </div>
-                        <div className="metric-card" style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '16px', border: '1px solid var(--border-light)' }}>
-                            <div className="label" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Active Folders</div>
-                            <div className="value" style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--text-main)' }}>{folders.length}</div>
+                        <div className="metric-card" style={{ background: 'var(--card-bg)', padding: '24px', borderRadius: '16px', border: '1px solid var(--border-light)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div className="label" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}><FolderOpen size={14} /> Active Folders</div>
+                            <div className="value" style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--text-main)' }}>{folders.length}</div>
                         </div>
-                        <div className="metric-card" style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '16px', border: '1px solid var(--border-light)' }}>
-                            <div className="label" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Reports Generated</div>
-                            <div className="value" style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--success-color)' }}>{stats?.reportsGenerated || 0}</div>
+                        <div className="metric-card" style={{ background: 'var(--card-bg)', padding: '24px', borderRadius: '16px', border: '1px solid var(--border-light)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div className="label" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}><FileText size={14} /> Reports Generated</div>
+                            <div className="value" style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--success-color)' }}>{stats?.reportsGenerated || 0}</div>
                         </div>
-                        <div className="metric-card" style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '16px', border: '1px solid var(--border-light)' }}>
-                            <div className="label" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Hours Saved</div>
-                            <div className="value" style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--warning-color)' }}>{stats?.hoursSaved || 0} <span style={{ fontSize: '0.8rem', opacity: 0.6 }}>h</span></div>
+                        <div className="metric-card" style={{ background: 'var(--card-bg)', padding: '24px', borderRadius: '16px', border: '1px solid var(--border-light)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div className="label" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}><Clock size={14} /> Hours Saved</div>
+                            <div className="value" style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--warning-color)' }}>{(stats?.hoursSaved || 0).toFixed(1)} <span style={{ fontSize: '0.9rem', opacity: 0.6, fontWeight: 'normal' }}>h</span></div>
                         </div>
                     </div>
 

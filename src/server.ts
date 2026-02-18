@@ -452,6 +452,37 @@ app.post("/api/folders/:id/analyze", async (req: express.Request, res: express.R
     }
 });
 
+// Helper to redact reports for Free Users
+function redactAnalysis(data: any): any {
+    const redacted = { ...data };
+
+    // Metadata for the "Unlock" UI
+    redacted.locked_counts = {
+        leads: data.potential_leads?.length || 0,
+        intent: data.buying_intent_signals?.length || 0,
+        engagement: data.engagement_opportunities?.length || 0,
+        features: data.feature_requests?.length || 0
+    };
+
+    // 1. Partial Unlocks (Top 3 Only)
+    if (data.themes) redacted.themes = data.themes.slice(0, 3);
+    if (data.pain_points) redacted.pain_points = data.pain_points.slice(0, 3);
+
+    // 2. Full Locks (High Value)
+    redacted.buying_intent_signals = [];
+    redacted.potential_leads = [];
+    redacted.engagement_opportunities = [];
+    redacted.feature_requests = [];
+
+    // 3. Curiosity Gaps
+    delete redacted.quality_reasoning;
+
+    // 4. Signal Flag
+    redacted.isLocked = true;
+
+    return redacted;
+}
+
 app.get("/api/folders/:id/analysis", async (req: express.Request, res: express.Response) => {
     if (!req.user) {
         res.status(401).json({ error: "Unauthorized" });
@@ -459,12 +490,24 @@ app.get("/api/folders/:id/analysis", async (req: express.Request, res: express.R
     }
     try {
         const analyses = await getFolderAnalyses(req.user.uid, req.params.id as string);
+
+        const isFree = req.user.plan === 'free';
+
         // Flatten the structure for the frontend
-        const flattened = analyses.map(a => ({
-            ...a.data,
-            id: a.id,
-            createdAt: a.createdAt || new Date().toISOString()
-        }));
+        const flattened = analyses.map(a => {
+            let cleanData = { ...a.data };
+
+            // Apply Redaction if Free Plan
+            if (isFree) {
+                cleanData = redactAnalysis(cleanData);
+            }
+
+            return {
+                ...cleanData,
+                id: a.id,
+                createdAt: a.createdAt || new Date().toISOString()
+            };
+        });
         res.json(flattened);
     } catch (err: any) {
         res.status(500).json({ error: err.message });

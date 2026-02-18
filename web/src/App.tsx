@@ -1,6 +1,6 @@
 
 import { useEffect } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { FolderProvider } from "./contexts/FolderContext";
 import { setTokenGetter } from "./lib/api";
@@ -14,6 +14,20 @@ import { Sidebar } from "./components/Sidebar";
 import { ReportsView } from "./components/ReportsView";
 import { SettingsView } from "./components/SettingsView";
 import { BRANDING } from "./constants/branding";
+
+import { LoginView } from "./components/LoginView";
+
+function RequireAuth({ children }: { children: JSX.Element }) {
+  const { user, loading } = useAuth();
+
+  if (loading) return <PremiumLoader fullPage text={`Loading ${BRANDING.NAME}...`} />;
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+}
 
 function AppContent() {
   const { getIdToken, loading, user } = useAuth();
@@ -64,19 +78,45 @@ function AppContent() {
           </div>
           <div className="header-actions" style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
             <ThemeToggle />
-            <AuthButton />
+            {user && <AuthButton />}
           </div>
         </header>
 
         <main className="app-main">
           <div className="content-container" style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 40px' }}>
             <Routes>
-              <Route path="/" element={<HomeView />} />
-              <Route path="/folders" element={<HomeView />} />
-              <Route path="/reports" element={<ReportsView />} />
-              <Route path="/settings" element={<SettingsView />} />
-              <Route path="/folders/:folderId" element={<FolderDetail />} />
-              <Route path="/folders/:folderId/threads/:threadId" element={<FolderDetail />} />
+              <Route path="/login" element={<LoginView />} />
+
+              <Route path="/" element={
+                <RequireAuth>
+                  <HomeView />
+                </RequireAuth>
+              } />
+              <Route path="/folders" element={
+                <RequireAuth>
+                  <HomeView />
+                </RequireAuth>
+              } />
+              <Route path="/reports" element={
+                <RequireAuth>
+                  <ReportsView />
+                </RequireAuth>
+              } />
+              <Route path="/settings" element={
+                <RequireAuth>
+                  <SettingsView />
+                </RequireAuth>
+              } />
+              <Route path="/folders/:folderId" element={
+                <RequireAuth>
+                  <FolderDetail />
+                </RequireAuth>
+              } />
+              <Route path="/folders/:folderId/threads/:threadId" element={
+                <RequireAuth>
+                  <FolderDetail />
+                </RequireAuth>
+              } />
             </Routes>
           </div>
         </main>
@@ -86,6 +126,7 @@ function AppContent() {
     </div>
   );
 }
+
 
 function App() {
   return (

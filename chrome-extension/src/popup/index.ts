@@ -119,6 +119,16 @@ async function fetchFolders() {
             select.innerHTML = folders.map((f: any) => `
                 <option value="${f.id}">${f.name}</option>
             `).join('') + '<option value="default">Default Inbox</option>';
+
+            // Restore last used folder
+            const storage = await chrome.storage.local.get('lastUsedFolderId');
+            if (storage.lastUsedFolderId) {
+                // Verify the folder still exists
+                const folderExists = folders.some((f: any) => f.id === storage.lastUsedFolderId) || storage.lastUsedFolderId === 'default';
+                if (folderExists) {
+                    select.value = storage.lastUsedFolderId;
+                }
+            }
         }
     } catch (err) {
         console.error('Failed to fetch folders');
@@ -320,6 +330,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (response && response.data) {
                 const folderId = (document.getElementById('folder-select') as HTMLSelectElement)?.value;
+
+                // Remember this folder for next time
+                if (folderId) {
+                    chrome.storage.local.set({ lastUsedFolderId: folderId });
+                }
 
                 const extractionData = {
                     ...response.data,

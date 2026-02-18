@@ -124,90 +124,99 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // ── Extension Auth Sync ─────────────────────────────────────────────
     useEffect(() => {
         const syncTokenToExtension = async () => {
-            const apiBase = API_BASE.startsWith('http') ? API_BASE : window.location.origin + API_BASE;
-            console.log("[AuthContext] Syncing to extension. API_BASE:", API_BASE, "Resolved:", apiBase);
+            if (!firebaseUser) return;
 
-            token,
-                apiUrl: apiBase,
+            try {
+                const token = await firebaseUser.getIdToken();
+                const apiBase = API_BASE.startsWith('http') ? API_BASE : window.location.origin + API_BASE;
+                console.log("[AuthContext] Syncing to extension. API_BASE:", API_BASE, "Resolved:", apiBase);
+
+                window.postMessage({
+                    type: 'OPINION_DECK_AUTH_SYNC',
+                    token,
+                    apiUrl: apiBase,
                     dashboardUrl: window.location.origin
-        }, window.location.origin);
-} catch (err) {
-    console.error("Failed to sync token to extension:", err);
-}
+                }, window.location.origin);
+            } catch (err) {
+                console.error("Failed to sync token to extension:", err);
+            }
         };
 
-const handleExtensionMessage = async (event: MessageEvent) => {
-    if (event.origin !== window.location.origin) return;
-    if (event.data && event.data.type === "OPINION_DECK_EXTENSION_READY") {
-        console.log("[Web] Extension ready signal received. Syncing token...");
-        await syncTokenToExtension();
-    }
-};
+        const handleExtensionMessage = async (event: MessageEvent) => {
+            if (event.origin !== window.location.origin) return;
+            if (event.data && event.data.type === "OPINION_DECK_EXTENSION_READY") {
+                console.log("[Web] Extension ready signal received. Syncing token...");
+                await syncTokenToExtension();
+            }
+        };
 
-window.addEventListener("message", handleExtensionMessage);
-// Also sync immediately when user changes (login/logout)
-syncTokenToExtension();
+        window.addEventListener('message', handleExtensionMessage);
 
-return () => window.removeEventListener("message", handleExtensionMessage);
+        // Also sync immediately when user changes
+        syncTokenToExtension();
+
+        return () => {
+            window.removeEventListener('message', handleExtensionMessage);
+        };
     }, [firebaseUser]);
 
-const signInWithGoogle = useCallback(async () => {
-    if (!auth || !googleProvider) {
-        console.error("Firebase not configured. Cannot sign in.");
-        return;
-    }
-    try {
-        await signInWithPopup(auth, googleProvider);
-    } catch (err: any) {
-        if (err.code !== "auth/popup-closed-by-user") {
-            console.error("Sign-in error:", err);
-            throw err;
+    const signInWithGoogle = useCallback(async () => {
+        if (!auth || !googleProvider) {
+            console.error("Firebase not configured. Cannot sign in.");
+            return;
         }
-    }
-}, []);
+        try {
+            await signInWithPopup(auth, googleProvider);
+        } catch (err: any) {
+            if (err.code !== "auth/popup-closed-by-user") {
+                console.error("Sign-in error:", err);
+                throw err;
+            }
+        }
+    }, []);
 
-const signOutUser = useCallback(async () => {
-    if (auth) {
-        await firebaseSignOut(auth);
-    }
-    setUser(null);
-    setPlan(null);
-    setConfig(null);
-    setUserStats(null);
-}, []);
+    const signOutUser = useCallback(async () => {
+        if (auth) {
+            await firebaseSignOut(auth);
+        }
+        setUser(null);
+        setPlan(null);
+        setConfig(null);
+        setUserStats(null);
+    }, []);
 
-const refreshPlan = useCallback(async () => {
-    await fetchPlan(firebaseUser);
-}, [firebaseUser, fetchPlan]);
+    const refreshPlan = useCallback(async () => {
+        await fetchPlan(firebaseUser);
+    }, [firebaseUser, fetchPlan]);
 
-const refreshStats = useCallback(async () => {
-    await fetchStats(firebaseUser);
-}, [firebaseUser, fetchStats]);
+    const refreshStats = useCallback(async () => {
+        await fetchStats(firebaseUser);
+    }, [firebaseUser, fetchStats]);
 
-const getIdToken = useCallback(async (): Promise<string | null> => {
-    if (!firebaseUser) return null;
-    return firebaseUser.getIdToken(false); // Changed from true to false to stop forcing refresh
-}, [firebaseUser]);
+    const getIdToken = useCallback(async (): Promise<string | null> => {
+        if (!firebaseUser) return null;
+        return firebaseUser.getIdToken(false); // Changed from true to false to stop forcing refresh
+    }, [firebaseUser]);
 
-return (
-    <AuthContext.Provider
-        value={{
-            user,
-            plan,
-            config,
-            loading,
-            firebaseConfigured,
-            signInWithGoogle,
-            signOut: signOutUser,
-            refreshPlan,
-            getIdToken,
-            userStats,
-            refreshStats
-        }}
-    >
-        {children}
-    </AuthContext.Provider>
-);
+    return (
+        <AuthContext.Provider
+            value={{
+                user,
+                plan,
+                config,
+                loading,
+                firebaseConfigured,
+                signInWithGoogle,
+                signOut: signOutUser,
+                refreshPlan,
+                getIdToken,
+                userStats,
+                refreshStats
+            }}
+        >
+            {children}
+        </AuthContext.Provider>
+    );
 }
 
 export function useAuth(): AuthContextType {

@@ -330,7 +330,8 @@ a:hover {
    URL INPUT
    ============================== */
 .url-input-form {
-    max-width: 800px;
+    width: 100%;
+    max-width: 100%;
     margin: 0 auto 40px;
 }
 
@@ -2133,4 +2134,24 @@ select:focus-visible {
     .auth-btn span:not(.user-plan-badge) {
         display: none;
     }
+}
+
+/* ==============================
+   TEXT OVERFLOW SAFETY
+   ============================== */
+.post-title,
+.post-body,
+.post-card,
+.comment-body {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    max-width: 100%;
+}
+
+/* ==============================
+   FIX MAIN WRAPPER OVERFLOW
+   ============================== */
+.app-main-wrapper {
+    overflow-x: hidden;
+    width: 100%;
 }

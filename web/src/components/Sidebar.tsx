@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { BRANDING } from '../constants/branding';
+import { LayoutDashboard, Folder, RefreshCw, Settings, Globe } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
     const { plan, userStats } = useAuth();
@@ -22,13 +23,13 @@ export const Sidebar: React.FC = () => {
 
             <nav className="sidebar-nav">
                 <NavLink to="/" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                    🏠 Dashboard
+                    <LayoutDashboard size={18} /> <span className="link-text">Dashboard</span>
                 </NavLink>
                 <NavLink to="/folders" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                    📂 Folders
+                    <Folder size={18} /> <span className="link-text">Folders</span>
                 </NavLink>
                 <NavLink to="/reports" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                    📊 AI Reports
+                    <RefreshCw size={18} /> <span className="link-text">AI Reports</span>
                 </NavLink>
             </nav>
 
@@ -42,10 +43,10 @@ export const Sidebar: React.FC = () => {
                     </div>
                 </div>
                 <NavLink to="/settings" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'} style={{ padding: '8px 0' }}>
-                    ⚙️ Settings
+                    <Settings size={18} /> <span className="link-text">Settings</span>
                 </NavLink>
                 <a href={BRANDING.LANDING_PAGE_URL} className="nav-link" style={{ padding: '8px 0', opacity: 0.7 }}>
-                    🌐 Back to Home
+                    <Globe size={18} /> <span className="link-text">Back to Home</span>
                 </a>
             </div>
         </aside>

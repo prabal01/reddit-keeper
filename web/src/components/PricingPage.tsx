@@ -3,13 +3,16 @@ import { useAuth } from "../contexts/AuthContext";
 import { createCheckoutSession } from "../lib/api";
 
 const FEATURES = [
-    { name: "AI Research Reports", free: "5 (One-time)", pro: "50 / month", highlight: true },
-    { name: "Research Folders", free: "1", pro: "Unlimited", highlight: true },
-    { name: "Max Comments / Thread", free: "50", pro: "5,000", highlight: true },
-    { name: "Saved Threads", free: "Up to 30", pro: "Up to 5,000", highlight: true },
-    { name: "Lead Extraction", free: "—", pro: "✅", highlight: true },
-    { name: "Unlimited Thread Exports", free: "✅", pro: "✅", highlight: true },
-    { name: "Priority Support", free: "—", pro: "✅" },
+    { name: "AI Research Reports", free: "5 (Teaser)", pro: "50 / month", highlight: true },
+    { name: "AI Research Reports", free: "5 / month", pro: "Unlimited", highlight: true },
+    { name: "Pain Points & Themes", free: "Top 3", pro: "✅ Unlimited", highlight: true },
+    { name: "Commercial Intent", free: "Locked 🔒", pro: "✅", highlight: true },
+    { name: "Strength Analysis", free: "Locked 🔒", pro: "✅", highlight: true },
+    { name: "Commercial Intent & Leads", free: "Locked 🔒", pro: "✅", highlight: true },
+    { name: "Engagement Strategy", free: "Locked 🔒", pro: "✅" },
+    { name: "Max Comments / Thread", free: "50", pro: "5,000" },
+    { name: "Saved Threads", free: "Up to 30", pro: "Unlimited" },
+    { name: "Research Folders", free: "1", pro: "Unlimited" },
 ];
 
 export function PricingPage() {
