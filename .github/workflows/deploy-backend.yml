@@ -32,4 +32,4 @@ jobs:
           service: opiniondeck-backend
           image: gcr.io/${{ secrets.GCP_PROJECT_ID }}/opiniondeck-backend:${{ github.sha }}
           region: us-central1
-          flags: '--allow-unauthenticated --set-env-vars=NODE_ENV=production,ALLOWED_ORIGINS=https://app.opiniondeck.com,https://opiniondeck.com,https://www.opiniondeck.com'
+          flags: '--allow-unauthenticated --set-env-vars=NODE_ENV=production,ALLOWED_ORIGINS=https://app.opiniondeck.com,https://opiniondeck.com,https://www.opiniondeck.com,REDIS_URL=${{ secrets.REDIS_URL }},GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }},FIREBASE_SERVICE_ACCOUNT=${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
