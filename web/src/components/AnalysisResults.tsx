@@ -3,8 +3,9 @@ import React from 'react';
 import './AnalysisResults.css';
 import {
     Lock, Clock, Download, FileText, CheckCircle2, MinusCircle, XCircle,
-    Megaphone, Target, MessageSquare, Lightbulb, Trophy, Bug
+    Megaphone, Target, MessageSquare, Lightbulb, Trophy, Bug, FileDown
 } from 'lucide-react';
+import { exportReportToPDF } from '../lib/pdfExport';
 
 interface Theme {
     title: string;
@@ -121,6 +122,10 @@ export const AnalysisResults: React.FC<{ data: AnalysisData, onCitationClick?: (
         a.click();
     };
 
+    const handleExportPDF = () => {
+        exportReportToPDF(data);
+    };
+
     return (
         <div className="analysis-results">
             <div className="analysis-header">
@@ -134,9 +139,16 @@ export const AnalysisResults: React.FC<{ data: AnalysisData, onCitationClick?: (
                         )}
                         {data.isLocked && <span className="badge-new" style={{ background: 'var(--warning-color)', color: 'black' }}>FREE PREVIEW</span>}
                     </div>
-                    <div className="export-actions" style={{ display: 'flex', gap: '15px', marginTop: '8px' }}>
-                        <button className="btn-text" onClick={handleExportJSON} style={{ fontSize: '0.7rem', opacity: 0.7, display: 'flex', alignItems: 'center', gap: '4px' }}><Download size={14} /> Export JSON</button>
-                        <button className="btn-text" onClick={handleExportMarkdown} style={{ fontSize: '0.7rem', opacity: 0.7, display: 'flex', alignItems: 'center', gap: '4px' }}><FileText size={14} /> Export Markdown</button>
+                    <div className="export-actions" style={{ display: 'flex', gap: '15px', marginTop: '12px' }}>
+                        <button className="btn-text" onClick={handleExportPDF} style={{ background: 'rgba(255, 69, 0, 0.1)', color: 'var(--primary-color)', padding: '6px 14px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <FileDown size={14} /> Download PDF Report
+                        </button>
+                        <button className="btn-text" onClick={handleExportJSON} style={{ fontSize: '0.75rem', opacity: 0.7, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Download size={14} /> JSON
+                        </button>
+                        <button className="btn-text" onClick={handleExportMarkdown} style={{ fontSize: '0.75rem', opacity: 0.7, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <FileText size={14} /> Markdown
+                        </button>
                     </div>
                 </div>
 

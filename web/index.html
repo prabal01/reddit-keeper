@@ -7,10 +7,111 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="OpinionDeck — Strategic market intelligence from Reddit, G2, and more." />
   <title>OpinionDeck — Strategic Market Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    (function () {
+      const theme = localStorage.getItem('theme') ||
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+      const bg = theme === 'dark' ? '#0f0f17' : '#f8f9fb';
+      document.documentElement.style.backgroundColor = bg;
+      document.head.insertAdjacentHTML('beforeend', '<style>body{background-color:' + bg + ' !important;}</style>');
+    })();
+  </script>
+  <style>
+    :root {
+      --fp-bg: #f8f9fb;
+      --fp-sidebar: #ffffff;
+      --fp-shimmer: #eee;
+    }
+
+    [data-theme="dark"] {
+      --fp-bg: #0f0f17;
+      --fp-sidebar: #1a1a2e;
+      --fp-shimmer: #252545;
+    }
+
+    body {
+      background: var(--fp-bg);
+      margin: 0;
+    }
+
+    .fp-root {
+      display: flex;
+      height: 100vh;
+      font-family: sans-serif;
+      visibility: visible;
+    }
+
+    .fp-sidebar {
+      width: 260px;
+      background: var(--fp-sidebar);
+      border-right: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 30px;
+      box-sizing: border-box;
+    }
+
+    .fp-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .fp-header {
+      height: 70px;
+      background: var(--fp-sidebar);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .fp-content {
+      padding: 40px;
+    }
+
+    .fp-shim {
+      background: var(--fp-shimmer);
+      background: linear-gradient(90deg, var(--fp-shimmer) 25%, var(--fp-bg) 50%, var(--fp-shimmer) 75%);
+      background-size: 200% 100%;
+      animation: fp-spin 1.5s infinite;
+      border-radius: 8px;
+    }
+
+    @keyframes fp-spin {
+      from {
+        background-position: 200% 0;
+      }
+
+      to {
+        background-position: -200% 0;
+      }
+    }
+  </style>
 </head>
 
 <body>
-  <div id="root"></div>
+  <div id="root">
+    <div class="fp-root">
+      <div class="fp-sidebar">
+        <div class="fp-shim" style="height: 40px; margin-bottom: 40px; opacity: 0.5;"></div>
+        <div class="fp-shim" style="height: 48px; margin-bottom: 12px;"></div>
+        <div class="fp-shim" style="height: 48px; margin-bottom: 12px;"></div>
+        <div class="fp-shim" style="height: 48px;"></div>
+      </div>
+      <div class="fp-main">
+        <div class="fp-header"></div>
+        <div class="fp-content">
+          <div class="fp-shim" style="height: 48px; width: 40%; margin-bottom: 12px;"></div>
+          <div class="fp-shim" style="height: 24px; width: 20%; margin-bottom: 40px;"></div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px;">
+            <div class="fp-shim" style="height: 160px; border-radius: 24px;"></div>
+            <div class="fp-shim" style="height: 160px; border-radius: 24px;"></div>
+            <div class="fp-shim" style="height: 160px; border-radius: 24px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
   <script type="module" src="/src/main.tsx"></script>
 </body>
 

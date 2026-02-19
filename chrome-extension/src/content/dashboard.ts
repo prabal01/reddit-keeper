@@ -37,4 +37,59 @@ window.addEventListener("message", (event) => {
             }, window.location.origin);
         });
     }
+
+    // Handle Saving Extraction
+    if (event.data.type === "OPINION_DECK_SAVE_REQUEST") {
+        console.log("[OpinionDeck] Bridge received save request:", event.data.data?.url);
+
+        chrome.runtime.sendMessage({
+            action: "SAVE_EXTRACTION",
+            data: event.data.data
+        }, (response) => {
+            window.postMessage({
+                type: "OPINION_DECK_SAVE_RESPONSE",
+                id: event.data.id,
+                success: response && response.status === 'success',
+                error: response ? response.error : "Unknown error"
+            }, window.location.origin);
+        });
+    }
+
+    // Handle Discovery Search
+    if (event.data.type === "OPINION_DECK_DISCOVERY_REQUEST") {
+        console.log("[OpinionDeck] Bridge received discovery request:", event.data.competitor);
+
+        chrome.runtime.sendMessage({
+            action: "DISCOVERY_SEARCH",
+            competitor: event.data.competitor
+        }, (response) => {
+            window.postMessage({
+                type: "OPINION_DECK_DISCOVERY_RESPONSE",
+                id: event.data.id,
+                success: response && response.status === 'success',
+                results: response ? response.results : [],
+                error: response ? response.error : "Unknown error"
+            }, window.location.origin);
+        });
+    }
+
+    // Handle Batch Save (delegating to extension's saving logic)
+    if (event.data.type === "OPINION_DECK_SAVE_BATCH_REQUEST") {
+        const { threads, folderId } = event.data;
+        console.log("[OpinionDeck] Bridge received batch save request for", threads.length, "threads");
+
+        // Note: Batch saving will be orchestrated by the dashboard calling 
+        // the existing save extraction bridge multiple times OR we can add a batch helper here.
+    }
+
+    // Handle Ping
+    if (event.data.type === "OPINION_DECK_PING_REQUEST") {
+        console.log("[OpinionDeck] Bridge received ping");
+        window.postMessage({
+            type: "OPINION_DECK_PING_RESPONSE",
+            id: event.data.id,
+            success: true,
+            version: "1.0.0"
+        }, window.location.origin);
+    }
 });

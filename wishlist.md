@@ -10,3 +10,6 @@
 - cancel folder create button in extension - done
 - if analysis takes lot of time inform user he/she can leave tha page and we will notifiy him/her.
 - competitor research based based on keywords : toolname + frustating
+- shallow save vs deep save.
+- add to discovery to type a idea -> it will find the related product -> user checks and tickmark the products. -> Find pain points for those user.-> idea
+- redirect to folder after discovery.

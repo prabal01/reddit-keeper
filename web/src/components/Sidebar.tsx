@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { BRANDING } from '../constants/branding';
-import { LayoutDashboard, Folder, RefreshCw, Settings, Globe } from 'lucide-react';
+import { LayoutDashboard, Folder, RefreshCw, Settings, Globe, Search } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
     const { plan, userStats } = useAuth();
@@ -28,8 +28,11 @@ export const Sidebar: React.FC = () => {
                 <NavLink to="/folders" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                     <Folder size={18} /> <span className="link-text">Folders</span>
                 </NavLink>
+                <NavLink to="/research" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                    <Search size={18} /> <span className="link-text">Research</span>
+                </NavLink>
                 <NavLink to="/reports" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                    <RefreshCw size={18} /> <span className="link-text">AI Reports</span>
+                    <RefreshCw size={18} /> <span className="link-text">Analytics</span>
                 </NavLink>
             </nav>
 

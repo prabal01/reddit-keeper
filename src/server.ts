@@ -346,6 +346,11 @@ const analysisWorker = new Worker("analysis", async (job) => {
                     // The structure depends on the platform
                     let comments = contentJson.flattenedComments || contentJson.comments || contentJson.reviews || [];
 
+                    // If it's a Reddit tree, it might be nested under contentJson.post or similar if the structure matches SavedThread.data
+                    if (comments.length === 0 && contentJson.content) {
+                        comments = contentJson.content.flattenedComments || contentJson.content.comments || contentJson.content.reviews || [];
+                    }
+
                     return { ...t, comments };
                 } catch (fetchErr) {
                     console.error(`[Worker] Failed to fetch storage content for ${t.id}:`, fetchErr);
@@ -424,7 +429,8 @@ app.post("/api/folders/:id/analyze", async (req: express.Request, res: express.R
 
         // Calculate total comments
         const totalComments = savedThreads.reduce((sum, thread) => {
-            const count = thread.data.comments ? countComments(thread.data.comments) : 0;
+            // Safe access for cloud-saved threads where data is null
+            const count = (thread as any).commentCount || (thread.data?.comments ? countComments(thread.data.comments) : 0);
             return sum + count;
         }, 0);
 

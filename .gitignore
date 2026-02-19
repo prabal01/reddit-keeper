@@ -27,3 +27,5 @@ Thumbs.db
 *.log
 npm-debug.log*
 wishlist.md
+chrome-extension/.env.development 
+chrome-extension/.env.production

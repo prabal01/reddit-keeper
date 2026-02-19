@@ -463,5 +463,144 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 
+    if (request.action === 'DISCOVERY_SEARCH') {
+        const { competitor } = request;
+        if (!competitor) {
+            sendResponse({ status: 'error', error: 'Competitor name is required.' });
+            return true;
+        }
+
+        const variations = [
+            `title:"${competitor}" frustrated`,
+            `title:"${competitor}" alternative`,
+            `title:"${competitor}" vs`,
+            `title:"hate ${competitor}"`,
+            `title:"stop using ${competitor}"`,
+            `"${competitor}" annoying`,
+            `"${competitor}" problems`,
+            `"anyone else" "${competitor}"`,
+            `"using ${competitor}" app`
+        ];
+
+        const searchQueries = variations;
+
+        console.log(`[OpinionDeck] Discovery Search for: ${competitor}`);
+
+        const runDiscovery = async () => {
+            const allResultsMap = new Map<string, any>();
+            const now = Date.now() / 1000;
+            const TWELVE_MONTHS = 12 * 30 * 24 * 60 * 60;
+
+            for (const query of searchQueries) {
+                try {
+                    const searchUrl = `https://www.reddit.com/search.json?q=${encodeURIComponent(query)}&sort=relevance&t=year&limit=50`;
+                    const res = await fetch(searchUrl);
+                    if (!res.ok) continue;
+
+                    const data = await res.json();
+                    const children = data.data?.children || [];
+
+                    children.forEach((child: any) => {
+                        const post = child.data;
+                        if (allResultsMap.has(post.id)) return;
+
+                        const title = (post.title || '').toLowerCase();
+                        const text = (post.selftext || '').toLowerCase();
+                        const combined = title + " " + text;
+                        const compLower = competitor.toLowerCase();
+                        const subredditLower = (post.subreddit || '').toLowerCase();
+
+                        // 1. HARD FILTER: Competitor Presence
+                        const inTitle = title.includes(compLower);
+                        if (!inTitle && !combined.includes(compLower)) return;
+
+                        // 2. HARD FILTER: Idiom Killers (Iteration 4)
+                        const forbiddenPhrases = [
+                            `cut ${compLower}`, `some ${compLower}`, `getting ${compLower}`,
+                            `${compLower} off`, `pick up the ${compLower}`, `${compLower} on work`,
+                            `${compLower} for being`, `${compLower} in my`, `constant ${compLower}`,
+                            `no ${compLower} for`, `giving ${compLower}`, `${compLower} results`,
+                            `${compLower} in the line`, `taking up ${compLower}`, `slack on`
+                        ];
+                        if (forbiddenPhrases.some(p => combined.includes(p))) return;
+
+                        // 3. HARD FILTER: Subreddit Blacklist
+                        const qualitySubs = ['saas', 'productivity', 'startups', 'sysadmin', 'productmanagement', 'entrepreneur', 'webdev', 'experienceddevs', 'softwareengineering', 'devops', 'cscareerquestions', 'technology', 'salesforce', 'projectmanagement'];
+                        const noiseSubs = [
+                            'tifu', 'amitheasshole', 'kpop', 'wellthatsucks', 'bestofredditorupdates',
+                            'aitah', 'relationship_advice', 'interestingasfuck', 'mildlyinfuriating',
+                            'recruitinghell', 'superstonk', 'eagles', 'jewish', 'nvidia', 'askreddit',
+                            'pics', 'funny', 'gaming', 'movies', 'politics', 'news', 'worldnews',
+                            'todayilearned', 'showerthoughts', 'aww', 'dustythunder', 'twoxchromosomes',
+                            'personalfinance', 'legaladvice', 'workplace', 'jobsearchhacks', 'hvac', 'construction',
+                            'amioverreacting', 'motorbuzz', 'advice', 'trueoffmychest'
+                        ];
+                        if (noiseSubs.includes(subredditLower)) return;
+
+                        // --- SCORING ENGINE ---
+                        const productKeywords = ['app', 'software', 'tool', 'saas', 'channel', 'message', 'notification', 'integration', 'ui', 'ux', 'teams', 'discord', 'microsoft', 'workflow', 'workspace', 'threaded', 'mentions', 'huddle', 'bot', 'subscription', 'pricing', 'desktop', 'mobile'];
+                        const intentKeywords = ['annoying', 'frustrating', 'frustrated', 'sucks', 'hate', 'broken', 'slow', 'expensive', 'switching', 'moved to', 'anyone else', 'problems', 'bug', 'issue', 'overrated', 'alternatives'];
+
+                        const contextMatches = productKeywords.filter(k => combined.includes(k));
+                        const intentMatches = intentKeywords.filter(k => combined.includes(k));
+
+                        // MANDATORY SIGNAL FOR NON-TARGET SUBS
+                        const isTargetSub = subredditLower === compLower || qualitySubs.includes(subredditLower);
+                        if (!isTargetSub) {
+                            if (intentMatches.length === 0 && contextMatches.length < 2) return;
+                        }
+
+                        let score = 0;
+                        if (subredditLower === compLower) {
+                            score += 20000;
+                        } else if (qualitySubs.includes(subredditLower)) {
+                            score += 10000;
+                        }
+
+                        if (inTitle) score += 5000;
+                        score += (intentMatches.length * 1000);
+                        score += (contextMatches.length * 500);
+
+                        // Engagement Scaling (Capped)
+                        score += Math.min(post.num_comments, 200) * 20;
+
+                        // Recency
+                        const ageDays = (now - post.created_utc) / 86400;
+                        if (ageDays < 30) score += 5000;
+                        else if (ageDays < 90) score += 2000;
+
+                        allResultsMap.set(post.id, {
+                            id: post.id,
+                            title: post.title,
+                            url: `https://www.reddit.com${post.permalink}`,
+                            subreddit: post.subreddit,
+                            ups: post.ups,
+                            num_comments: post.num_comments,
+                            created_utc: post.created_utc,
+                            score: score,
+                            rankScore: score
+                        });
+                    });
+
+                    // Avoid aggressive rate limiting during multi-search
+                    await new Promise(r => setTimeout(r, 1000));
+                } catch (err) {
+                    console.error(`[OpinionDeck] Discovery query failed: ${query}`, err);
+                }
+            }
+
+            const sortedResults = Array.from(allResultsMap.values())
+                .sort((a, b) => b.rankScore - a.rankScore)
+                .slice(0, 20);
+
+            return sortedResults;
+        };
+
+        runDiscovery()
+            .then(results => sendResponse({ status: 'success', results }))
+            .catch(err => sendResponse({ status: 'error', error: err.message }));
+        return true;
+    }
+
     return true; // Keep channel open for any other potential listeners
 });

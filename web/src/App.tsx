@@ -9,18 +9,58 @@ import { AuthButton } from "./components/AuthButton";
 import { Footer } from "./components/Footer";
 import { HomeView } from "./components/HomeView";
 import { FolderDetail } from "./components/FolderDetail";
-import { PremiumLoader } from "./components/PremiumLoader";
+import { Skeleton } from "./components/Skeleton";
 import { Sidebar } from "./components/Sidebar";
 import { ReportsView } from "./components/ReportsView";
 import { SettingsView } from "./components/SettingsView";
-import { BRANDING } from "./constants/branding";
+import { ResearchView } from "./components/ResearchView";
 
 import { LoginView } from "./components/LoginView";
+
+const AppSkeleton = () => (
+  <div className="app" style={{ background: 'var(--bg-primary, #f8f9fb)', minHeight: '100vh' }}>
+    <aside className="sidebar skeleton-sidebar" style={{ background: 'rgba(255,255,255,0.02)', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
+      <div style={{ padding: '30px' }}>
+        <Skeleton width="100%" height="40px" style={{ borderRadius: '12px', marginBottom: '40px' }} />
+        {[1, 2, 3].map(i => (
+          <Skeleton key={i} width="100%" height="48px" style={{ borderRadius: '12px', marginBottom: '12px' }} />
+        ))}
+      </div>
+      <div style={{ marginTop: 'auto', padding: '30px' }}>
+        <Skeleton width="100%" height="100px" style={{ borderRadius: '20px' }} />
+      </div>
+    </aside>
+
+    <div className="app-main-wrapper">
+      <header className="app-header">
+        <div style={{ display: 'flex', gap: '15px', alignItems: 'center', marginLeft: 'auto', paddingRight: '40px' }}>
+          <Skeleton width="40px" height="40px" circle />
+          <Skeleton width="100px" height="40px" style={{ borderRadius: '12px' }} />
+        </div>
+      </header>
+
+      <main className="app-main">
+        <div className="content-container" style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 40px' }}>
+          <div style={{ marginTop: '40px' }}>
+            <Skeleton width="40%" height="48px" style={{ marginBottom: '12px' }} />
+            <Skeleton width="20%" height="24px" style={{ marginBottom: '40px' }} />
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', marginBottom: '40px' }}>
+              {[1, 2, 3, 4].map(i => (
+                <Skeleton key={i} width="100%" height="160px" style={{ borderRadius: '24px' }} />
+              ))}
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+);
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
 
-  if (loading) return <PremiumLoader fullPage text={`Loading ${BRANDING.NAME}...`} />;
+  if (loading) return <AppSkeleton />;
 
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -74,7 +114,7 @@ function AppContent() {
   }, []);
 
   if (loading) {
-    return <PremiumLoader fullPage text={`Initializing ${BRANDING.NAME}...`} />;
+    return <AppSkeleton />;
   }
 
   return (
@@ -115,6 +155,11 @@ function AppContent() {
               <Route path="/settings" element={
                 <RequireAuth>
                   <SettingsView />
+                </RequireAuth>
+              } />
+              <Route path="/research" element={
+                <RequireAuth>
+                  <ResearchView />
                 </RequireAuth>
               } />
               <Route path="/folders/:folderId" element={

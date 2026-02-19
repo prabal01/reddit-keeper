@@ -3,12 +3,15 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFolders } from '../contexts/FolderContext';
 import type { Folder } from '../contexts/FolderContext';
+import { Skeleton } from './Skeleton';
 import './Folders.css';
 
 interface FolderCardProps {
     folder: Folder;
     onClick: (folder: Folder) => void;
 }
+
+import { Folder as FolderIcon, Trash2, PlusCircle } from 'lucide-react';
 
 const FolderCard: React.FC<FolderCardProps> = ({ folder, onClick }) => {
     const { deleteFolder } = useFolders();
@@ -22,23 +25,29 @@ const FolderCard: React.FC<FolderCardProps> = ({ folder, onClick }) => {
 
     return (
         <div className="folder-card" onClick={() => onClick(folder)}>
-            <div className="folder-icon">📁</div>
+            <div className="folder-card-header">
+                <div className="folder-icon-wrapper">
+                    <FolderIcon size={24} />
+                </div>
+                <div className="folder-actions">
+                    <button
+                        className="btn-icon-v2"
+                        onClick={handleDelete}
+                        title="Delete Folder"
+                        aria-label="Delete Folder"
+                    >
+                        <Trash2 size={18} />
+                    </button>
+                </div>
+            </div>
             <div className="folder-info">
                 <h3 className="folder-name">{folder.name}</h3>
                 {folder.description && <p className="folder-desc">{folder.description}</p>}
             </div>
-            <div className="folder-meta">
-                <span className="thread-count">
+            <div className="folder-card-footer">
+                <div className="thread-count-badge">
                     {folder.threadCount} {folder.threadCount === 1 ? 'thread' : 'threads'}
-                </span>
-                <button
-                    className="btn-icon"
-                    onClick={handleDelete}
-                    title="Delete Folder"
-                    aria-label="Delete Folder"
-                >
-                    <span aria-hidden="true">🗑️</span>
-                </button>
+                </div>
             </div>
         </div>
     );
@@ -83,7 +92,31 @@ export const FolderList: React.FC<{ onSelect: (folder: Folder) => void }> = ({ o
     };
 
     if (loading && folders.length === 0) {
-        return <div className="loading-folders">Loading folders...</div>;
+        return (
+            <div className="folders-section">
+                <div className="section-header">
+                    <Skeleton width="250px" height="32px" />
+                    <Skeleton width="120px" height="40px" style={{ borderRadius: '12px' }} />
+                </div>
+                <div className="folders-grid">
+                    {[1, 2, 3].map(id => (
+                        <div key={id} className="folder-card" style={{ pointerEvents: 'none' }}>
+                            <div className="folder-card-header">
+                                <Skeleton width="40px" height="40px" circle />
+                                <Skeleton width="32px" height="32px" style={{ borderRadius: '8px' }} />
+                            </div>
+                            <div className="folder-info">
+                                <Skeleton width="60%" height="20px" style={{ marginBottom: '8px' }} />
+                                <Skeleton width="90%" height="16px" />
+                            </div>
+                            <div className="folder-card-footer">
+                                <Skeleton width="80px" height="24px" style={{ borderRadius: '8px' }} />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -99,10 +132,12 @@ export const FolderList: React.FC<{ onSelect: (folder: Folder) => void }> = ({ o
 
             {folders.length === 0 ? (
                 <div className="empty-state">
-                    <div className="folder-icon">📂</div>
+                    <div className="empty-state-icon">
+                        <FolderIcon size={48} strokeWidth={1.5} />
+                    </div>
                     <p>You haven't created any folders yet. Organization is the first step to deep research.</p>
                     <button className="btn-primary" onClick={() => setIsModalOpen(true)}>
-                        Create your first folder
+                        <PlusCircle size={18} /> Create your first folder
                     </button>
                 </div>
             ) : (

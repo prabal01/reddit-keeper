@@ -12,86 +12,100 @@
 </head>
 
 <body>
-    <header style="display: flex; align-items: center; justify-content: space-between; padding: 15px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <img src="../../icons/logo.svg" alt="logo" style="width: 24px; height: 24px;">
-            <h1 style="margin: 0; font-size: 1.2rem;">OpinionDeck BETA <span
-                    style="font-size: 0.6em; opacity: 0.6; vertical-align: middle;">BETA</span></h1>
+    <header style="display: flex; flex-direction: column; padding: 15px 15px 15px 15px; position: relative;">
+        <!-- Connection Status -->
+        <div class="status-container">
+            <span id="connection-dot" class="dot"></span>
+            <span id="connection-text">Connecting...</span>
         </div>
-        <div style="display: flex; gap: 8px;">
-            <button id="open-dashboard-btn" class="icon-btn" title="Open Dashboard" style="font-size: 1rem;">🏠</button>
-            <button id="refresh-auth-btn" class="icon-btn" title="Refresh Sync" style="font-size: 1rem;">↻</button>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <img src="../../icons/logo.svg" alt="logo" style="width: 24px; height: 24px;">
+                <h1 style="margin: 0; font-size: 1.2rem;">OpinionDeck <span
+                        style="font-size: 0.6em; opacity: 0.6; vertical-align: middle;">BETA</span></h1>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button id="open-dashboard-btn" class="icon-btn" title="Open Dashboard"
+                    style="font-size: 1rem;">🏠</button>
+                <button id="refresh-auth-btn" class="icon-btn" title="Refresh Sync" style="font-size: 1rem;">↻</button>
+            </div>
         </div>
     </header>
 
-    <div class="glass-card" id="login-required" style="display: none; text-align: center;">
-        <div class="section-title">Auth Required</div>
-        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 15px;">
-            Please <strong>Sign Up</strong> or <strong>Login</strong> to our web dashboard to sync your extractions.
-        </p>
-        <button id="login-btn" class="primary-btn">Go to Dashboard</button>
-    </div>
-
-    <div class="glass-card" id="extraction-card">
-        <div class="form-group">
-            <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
-                Save to Folder
-                <button id="add-folder-toggle" class="icon-btn" title="New Folder">+</button>
-            </div>
-            <div id="new-folder-input-group" style="display: none; margin-bottom: 10px;">
-                <input type="text" id="new-folder-name" placeholder="Folder name..." class="glass-input">
-                <div style="display: flex; gap: 8px;">
-                    <button id="create-folder-btn" class="secondary-btn" style="flex: 1; padding: 8px;">Create</button>
-                    <button id="cancel-folder-btn" class="secondary-btn" style="width: auto; padding: 8px 12px;"
-                        title="Cancel">✕</button>
-                </div>
-            </div>
-            <select id="folder-select">
-                <option value="default">Default Inbox</option>
-            </select>
-        </div>
-
-        <div id="snapshot-preview" class="snapshot-preview" style="display: none;">
-            <span class="snapshot-title" id="preview-title">Loading...</span>
-            <p class="snapshot-snip" id="preview-snippet"></p>
-        </div>
-
-        <div id="extraction-progress"
-            style="display: none; margin-top: 15px; padding: 12px; background: rgba(99, 102, 241, 0.1); border: 1px dashed var(--primary-color); border-radius: 8px; text-align: center;">
-            <div style="font-size: 0.75rem; font-weight: 600; color: var(--primary-color); margin-bottom: 4px;">
-                Capturing Full
-                Thread...</div>
-            <div id="progress-text" style="font-size: 0.85rem; font-weight: 700;">0 comments collected</div>
-            <div style="font-size: 0.65rem; opacity: 0.6; margin-top: 4px;">Respecting Reddit rate limits...</div>
-        </div>
-
-        <div class="btn-group" style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <button id="extract-only-btn" class="secondary-btn" title="Sync to Cloud" disabled>Save & Keep
-                Browsing</button>
-            <button id="extract-analyse-btn" class="primary-btn" title="Deep AI Analysis" disabled>Save & Analyse
-                →</button>
-        </div>
-
-        <div style="margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px;">
-            <button id="copy-gpt-btn" class="secondary-btn"
-                style="background: rgba(46, 204, 113, 0.1); border-color: rgba(46, 204, 113, 0.2); color: #2ecc71;"
-                disabled>
-                📋 Copy for AI (Free)
-            </button>
-        </div>
-        <p id="error-message"></p>
-    </div>
-
-    <div class="glass-card" id="history-section" style="display: none;">
-        <div class="section-title">Cloud Extractions</div>
-        <div class="history-list" id="history-list">
-            <p style="font-size: 0.7rem; color: var(--text-secondary); text-align: center; padding: 10px;">
-                Checking cloud sync...
+    <div id="extract-view">
+        <div class="glass-card" id="login-required" style="display: none; text-align: center;">
+            <div class="section-title">Auth Required</div>
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 15px;">
+                Please <strong>Sign Up</strong> or <strong>Login</strong> to our web dashboard to sync your extractions.
             </p>
+            <button id="login-btn" class="primary-btn">Go to Dashboard</button>
+        </div>
+
+        <div class="glass-card" id="extraction-card">
+            <div class="form-group">
+                <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
+                    Save to Folder
+                    <button id="add-folder-toggle" class="icon-btn" title="New Folder">+</button>
+                </div>
+                <div id="new-folder-input-group" style="display: none; margin-bottom: 10px;">
+                    <input type="text" id="new-folder-name" placeholder="Folder name..." class="glass-input">
+                    <div style="display: flex; gap: 8px;">
+                        <button id="create-folder-btn" class="secondary-btn"
+                            style="flex: 1; padding: 8px;">Create</button>
+                        <button id="cancel-folder-btn" class="secondary-btn" style="width: auto; padding: 8px 12px;"
+                            title="Cancel">✕</button>
+                    </div>
+                </div>
+                <select id="folder-select">
+                    <option value="default">Default Inbox</option>
+                </select>
+            </div>
+
+            <div id="snapshot-preview" class="snapshot-preview" style="display: none;">
+                <span class="snapshot-title" id="preview-title">Loading...</span>
+                <p class="snapshot-snip" id="preview-snippet"></p>
+            </div>
+
+            <div id="extraction-progress"
+                style="display: none; margin-top: 15px; padding: 12px; background: rgba(99, 102, 241, 0.1); border: 1px dashed var(--primary-color); border-radius: 8px; text-align: center;">
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--primary-color); margin-bottom: 4px;">
+                    Capturing Full
+                    Thread...</div>
+                <div id="progress-text" style="font-size: 0.85rem; font-weight: 700;">0 comments collected</div>
+                <div style="font-size: 0.65rem; opacity: 0.6; margin-top: 4px;">Respecting Reddit rate limits...</div>
+            </div>
+
+            <div class="btn-group" style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <button id="extract-only-btn" class="secondary-btn" title="Sync to Cloud" disabled>Save & Keep
+                    Browsing</button>
+                <button id="extract-analyse-btn" class="primary-btn" title="Deep AI Analysis" disabled>Save & Analyse
+                    →</button>
+            </div>
+
+            <div style="margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px;">
+                <button id="copy-gpt-btn" class="secondary-btn"
+                    style="background: rgba(46, 204, 113, 0.1); border-color: rgba(46, 204, 113, 0.2); color: #2ecc71;"
+                    disabled>
+                    📋 Copy for AI (Free)
+                </button>
+            </div>
+            <p id="error-message"></p>
+        </div>
+
+        <div class="glass-card" id="history-section" style="display: none;">
+            <div class="section-title">Cloud Extractions</div>
+            <div class="history-list" id="history-list">
+                <p style="font-size: 0.7rem; color: var(--text-secondary); text-align: center; padding: 10px;">
+                    Checking cloud sync...
+                </p>
+            </div>
         </div>
     </div>
 
     <script type="module" src="index.ts"></script>
 </body>
+
+</html>
 
 </html>

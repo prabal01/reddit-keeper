@@ -31,6 +31,24 @@ async function getDashboardBase() {
     return storedDashboardUrl || FALLBACK_DASHBOARD;
 }
 
+async function checkBackgroundConnection() {
+    const dot = document.getElementById('connection-dot');
+    const text = document.getElementById('connection-text');
+
+    try {
+        const response = await chrome.runtime.sendMessage({ action: 'PING_BACKGROUND' });
+        if (response && response.status === 'success') {
+            if (dot) dot.className = 'dot active';
+            if (text) text.innerText = 'Connected';
+        } else {
+            throw new Error('Invalid response');
+        }
+    } catch (err) {
+        if (dot) dot.className = 'dot error';
+        if (text) text.innerText = 'Extension Offline';
+    }
+}
+
 async function checkAuth() {
     const authRecord = await chrome.storage.local.get('opinion_deck_token');
     const token = authRecord.opinion_deck_token;
@@ -284,9 +302,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    checkBackgroundConnection();
+
     await checkAuth(); // Ensure visibility is set immediately
     await fetchFolders();
     await fetchFolders();
+    await updateHistory();
+
+    // Tab Switching Logic
+    const tabExtract = document.getElementById('tab-extract');
+    const extractView = document.getElementById('extract-view');
+
+    tabExtract?.addEventListener('click', () => {
+        tabExtract.classList.add('active');
+        extractView!.style.display = 'block';
+    });
+
     await updateHistory();
 
     document.getElementById('open-dashboard-btn')?.addEventListener('click', async () => {
