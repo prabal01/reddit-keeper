@@ -15,8 +15,11 @@ interface SavedThread {
     title: string;
     subreddit: string;
     author: string;
+    commentCount: number;
+    source: string;
     savedAt: string;
     data: any;
+    storageUrl?: string;
 }
 
 export const FolderDetail: React.FC = () => {
@@ -33,11 +36,49 @@ export const FolderDetail: React.FC = () => {
     const [threads, setThreads] = useState<SavedThread[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedThread, setSelectedThread] = useState<any | null>(null);
+    const [fetchingThread, setFetchingThread] = useState(false);
 
     // Analysis State
     const [analyses, setAnalyses] = useState<any[]>([]);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [analysisError, setAnalysisError] = useState<string | null>(null);
+
+    // Helper to select thread with lazy loading
+    const handleSelectThread = async (thread: SavedThread) => {
+        if (thread.data) {
+            setSelectedThread(thread.data);
+            return;
+        }
+
+        if (thread.storageUrl) {
+            setFetchingThread(true);
+            try {
+                const response = await fetch(thread.storageUrl);
+                if (!response.ok) throw new Error("Failed to fetch thread from storage");
+                const fullData = await response.json();
+
+                // Reconstruct the expected object structure for ThreadView
+                const threadObj = {
+                    id: thread.id,
+                    title: thread.title,
+                    post: { title: thread.title, subreddit: thread.subreddit, author: thread.author }, // Minimal fallback
+                    content: fullData,
+                    metadata: {
+                        fetchedAt: thread.savedAt,
+                        toolVersion: "ext-1.0.1",
+                        source: thread.source
+                    }
+                };
+
+                setSelectedThread(threadObj);
+            } catch (err) {
+                console.error("Lazy Load Error:", err);
+                alert("Failed to load thread content from Cloud Storage.");
+            } finally {
+                setFetchingThread(false);
+            }
+        }
+    };
 
     useEffect(() => {
         if (!folderId || !folder) return;
@@ -52,7 +93,7 @@ export const FolderDetail: React.FC = () => {
                 // Deep link selection
                 if (threadId) {
                     const target = data.find((t: any) => t.id === threadId || t.data?.id === threadId);
-                    if (target) setSelectedThread(target.data);
+                    if (target) handleSelectThread(target);
                 }
             }
         });
@@ -64,11 +105,9 @@ export const FolderDetail: React.FC = () => {
         if (!folderId) return;
         fetchFolderAnalysis(folderId)
             .then(data => {
-                // API now returns an array of analyses
                 if (Array.isArray(data)) {
                     setAnalyses(data);
                 } else if (data) {
-                    // Backward compatibility if API wraps or returns single object
                     setAnalyses([data]);
                 }
             })
@@ -120,36 +159,26 @@ export const FolderDetail: React.FC = () => {
         }
     };
 
-    const handleCitationClick = (commentId: string) => {
-        // 1. Find which thread contains this comment
-        // Clean ID (remove "ID:" prefix if present)
+    const handleCitationClick = async (commentId: string) => {
         const cleanId = commentId.replace("ID:", "").trim();
-
-        const targetThread = threads.find(t => {
-            // Need to search deep in the comment tree? 
-            // The SavedThread.data contains the full JSON with comments.
-            // We can do a quick regex check on the stringified data for performance, 
-            // or traverse. String match is faster for "does it exist".
-            return JSON.stringify(t.data).includes(cleanId);
-        });
+        const targetThread = threads.find(t => t.data && JSON.stringify(t.data).includes(cleanId));
 
         if (targetThread) {
-            setSelectedThread(targetThread.data);
-            // Wait for render then scroll
+            await handleSelectThread(targetThread);
             setTimeout(() => {
                 const el = document.getElementById(cleanId);
                 if (el) {
                     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     el.classList.add('highlight-flash');
                     setTimeout(() => el.classList.remove('highlight-flash'), 2000);
-                } else {
-                    console.warn("Element not found after render:", cleanId);
                 }
-            }, 500); // 500ms delay to allow React to render the ThreadView
-        } else {
-            alert(`Could not locate comment ${cleanId} in saved threads.`);
+            }, 500);
         }
     };
+
+    if (fetchingThread) {
+        return <PremiumLoader fullPage text="Downloading from Cloud..." />;
+    }
 
     if (selectedThread) {
         return (
@@ -221,7 +250,7 @@ export const FolderDetail: React.FC = () => {
                 <div className="folder-stats">
                     <span>{threads.length} threads</span>
                     <span>•</span>
-                    <span>{threads.reduce((acc, t) => acc + (t.data.num_comments || 0), 0).toLocaleString()} comments</span>
+                    <span>{threads.reduce((acc, t) => acc + (t.commentCount || 0), 0).toLocaleString()} comments</span>
                     <span>•</span>
                     <span>Created {new Date(folder.createdAt).toLocaleDateString()}</span>
                 </div>
@@ -281,7 +310,7 @@ export const FolderDetail: React.FC = () => {
             ) : (
                 <div className="threads-list">
                     {threads.map(thread => (
-                        <div key={thread.id} className="thread-card" onClick={() => setSelectedThread(thread.data)}>
+                        <div key={thread.id} className="thread-card" onClick={() => handleSelectThread(thread)}>
                             <h3 className="thread-title">{thread.title}</h3>
                             <div className="thread-meta">
                                 <span>r/{thread.subreddit}</span>

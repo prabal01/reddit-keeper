@@ -68,9 +68,9 @@ export function CommentNode({ comment, postAuthor }: CommentNodeProps) {
                         className={`comment-body ${isDeleted ? "deleted" : ""}`}
                         dangerouslySetInnerHTML={{ __html: formatBody(comment.body) }}
                     />
-                    {comment.replies.length > 0 && (
+                    {comment.replies && Array.isArray(comment.replies) && comment.replies.length > 0 && (
                         <div className="comment-replies" role="list" aria-label="Replies">
-                            {comment.replies.map((reply) => (
+                            {comment.replies.map((reply: any) => (
                                 <CommentNode
                                     key={reply.id}
                                     comment={reply}

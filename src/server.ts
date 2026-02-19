@@ -261,23 +261,29 @@ app.get("/api/folders/:id/threads", async (req: express.Request, res: express.Re
             const extractions = await listExtractions(req.user.uid);
 
             // Map ExtractedData -> SavedThread
-            const threads: SavedThread[] = extractions.map(ext => ({
-                id: ext.id,
-                folderId: 'inbox',
-                uid: req.user!.uid,
-                title: ext.title,
-                author: ext.content.post?.author || ext.content.author || 'Unknown',
-                subreddit: ext.content.post?.subreddit || ext.source,
-                savedAt: ext.extractedAt,
-                data: {
-                    post: ext.content.post || { title: ext.title },
-                    content: ext.content,
-                    metadata: {
-                        fetchedAt: ext.extractedAt,
-                        source: ext.source
+            const threads: SavedThread[] = extractions.map(ext => {
+                const commentCount = ext.commentCount || (ext.content?.comments ? countComments(ext.content.comments) : (ext.content?.flattenedComments?.length || 0));
+
+                return {
+                    id: ext.id,
+                    folderId: 'inbox',
+                    uid: req.user!.uid,
+                    title: ext.title,
+                    author: ext.content?.post?.author || ext.post?.author || ext.content?.author || 'Unknown',
+                    subreddit: ext.content?.post?.subreddit || ext.post?.subreddit || ext.source,
+                    commentCount: commentCount,
+                    source: ext.source,
+                    savedAt: ext.extractedAt,
+                    data: {
+                        post: ext.content?.post || ext.post || { title: ext.title },
+                        content: ext.content,
+                        metadata: {
+                            fetchedAt: ext.extractedAt,
+                            source: ext.source
+                        }
                     }
-                }
-            }));
+                };
+            });
             res.json(threads);
         } else {
             const threads = await getThreadsInFolder(req.user.uid, req.params.id as string);
@@ -613,49 +619,91 @@ app.post("/api/extractions", async (req: express.Request, res: express.Response)
 
         // BRIDGE: If a folderId is provided, also save it to the folder's thread list
         // so it appears in the dashboard folder view immediately.
-        if (data.folderId && data.folderId !== 'default') {
+        if (data.folderId) {
             try {
-                // Apply Plan Limits (Truncate comments if on Free plan)
-                const commentLimit = req.user.config.commentLimit; // e.g. 50 or -1
+                console.log(`[Bridge] Attempting to link extraction ${data.id} to folder ${data.folderId}`);
+                let threadPayload;
 
-                // Detect the correct array key (Reddit/Twitter use flattenedComments, G2 uses reviews)
-                let arrayKey = 'flattenedComments';
-                if (Array.isArray(data.content.reviews)) {
-                    arrayKey = 'reviews';
-                } else if (Array.isArray(data.content.comments) && !data.content.flattenedComments) {
-                    arrayKey = 'comments';
-                }
+                if (data.content) {
+                    // Apply Plan Limits (Truncate comments if on Free plan)
+                    const commentLimit = req.user.config.commentLimit;
 
-                let items = data.content[arrayKey] || [];
-                let originalCount = items.length;
-                let truncated = false;
-
-                if (commentLimit > 0 && originalCount > commentLimit) {
-                    console.log(`[Limit] Truncating ${arrayKey} from ${originalCount} to ${commentLimit} for user ${req.user.uid}`);
-                    items = items.slice(0, commentLimit);
-                    truncated = true;
-                }
-
-                // Update the content object with truncated array
-                const updatedContent = { ...data.content };
-                updatedContent[arrayKey] = items;
-                updatedContent.originalCommentCount = originalCount;
-                updatedContent.truncated = truncated;
-
-                // Adapt ExtractedData to what the dashboard expects for ThreadData
-                const threadPayload = {
-                    post: data.content.post || { title: data.title }, // Fallback for G2 which might not have 'post' object
-                    content: updatedContent,
-                    metadata: {
-                        fetchedAt: data.extractedAt,
-                        totalCommentsFetched: items.length,
-                        originalCommentCount: originalCount, // Persist for UI
-                        truncated: truncated,
-                        toolVersion: "ext-1.0.1",
-                        source: data.source
+                    // Detect the correct array key
+                    let arrayKey = 'flattenedComments';
+                    if (Array.isArray(data.content.reviews)) {
+                        arrayKey = 'reviews';
+                    } else if (Array.isArray(data.content.comments)) {
+                        arrayKey = 'comments';
                     }
-                };
+
+                    console.log(`[Bridge] Detected content type: ${arrayKey}`);
+                    let items = data.content[arrayKey] || [];
+                    const originalCount = items.length;
+                    let truncated = false;
+
+                    if (commentLimit > 0 && originalCount > commentLimit) {
+                        console.log(`[Limit] Truncating ${arrayKey} from ${originalCount} to ${commentLimit} for user ${req.user.uid}`);
+                        items = items.slice(0, commentLimit);
+                        truncated = true;
+                    }
+
+                    // Calculate accurate count (recursive for nested structures)
+                    const totalCount = (arrayKey === 'comments')
+                        ? countComments(data.content.comments)
+                        : items.length;
+
+                    // Update the content object with truncated array
+                    const updatedContent = { ...data.content };
+                    updatedContent[arrayKey] = items;
+                    updatedContent.originalCommentCount = totalCount;
+                    updatedContent.truncated = truncated;
+
+                    threadPayload = {
+                        id: data.id,
+                        title: data.title,
+                        post: data.content.post || { title: data.title },
+                        content: updatedContent,
+                        commentCount: truncated ? items.length : totalCount,
+                        source: data.source,
+                        metadata: {
+                            fetchedAt: data.extractedAt || new Date().toISOString(),
+                            totalCommentsFetched: truncated ? items.length : totalCount,
+                            originalCommentCount: totalCount,
+                            truncated: truncated,
+                            toolVersion: "ext-1.1.0",
+                            source: data.source
+                        }
+                    };
+                } else {
+                    // Hybrid Storage case (content is already in storage)
+                    const source = data.source || 'reddit';
+                    const subreddit = data.post?.subreddit || (source === 'reddit' ? 'r/unknown' : source);
+
+                    console.log(`[Bridge] Hybrid Storage link for thread: ${data.id} (Source: ${source}, Folder: ${data.folderId})`);
+
+                    threadPayload = {
+                        id: data.id,
+                        title: data.title,
+                        post: data.post || {
+                            title: data.title,
+                            author: data.author || 'anonymous',
+                            subreddit: subreddit
+                        },
+                        content: null,
+                        commentCount: data.commentCount || 0,
+                        source: source,
+                        storageUrl: data.storageUrl,
+                        metadata: {
+                            fetchedAt: data.extractedAt || new Date().toISOString(),
+                            totalCommentsFetched: data.commentCount || 0,
+                            toolVersion: "ext-1.1.0",
+                            source: source
+                        }
+                    };
+                }
+
                 await saveThreadToFolder(req.user.uid, data.folderId, threadPayload);
+                console.log(`[Bridge] SUCCESS: Thread ${data.id} linked to folder ${data.folderId}`);
             } catch (bridgeErr) {
                 console.error("[Bridge] Failed to link extraction to folder:", bridgeErr);
             }

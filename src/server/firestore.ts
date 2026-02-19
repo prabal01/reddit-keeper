@@ -61,7 +61,7 @@ export function initFirebase(): void {
 
     if (serviceAccount) {
         try {
-            const BUCKET = process.env.FIREBASE_STORAGE_BUCKET || 'redditkeeperprod.appspot.com';
+            const BUCKET = process.env.FIREBASE_STORAGE_BUCKET || 'redditkeeperprod.firebasestorage.app';
             initializeApp({
                 credential: cert(serviceAccount),
                 storageBucket: BUCKET
@@ -141,6 +141,8 @@ export interface SavedThread {
     title: string;
     author: string;
     subreddit: string;
+    commentCount: number;
+    source: string;
     data: any; // Full thread JSON snapshot
     storageUrl?: string; // Pointer to external storage
     savedAt: string;
@@ -396,6 +398,8 @@ export async function saveThreadToFolder(uid: string, folderId: string, threadDa
         title: threadData.title || threadData.post?.title || "Untitled",
         author: threadData.author || threadData.post?.author || "anonymous",
         subreddit: threadData.subreddit || threadData.post?.subreddit || "r/unknown",
+        commentCount: threadData.commentCount || 0,
+        source: threadData.source || "reddit",
         data: threadData.storageUrl ? null : threadData,
         storageUrl: threadData.storageUrl || null,
         savedAt: new Date().toISOString(),
@@ -545,6 +549,8 @@ export interface ExtractedData {
     url: string;
     title: string;
     content: any; // Raw platform-specific data
+    post?: any; // Skeleton metadata for listing (hybrid storage)
+    commentCount?: number; // Pre-calculated count (hybrid storage)
     storageUrl?: string;
     extractedAt: string;
     folderId?: string;

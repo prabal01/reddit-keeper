@@ -51,15 +51,15 @@ export function ThreadView({ thread }: ThreadViewProps) {
                     <span className="meta-sep" aria-hidden="true">•</span>
                     <span className="post-author">{post.author}</span>
                     <span className="meta-sep" aria-hidden="true">•</span>
-                    <span className="post-score" aria-label={`${post.score} points`}>
-                        ↑ {post.score}
+                    <span className="post-score" aria-label={`${post.score || 0} points`}>
+                        ↑ {post.score || 0}
                     </span>
-                    <span className="post-ratio" aria-label={`${Math.round(post.upvoteRatio * 100)}% upvoted`}>
-                        ({Math.round(post.upvoteRatio * 100)}%)
+                    <span className="post-ratio" aria-label={`${Math.round((post.upvoteRatio || 1) * 100)}% upvoted`}>
+                        ({Math.round((post.upvoteRatio || 1) * 100)}%)
                     </span>
                     <span className="meta-sep" aria-hidden="true">•</span>
-                    <time dateTime={new Date(post.createdUtc * 1000).toISOString()}>
-                        {formatDate(post.createdUtc)}
+                    <time dateTime={new Date((post.createdUtc || 0) * 1000).toISOString()}>
+                        {formatDate(post.createdUtc || 0)}
                     </time>
                 </div>
 
@@ -97,7 +97,20 @@ export function ThreadView({ thread }: ThreadViewProps) {
             {/* Comments Section */}
             <section className="comments-section" aria-label="Comments">
                 <h2 className="comments-heading">
-                    {(metadata?.totalCommentsFetched || displayComments.length)} Comments
+                    {(() => {
+                        const metadataCount = metadata?.totalCommentsFetched || 0;
+                        if (metadataCount > 0) return metadataCount;
+
+                        // Recursive fallback if metadata is missing/wrong
+                        const countAll = (nodes: any[]): number => {
+                            let total = 0;
+                            for (const n of nodes) {
+                                total += 1 + countAll(n.replies || []);
+                            }
+                            return total;
+                        };
+                        return countAll(displayComments);
+                    })()} Comments
                 </h2>
 
                 {displayComments.length === 0 ? (

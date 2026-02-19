@@ -6,12 +6,29 @@ const FALLBACK_DASHBOARD = import.meta.env.VITE_DASHBOARD_URL;
 
 async function getApiBase() {
     const record = await chrome.storage.local.get('opinion_deck_api_url');
-    return record.opinion_deck_api_url || FALLBACK_API;
+    let storedApiUrl = record.opinion_deck_api_url;
+
+    // Safety check: Ignore stale Railway.app URLs
+    if (storedApiUrl && storedApiUrl.includes('railway.app')) {
+        console.log(`[OpinionDeck] Ignoring stale popup API URL: ${storedApiUrl}`);
+        chrome.storage.local.remove('opinion_deck_api_url');
+        storedApiUrl = null;
+    }
+
+    const base = (storedApiUrl || FALLBACK_API).replace(/\/$/, '');
+    return base.endsWith('/api') ? base : `${base}/api`;
 }
 
 async function getDashboardBase() {
     const record = await chrome.storage.local.get('opinion_deck_dashboard_url');
-    return record.opinion_deck_dashboard_url || FALLBACK_DASHBOARD;
+    let storedDashboardUrl = record.opinion_deck_dashboard_url;
+
+    if (storedDashboardUrl && storedDashboardUrl.includes('railway.app')) {
+        chrome.storage.local.remove('opinion_deck_dashboard_url');
+        storedDashboardUrl = null;
+    }
+
+    return storedDashboardUrl || FALLBACK_DASHBOARD;
 }
 
 async function checkAuth() {
@@ -118,17 +135,19 @@ async function fetchFolders() {
         if (folders.length > 0) {
             select.innerHTML = folders.map((f: any) => `
                 <option value="${f.id}">${f.name}</option>
-            `).join('') + '<option value="default">Default Inbox</option>';
+            `).join('');
 
             // Restore last used folder
             const storage = await chrome.storage.local.get('lastUsedFolderId');
             if (storage.lastUsedFolderId) {
                 // Verify the folder still exists
-                const folderExists = folders.some((f: any) => f.id === storage.lastUsedFolderId) || storage.lastUsedFolderId === 'default';
+                const folderExists = folders.some((f: any) => f.id === storage.lastUsedFolderId);
                 if (folderExists) {
                     select.value = storage.lastUsedFolderId;
                 }
             }
+        } else {
+            select.innerHTML = '<option value="" disabled selected>Create a folder first...</option>';
         }
     } catch (err) {
         console.error('Failed to fetch folders');
@@ -323,22 +342,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (errorEl) errorEl.style.display = 'none';
 
         try {
+            const folderSelect = document.getElementById('folder-select') as HTMLSelectElement;
+            const folderId = folderSelect?.value;
+
+            if (!folderId) {
+                throw new Error('Please select or create a folder first.');
+            }
+
             const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
             if (!activeTab.id) throw new Error('No active tab');
 
             const response = await chrome.tabs.sendMessage(activeTab.id, { action: 'EXTRACT_DATA' });
 
             if (response && response.data) {
-                const folderId = (document.getElementById('folder-select') as HTMLSelectElement)?.value;
-
                 // Remember this folder for next time
-                if (folderId) {
-                    chrome.storage.local.set({ lastUsedFolderId: folderId });
-                }
+                chrome.storage.local.set({ lastUsedFolderId: folderId });
 
                 const extractionData = {
                     ...response.data,
-                    folderId: folderId === 'default' ? undefined : folderId,
+                    folderId: folderId,
                     shouldAnalyze: shouldRedirect // Auto-trigger analysis if redirecting
                 };
 
@@ -392,6 +414,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     saveOnlyBtn?.addEventListener('click', () => performSave(false));
     saveAnalyseBtn?.addEventListener('click', () => performSave(true));
+
+    // Handle progress updates from background
+    chrome.runtime.onMessage.addListener((message) => {
+        if (message.type === 'DEEP_FETCH_PROGRESS') {
+            const progressArea = document.getElementById('extraction-progress');
+            const progressText = document.getElementById('progress-text');
+            if (progressArea) progressArea.style.display = 'block';
+            if (progressText) progressText.innerText = `${message.count} comments collected`;
+        }
+    });
 
     document.getElementById('copy-gpt-btn')?.addEventListener('click', async () => {
         const copyBtn = document.getElementById('copy-gpt-btn') as HTMLButtonElement;

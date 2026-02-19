@@ -15,7 +15,7 @@
     <header style="display: flex; align-items: center; justify-content: space-between; padding: 15px;">
         <div style="display: flex; align-items: center; gap: 10px;">
             <img src="../../icons/logo.svg" alt="logo" style="width: 24px; height: 24px;">
-            <h1 style="margin: 0; font-size: 1.2rem;">OpinionDeck <span
+            <h1 style="margin: 0; font-size: 1.2rem;">OpinionDeck BETA <span
                     style="font-size: 0.6em; opacity: 0.6; vertical-align: middle;">BETA</span></h1>
         </div>
         <div style="display: flex; gap: 8px;">
@@ -54,6 +54,15 @@
         <div id="snapshot-preview" class="snapshot-preview" style="display: none;">
             <span class="snapshot-title" id="preview-title">Loading...</span>
             <p class="snapshot-snip" id="preview-snippet"></p>
+        </div>
+
+        <div id="extraction-progress"
+            style="display: none; margin-top: 15px; padding: 12px; background: rgba(99, 102, 241, 0.1); border: 1px dashed var(--primary-color); border-radius: 8px; text-align: center;">
+            <div style="font-size: 0.75rem; font-weight: 600; color: var(--primary-color); margin-bottom: 4px;">
+                Capturing Full
+                Thread...</div>
+            <div id="progress-text" style="font-size: 0.85rem; font-weight: 700;">0 comments collected</div>
+            <div style="font-size: 0.65rem; opacity: 0.6; margin-top: 4px;">Respecting Reddit rate limits...</div>
         </div>
 
         <div class="btn-group" style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">

@@ -41,7 +41,7 @@ jobs:
               REDIS_URL: process.env.REDIS_URL,
               GEMINI_API_KEY: process.env.GEMINI_API_KEY,
               FIREBASE_SERVICE_ACCOUNT: process.env.FIREBASE_SERVICE_ACCOUNT,
-              FIREBASE_STORAGE_BUCKET: "redditkeeperprod.appspot.com"
+              FIREBASE_STORAGE_BUCKET: "redditkeeperprod.firebasestorage.app"
             };
             fs.writeFileSync("env.json", JSON.stringify(env));
           '
