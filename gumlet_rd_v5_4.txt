@@ -1,0 +1,136 @@
+
+🚀 Starting R&D Iteration 5.4 for: gumlet
+-----------------------------------
+
+🔍 Searching: title:gumlet + frustrated...
+   ⚠️ No quality results found for this query.
+
+🔍 Searching: title:gumlet + alternative...
+   ⚠️ No quality results found for this query.
+
+🔍 Searching: title:gumlet + vs...
+   ⚠️ No quality results found for this query.
+
+🔍 Searching: title:gumlet + review...
+   ⚠️ No quality results found for this query.
+
+🔍 Searching: title:gumlet + sucks...
+   ⚠️ No quality results found for this query.
+
+🔍 Searching: "gumlet" + annoying...
+   ⚠️ No quality results found for this query.
+
+🔍 Searching: "gumlet" + problems...
+   ⚠️ No quality results found for this query.
+
+🔍 Searching: "gumlet" + billing...
+   ⚠️ No quality results found for this query.
+
+🔍 Searching: "gumlet" + support...
+   ⚠️ No quality results found for this query.
+
+🔍 Searching: "gumlet" alternative...
+   ✨ Top 10 for this query:
+   1. [15130] r/SaaS | We power 2Mn+ hours of video views/mo. AMA about scaling infra, handling downtime, and competing with Vimeo
+   2. [5420] r/vimeo | Alternatives to Vimeo
+   3. [5250] r/Cinema8 | Welcome to r/Cinema8: A practical guide to video hosting, security and AI video workflows
+
+🔍 Searching: "gumlet" suck...
+   ✨ Top 10 for this query:
+   1. [4300] r/patreon | The Ultimate "Patreon Doesn't Work With Any Video Hosting Site" Thread
+   2. [3640] r/animationcareer | Demoreel hosting service recommendations
+
+🔍 Searching: "gumlet" annoying...
+   ⚠️ No quality results found for this query.
+
+🔍 Searching: "gumlet" review...
+   ✨ Top 10 for this query:
+   1. [5420] r/vimeo | Alternatives to Vimeo
+   2. [4520] r/GooglePixel | Photo processing issues/raised shadows/weird contrast (still) a problem on Pixel 9 (pro)?
+   3. [3270] r/patreon | New UI Glitching My Video Posts
+   4. [-12650] r/lifetimememberdeals | Best software Black Friday lifetime deals?
+
+🔍 Searching: "gumlet"...
+   ✨ Top 10 for this query:
+   1. [31000] r/gumlet | Spring Product Updates 2025: Be Productive with Gumlet
+   2. [21040] r/gumlet | vimeo import requires standard account
+   3. [20500] r/gumlet | Live stream is here!
+   4. [15130] r/SaaS | We power 2Mn+ hours of video views/mo. AMA about scaling infra, handling downtime, and competing with Vimeo
+   5. [14500] r/appsumo | Experience with Gumlet?
+   6. [11870] r/SaaS | AMA - We grew our Video Hosting product by 200% in 2024 with SEO, referrals and ads
+   7. [11040] r/SaaS | We just had a SaaS client triple their retainer — 20% of their inbound revenue now comes from ChatGPT.
+   8. [10530] r/SaaS | I Tested LLM SEO for Months. Here’s How to Rank in AI Generated Results
+   9. [6250] r/videohosting | Why SaaS founders underestimate video hosting (until it breaks)?
+   10. [5420] r/vimeo | Alternatives to Vimeo
+
+🏆 TOP 30 RESULTS (ITERATION 5.4):
+===================================
+1. [ 31000] r/gumlet          | Spring Product Updates 2025: Be Productive with Gumlet
+   💡 Exact Sub: +20000 | Context (2/2): +1000 | Title: +10000 | Engagement (Capped): +0
+---
+2. [ 21040] r/gumlet          | vimeo import requires standard account
+   💡 Exact Sub: +20000 | BodyWeight: 0.5x | Context (4/4): +1000 | Engagement (Capped): +40
+---
+3. [ 20500] r/gumlet          | Live stream is here!
+   💡 Exact Sub: +20000 | BodyWeight: 0.5x | Context (2/2): +500 | Engagement (Capped): +0
+---
+4. [ 15130] r/SaaS            | We power 2Mn+ hours of video views/mo. AMA about scaling infra, handling downtime, and competing with Vimeo
+   💡 Quality Sub: +10000 | BodyWeight: 0.5x | Intent (3/3): +3000 | Context (5/5): +1250 | Engagement (Capped): +880
+---
+5. [ 14500] r/appsumo         | Experience with Gumlet?
+   💡 Intent (2/2): +4000 | Title: +10000 | Engagement (Capped): +500
+---
+6. [ 11870] r/SaaS            | AMA - We grew our Video Hosting product by 200% in 2024 with SEO, referrals and ads
+   💡 Quality Sub: +10000 | BodyWeight: 0.5x | Context (5/7): +1250 | Engagement (Capped): +620
+---
+7. [ 11040] r/SaaS            | We just had a SaaS client triple their retainer — 20% of their inbound revenue now comes from ChatGPT.
+   💡 Quality Sub: +10000 | BodyWeight: 0.5x | Context (4/4): +1000 | Engagement (Capped): +40
+---
+8. [ 10530] r/SaaS            | I Tested LLM SEO for Months. Here’s How to Rank in AI Generated Results
+   💡 Quality Sub: +10000 | BodyWeight: 0.5x | Intent (4/4): +4000 | Context (5/8): +1250 | DensityPenalty: -5000 | Engagement (Capped): +280
+---
+9. [  6250] r/videohosting    | Why SaaS founders underestimate video hosting (until it breaks)?
+   💡 BodyWeight: 0.5x | Intent (3/3): +3000 | Context (5/5): +1250 | Engagement (Capped): +0 | Recent (90d): +2000
+---
+10. [  5420] r/vimeo           | Alternatives to Vimeo
+   💡 BodyWeight: 0.5x | Intent (4/4): +4000 | Context (2/2): +500 | Engagement (Capped): +920
+---
+11. [  5250] r/Cinema8         | Welcome to r/Cinema8: A practical guide to video hosting, security and AI video workflows
+   💡 BodyWeight: 0.5x | Intent (2/2): +2000 | Context (5/7): +1250 | Engagement (Capped): +0 | Recent (90d): +2000
+---
+12. [  4520] r/GooglePixel     | Photo processing issues/raised shadows/weird contrast (still) a problem on Pixel 9 (pro)?
+   💡 BodyWeight: 0.5x | Intent (4/4): +4000 | Context (2/2): +500 | Engagement (Capped): +20
+---
+13. [  4300] r/patreon         | The Ultimate "Patreon Doesn't Work With Any Video Hosting Site" Thread
+   💡 BodyWeight: 0.5x | Intent (3/3): +3000 | Context (2/2): +500 | Engagement (Capped): +800
+---
+14. [  3760] r/vfx             | Demo Reel hosting website recommendations
+   💡 BodyWeight: 0.5x | Intent (3/3): +3000 | Context (2/2): +500 | Engagement (Capped): +260
+---
+15. [  3640] r/animationcareer | Demoreel hosting service recommendations
+   💡 BodyWeight: 0.5x | Intent (3/3): +3000 | Context (2/2): +500 | Engagement (Capped): +140
+---
+16. [  3270] r/patreon         | New UI Glitching My Video Posts
+   💡 BodyWeight: 0.5x | Intent (3/3): +3000 | Context (1/1): +250 | Engagement (Capped): +20
+---
+17. [  1370] r/patreon         | Help - Wistia Videos Showing Up Too Big In My Patreon Posts
+   💡 BodyWeight: 0.5x | Intent (1/1): +1000 | Context (1/1): +250 | Engagement (Capped): +120
+---
+18. [  1290] r/gamification    | Questika - Goal-Setting Game
+   💡 BodyWeight: 0.5x | Intent (1/1): +1000 | Context (1/1): +250 | Engagement (Capped): +40
+---
+19. [  1250] r/CardGamer       | Questika - Goal-Setting Game
+   💡 BodyWeight: 0.5x | Intent (1/1): +1000 | Context (1/1): +250 | Engagement (Capped): +0
+---
+20. [   840] r/Re_Zero         | Help me finish the Power Ranking [spoiler discussion]
+   💡 BodyWeight: 0.5x | Context (2/2): +500 | Engagement (Capped): +340
+---
+21. [   690] r/seogrowth       | I Tested LLM SEO for Months. Here’s How to Rank in AI Generated Results
+   💡 BodyWeight: 0.5x | Intent (4/4): +4000 | Context (5/8): +1250 | DensityPenalty: -5000 | Engagement (Capped): +440
+---
+22. [ -4250] r/buildapc        | Can't figure out if it is the PSU's problem for whine during PC shutting down
+   💡 BodyWeight: 0.5x | Context (3/3): +750 | DensityPenalty: -5000 | Engagement (Capped): +0
+---
+23. [-12650] r/lifetimememberdeals | Best software Black Friday lifetime deals?
+   💡 BodyWeight: 0.5x | Intent (1/1): +1000 | Context (5/5): +1250 | ListiclePenalty: -15000 | Engagement (Capped): +100
+---

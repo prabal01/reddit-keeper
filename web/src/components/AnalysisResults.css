@@ -29,17 +29,18 @@
     gap: 1.5rem;
 }
 
-.analysis-header h2 {
-    font-size: 1.75rem;
+.analysis-header h2.strategic-title {
+    font-size: 1.85rem;
     margin: 0;
-    font-weight: 800;
+    font-weight: 900;
+    letter-spacing: -0.02em;
     background: linear-gradient(135deg, #FF4500 0%, #FF8717 100%);
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
 }
 
 .analysis-header h2::before {
@@ -171,8 +172,14 @@
 
 .analysis-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: 1.5rem;
+}
+
+@media (max-width: 1100px) {
+    .analysis-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* THEMES */
@@ -585,4 +592,277 @@
 
 .btn-text:hover {
     text-decoration: underline;
+}
+
+/* ==============================
+   STRATEGIC BLUEPRINT COMPONENTS
+   ============================== */
+
+.section-badge {
+    display: inline-block;
+    padding: 6px 14px;
+    background: rgba(255, 69, 0, 0.1);
+    color: #FF4500;
+    border-radius: 30px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 1.5rem;
+    border: 1px solid rgba(255, 69, 0, 0.2);
+}
+
+.attack-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+}
+
+.attack-card {
+    background: var(--bg-card);
+    padding: 1.5rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    position: relative;
+    overflow: hidden;
+}
+
+.attack-card .card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    margin-bottom: 1rem;
+    letter-spacing: 0.05em;
+}
+
+.attack-card.frustration {
+    border-top: 4px solid #ef4444;
+}
+
+.attack-card.failure {
+    border-top: 4px solid #f59e0b;
+}
+
+.attack-card.opportunity {
+    border-top: 4px solid #3b82f6;
+}
+
+.attack-card p {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+/* Pain Points Aggressive */
+.pain-points-aggressive {
+    grid-column: 1 / -1;
+}
+
+.pain-list-aggressive {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+}
+
+.pain-item-aggressive {
+    background: var(--bg-tertiary);
+    padding: 1.5rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-light);
+}
+
+.pain-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+
+.intensity-badge {
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.intensity-badge.high {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.intensity-badge.medium {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.intensity-badge.low {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.raw-quote {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    background: rgba(0, 0, 0, 0.03);
+    padding: 8px 12px;
+    border-radius: 6px;
+    border-left: 3px solid var(--border);
+    margin-top: 10px;
+    line-height: 1.4;
+}
+
+/* Feature Gaps & Build Priorities */
+.gap-item,
+.priority-item {
+    background: var(--bg-tertiary);
+    padding: 1.25rem;
+    border-radius: var(--radius-md);
+    margin-bottom: 1rem;
+    border: 1px solid var(--border-light);
+}
+
+.gap-header,
+.priority-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.rank-num {
+    width: 24px;
+    height: 24px;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 800;
+}
+
+/* Weakness Map */
+.weakness-item {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.comp-name {
+    font-weight: 900;
+    color: var(--primary-color);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 8px;
+}
+
+/* Messaging Angles */
+.angles-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+}
+
+.angle-item {
+    background: var(--bg-card);
+    padding: 1.25rem;
+    border-radius: var(--radius-md);
+    border: 1px dashed var(--primary-color);
+}
+
+.angle-name {
+    font-weight: 800;
+    color: var(--text-primary);
+    display: block;
+    margin-bottom: 6px;
+}
+
+/* Risk Flags */
+.risk-item {
+    background: #fffafa;
+    border: 1px solid #fee2e2;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+}
+
+.risk-item strong {
+    color: #991b1b;
+}
+
+/* Metrics Footer */
+.analysis-footer {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border-light);
+    opacity: 0.6;
+}
+
+.metadata-tag {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+}
+
+/* 90-Day Launch Roadmap */
+.launch-90-days {
+    grid-column: 1 / -1;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.03) 0%, rgba(168, 85, 247, 0.03) 100%);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    box-shadow: 0 10px 30px -10px rgba(99, 102, 241, 0.1);
+}
+
+.launch-tactics-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.tactic-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tactic-item label {
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: var(--primary-color);
+    letter-spacing: 0.05em;
+    opacity: 0.8;
+}
+
+.tactic-value {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.4;
+}
+
+@media (max-width: 900px) {
+    .launch-tactics-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.card-header-accent.priority {
+    background: linear-gradient(135deg, #6366f1, #a855f7);
+    color: white;
+}
+
+.card-header-accent.priority .metadata-tag {
+    background: var(--bg-tertiary);
+    border-radius: 6px;
 }

@@ -1,0 +1,372 @@
+[dotenv@17.3.1] injecting env (2) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+✅ Firebase initialized successfully with Storage.
+📦 Exporting ALL threads from folders: ThePrqeXS8kXmuG56nRk...
+🧵 Found 11 threads in folder ThePrqeXS8kXmuG56nRk.
+
+================ MASTER PROMPT START ================
+
+I am providing multiple Reddit threads below for deep competitive analysis.
+
+
+--- THREAD START ---
+Title: AMA - We grew our Video Hosting product by 200% in 2024 with SEO, referrals and ads
+Subreddit: r/SaaS
+[ID:misb57t] u/ap-oorv: How did you get your first 1,000 customers? Was it all SEO/ads or did you have some crazy growth hack?
+
+[ID:miscz6j] u/[deleted]: [deleted]
+
+[ID:misdlzr] u/Stunning_Public9524: Video Hosting seems like a super competitive space with YouTube, Vimeo, Cloudflare, Stream,etc. What made you guys think there was room for another player?
+
+[ID:misenoi] u/Used-Call-3503: How did you manage to do all your GTM in house? Was it mainly you doing outbound ? How did you get the right leads?
+
+[ID:misf3gy] u/veryhot_wheels: How does Gumlet prevent my videos from downloading or getting pirated?
+
+[ID:misfn4y] u/mtkochikunnel: What is the biggest mistake you made?
+
+[ID:mish061] u/Key-Boat-7519: Oh, Gumlet's magical formula of growth: sprinkle a bit of SEO, add a dash of referrals, shake it up with ads, and voilà, 200% growth! Sounds like a fairy tale every SaaS founder wishes to star in. I've dabbled in the mysterious arts of SaaS growth myself, trying everything from SEO spells to referral bribes. While juggling these, have you tried integrating tracking with Asana for KPI management? I've found it surprisingly tedious but also weirdly satisfying. Managed to survive without going crazy, mostly thanks to Pulse for Reddit which keeps me sane monitoring Reddit discussions while Asana keeps my team on track. And oh, feedback from Appsumo users? Must have felt like unsolicited advice from a nosy neighbor. But hey, sometimes those pearls of wisdom do lead to golden growth. Glad it worked out for you! Who knew Vimeo’s pickiness would be such a golden opportunity, right?
+
+[ID:mishvn5] u/CountOfMC799: What’s the toughest challenge in building a video hosting startup?
+
+[ID:misgl4m] u/mansuri_zain: Gumlet looks solid, and honestly, I’m sick of Vimeo’s pricing model. If I switch, do you guys offer any migration support? Also, is there a discount for AMA folks?
+
+[ID:miso9xp] u/Nmascara: How much does it actually cost to serve 1M video views on Gumlet vs. Vimeo?   Give me real numbers not vague ‘CHEAPER THAN VIMEO’ claims.
+
+[ID:mknkrwd] u/UnusualProperty9124: Thanks for sharing!  I'd love to better understand the specific use cases you're targeting and how critical live streaming is within those contexts.      Additionally, what's your perspective on the importance of providing dedicated UI and video solutions tailored specifically for developers and technical personas?
+
+[ID:nr9jcel] u/Dangerous_Wrangler51: Do you think gumlet offer better drm technology than vdocipher? Does gumlet protect videos better than vdocipher?
+
+[ID:misg2lg] u/[deleted]: why is DRM so highly priced its the only thing course makers would need and there video hosting platforms who gave you DRM support with 19 $ per month your cheapest pricing , BS
+
+--- THREAD END ---
+
+--- THREAD START ---
+Title: We power 2Mn+ hours of video views/mo. AMA about scaling infra, handling downtime, and competing with Vimeo
+Subreddit: r/SaaS
+[ID:mzvpz22] u/ap-oorv: I’m not a dev but love tinkering. Would I be able to set this up solo for a small paid video course? Or is it more for big teams?
+
+[ID:mzvy7bb] u/Positive_Victory_884: What's your tech stack?
+
+[ID:mzvp9i2] u/grayshubham: Cold emails led to big SaaS deals?! Can you share what worked for you:- subject lines, tools, targeting?
+
+[ID:mzvq82e] u/veryhot_wheels: I’ve been considering moving off Vimeo for a while now. Especially because their pricing and limits have become insanely costly. How does Gumlet compare on bandwidth, storage, and DRM?
+
+[ID:mzvrf0m] u/Stock-Magician7793: Love the lean approach! How did you convince early customers to trust you with video infra when you were just starting out?
+
+[ID:mzvs4u6] u/Ayushrmaaa: Have you seen folks switch from Wistia too, or is it mostly Vimeo migrations? Asking because I'm working with an early-stage SaaS platform and we're tired of Wistia’s overpricing and limited controls.
+
+[ID:mzvteeh] u/CountOfMC799: For devs building their own LMS, what’s the integration like? Do you offer SDKs or frontend components?
+
+[ID:mzvuy4j] u/mansuri_zain: If someone wanted to build a full clone of YouTube or Coursera using Gumlet, is that doable? What are the technical limitations?
+
+[ID:mzvv8n9] u/LowSkillKillBill: Can you talk more about DRM? Is it tokenized access or some other encryption?
+
+[ID:mzvvzfx] u/Nmascara: We’re exploring alternatives to Mux or Vimeo for our upcoming course platform. Can Gumlet handle ~5K concurrent streams?
+
+[ID:mzvw5i4] u/Mysterious-Train8950: 80+ countries is wild. What markets surprised you the most in terms of adoption? I imagine India and the US, but France and Brazil too?
+
+[ID:mzvww04] u/Not_Uranium: What kind of video metrics does Gumlet track for video? Is it possible to build custom dashboards?
+
+[ID:mzvxb8d] u/mtkochikunnel: Been noticing Gumlet results show up in ChatGPT and Perplexity. How did that happen?
+
+[ID:mzw0qip] u/[deleted]: [removed]
+
+[ID:mzwgc2t] u/rebroadcastr: Can you expand on:  -  "And most of our growth has been via cold email."  -  "Cold outreach that actually led to paid SaaS deals"  -  "Building trust with large customers as a small team"  What strategies or approaches did you use to succeed with cold outreach? Did you simply search for businesses online and send them emails, or were there other techniques involved? Really enjoyed your post, thanks for sharing.
+
+[ID:mzwtl5b] u/Stunning_Public9524: When did you realize Gumlet could become a real Vimeo alternative and not just a side product?
+
+[ID:mzxbxn3] u/imagiself: Hey Divyesh, for getting the word out about Gumlet, you might find PeerPush helpful for peer-powered discovery: [https://peerpush.net](https://peerpush.net)
+
+[ID:n8gcejd] u/abhiramskrishna: Good alternative for vimeo, lifetime deal is still on?
+
+[ID:npcx0d4] u/JRM_Insights: This is a great AMA, thanks for doing this! Scaling with a lean team is huge.  You're focused heavily on the core infra (delivery, encoding, DRM), which is essential. My question is strategic: **How do you advise customers who want to skip the dev work entirely and need a fully white-labeled, pre-built monetization layer and native mobile/TV apps right out of the box?**  That full-stack solution often saves huge developer costs for SaaS and course platforms, which is the main alternative to an API-first infra platform like Gumlet.  **(Disclosure: I work for a company that uses** [**Muvi**](https://www.muvi.com/) **for video hosting and OTT solutions.)**
+
+--- THREAD END ---
+
+--- THREAD START ---
+Title: Did Vimeo just started charging to remove its logo from embedded videos?
+Subreddit: r/vimeo
+[ID:nc8389d] u/Vimean22: Hi, thank you for this feedback. We had an internal review of this change and made the decision to roll this back.
+
+[ID:nc7dpyd] u/AutoModerator: Hello, and welcome to r/Vimeo! This is a subreddit for the Vimeo community, but it is not a support forum. If you are looking for support, please check our Help Center: https://help.vimeo.com/  If you're having trouble finding the answer in the Help Center, use the *Contact Us* link at the top of the page to reach out to the support team directly.  *I am a bot, and this action was performed automatically. Please [contact the moderators of this subreddit](/message/compose/?to=/r/vimeo) if you have any questions or concerns.*
+
+--- THREAD END ---
+
+--- THREAD START ---
+Title: FED UP WITH VIMEO
+Subreddit: r/vimeo
+[ID:nmvzbup] u/ParchutingPanda: it's brutal, it seems like they change the UI mid-upload sometimes 😂
+
+[ID:nmycbv5] u/brohebus: I used and recommended Vimeo for years and over the last 18 months (when Vimeo seems to have stopped performing any type of support) have moved clients to bunny.net for streaming delivery.
+
+[ID:nn15855] u/mikeski1976: It makes no sense that I have people who have their wedding links from r years abd TBH I know they are lazy for not downloading their films, but this is the world we live in. Now it's how many years later and I keep getting msg after ksg about how they can no longer access their folders..... Now I have to stop what I'm doing and figure out how to send them the access to the folder and worry about how they are gonna download everything and figure out the tech support for that mess as well...............
+
+[ID:nn1kjgz] u/philipp_roth: When discussing the bending spoons thing in this sub, we came up with that list to alternatives for Vimeo ...  * **(Self Host** your stuff) * **Mux** – developer-level infrastructure, embed/control everything. * **Bunny Net** \- good CDN, dev friendly, cheap * **Cloudflare Stream** – dev-friendly, clean API-based hosting. * **PeerTube** – open-source &amp; decentralized, more DIY but community-driven. * **Wistia** – business/marketing focus, strong analytics. * **Ignite Video** – alternative from Europe, privacy friendly, focused on hosting for websites * **Frame io** **(Adobe)** – pro collab &amp; editing integration, team-focused. * **Vidyard** \- great for Marketing * ... YouTube, uScreen, Flowplayer, SproutVideo,...  Depends in the end a lot on the use case. Maybe your good with frame io or "just" a file hoster?? Not so good for watching content but unlikely that they change something like folder sharing.
+
+[ID:nmw5ajd] u/Vimean22: Hi! I'd like to help if I may - Vimeo did recently update link and folder sharing, giving you more control than ever. You do not need to add people to a team to share a folder with them.  Here's the article for creating and customizing folder sharing: [https://help.vimeo.com/hc/en-us/articles/40300148080657-How-to-share-a-folder-of-videos-for-external-review](https://help.vimeo.com/hc/en-us/articles/40300148080657-How-to-share-a-folder-of-videos-for-external-review)  Me and the team want to make sure you have what you need. feel free to DM me if you need to be put in touch with support.   u/TabascoWolverine extending URL formats help to address three common customer requests:    1. Increase protection vs. AI scraping   2. Allow for expiring links   3. give customers more control and flexibility when creating share links  Hopefully these benefits out weigh the inconvenience from longer URLs.
+
+[ID:nmx2wyb] u/legittimo: If you’re only sharing final deliverables with clients for private viewing then I would greatly recommend Frame io.
+
+[ID:nmyvajg] u/Buckledcranium: Not to mention the entire curated front end user experience where we could browse, discover, and comment on other users videos was unceremoniously removed with the site stripped down to little more than a video hosting platform. I went from recommending Vimeo to everyone to suggesting folks stick with YouTube. Corporate greed and mismanagement personified.
+
+[ID:nn3npso] u/mikeski1976: Update : I believe I figured a workaround to give clients access to all the videos within their specific folders that I previously had sent them within the past few months to a year. You go into the folder and then add their specific email as a team member. This will give them access to view, share and download the videos only within that specific folder.
+
+[ID:nmuxpuy] u/TabascoWolverine: They've really screwed the pooch on so many levels. With no rhyme or reason.   I won't even go on my rant about them recently extending the share URL formatting structure AGAIN.   It's as-if they want to turn off all professionals.
+
+[ID:nn3lxd8] u/Nomadness: I was commenting just the other day that Vimeo's user interface would make Don Norman cry. I have had a paid account for about a decade, and every time I need to do something I have to poke around to find out where it lives at the moment. Turning off auto renew, and I've already started the migration. This used to be the best way to host videos for my blog, none of the tempting links and ads of youtube, just good clean reliable maximum quality hosting. Those were the days. I didn't even mind the lack of organic traffic since the embedding tools were so good.
+
+[ID:nn4td9s] u/Brilliant-Diver-5699: I’m really liking frame.io for sharing folders with clients.
+
+[ID:nn56hry] u/unrulymystic: I am now posting to YouTube as being more practical and cheaper without all the extras being thrown at me to justify paying more to Vimeo. After more than a decade, I didn’t renew my subscription.
+
+[ID:nn6162w] u/Wolfmaan01: My latest, and last experience with Vimeo was this: they emailed me advising me they are holding my 211 videos for ransom. If I don’t pay them, they will delete them all. I could not even get a list of the videos they had. I ended up paying the ransom fee, Downloading them all over a couple days, deleting them and closing my account. There are dozens of free hosting services today. Including YouTube, bitchute, dailymotion, even TikTok to a degree.
+
+[ID:nn61uxn] u/Wolfmaan01: My latest, and last experience with Vimeo was this: they emailed me advising me they are holding my 211 videos for ransom. If I don’t pay them, they will delete them all. I could not even get a list of the videos they had. I ended up paying the ransom fee, Downloading them all over a couple days, deleting them and closing my account. There are dozens of free hosting services today. Including YouTube, bitchute, dailymotion, even TikTok to a degree.
+
+[ID:nngrr7w] u/Lazy_Shorts: The UI changes are the single most baffling / frustrating pointless actions I've ever seen a company do. I'm extremely computer literate and I find myself searching for simple functions constantly that I used to understand. Why the eff do they do this??? It's so frustrating after 14 hours of working to have what SHOULD be the easiest final step of the process become complicated for no reason.
+
+[ID:nqqfxlc] u/AKMtnr: Absolute garbage, the holding your own videos hostage is the worst part.  It's near criminal to have paid them for years only to have them lock away all your uploads unless you pay up.  And figuring out how to even cancel a subscription is very "dark pattern".  At least they give you one last red-letter warning so you know you're making the right decision.
+
+--- THREAD END ---
+
+--- THREAD START ---
+Title: Stop paying Vimeo after a decade
+Subreddit: r/vimeo
+[ID:nmw3v66] u/0nxdebug: Everything is getting more expensive. I recommend using self-hosted solutions with S3/B2/R2 or cloudflare stream if you don't have thousands of GB of traffic or simply move to YouTube.
+
+[ID:nmx0paf] u/jann_dk: Yes, there have been changes, and apparently more are on the way? It looks like Plus accounts are being converted to Starter, but it's a bit difficult to get an overview of what that will actually mean - good or bad? There's something about the max 60 videos total limit? 😱  And by the way, I'm a bit offended that I should be called a "starter", when I've been using Vimeo since 2008, and most of the time either with a Plus or Pro subscription. 🤨
+
+[ID:nmy4omh] u/Proper-Parsnip-5585: I'm thinking to do the same move.  Some companies we just have to let go to bankrupt, if they constantly behave in a bad manner towards their clients, unwilling to change the course and care about customer satisfaction instead of just the profit.  There are many small things that together portray really bad image about the company.  For example, they limit plans without notifying. In the same time, they save all versions of your videos (knowing that most of the productions will have multiple reuploads for each project) without giving you an option to purge all unused versions. Instead, you should click one by one. That's just bad UX by choice.
+
+[ID:nmzcrlq] u/tequestaalquizar: I’m also worried about what will happen with the new owner but where is the industry moving?
+
+[ID:nmwome6] u/LalalaSherpa: Curious, how did you backup your videos?
+
+[ID:nmygv7t] u/triton100: Really? Which alternatives?
+
+[ID:nn0rlso] u/LOUDCO-HD: They need more money because completely redesigning the UI every three months is very expensive.
+
+[ID:nnb40o1] u/FingerPrevious2087: Last year, I spent about a day downloading everything on my account and then canceled my subscription. It was a weird feeling, as Vimeo has played such a massive part in my workflow over the years, but the cost has become crazy. Like you, after 15 years, I am done.
+
+[ID:npgcyh8] u/gizmo2501: Moved to Gumlet and it's been solid. Slightly confusing UI, but the product itself works well. Plus, live chat with Support.
+
+[ID:nn5z1nh] u/IdeasFromTheInkwell: Oh wow, we are on the same timeline, and I also literally just canceled my subscription today. I don’t need fancy players, I just need to share videos with clients, and not get taken advantage of. Google Drive makes more sense for me now. Sad.
+
+[ID:nnbdjmz] u/Numerous_Ad_5431: I've just stopped my vimeo pro account too.
+
+[ID:npjsxt6] u/hotmush69: Instead of leaning into their role as a filmmaker resource and curated library, they now do things like delete videos that are in excess of the free storage limits if you no longer pay a subscription - which has just happened to me. Imagine youtube doing that. No other video website was in a better position or as embraced by filmmakers, and they turned on those very people.
+
+--- THREAD END ---
+
+--- THREAD START ---
+Title: Alternative to Vimeo - need to migrate within a week
+Subreddit: r/vimeo
+[ID:no560al] u/Vimean22: Hi! Support can help you downgrade to a more appropriate plan. If you like send me a DM with your account ID or email and I can get you connected.
+
+[ID:no2z7w1] u/s137: If you just need video hosting, bunny.net or cloudflare are both good options.
+
+[ID:no32bp8] u/pjdk1: I just moved to Gumlet. Was easy and it seems fine
+
+[ID:no2zc70] u/triton100: How are they charging you that. It should be 100$ ? Seems like a mistake
+
+[ID:no3o2k8] u/haryanvis: Bunny.net should work for you
+
+[ID:no3sz3l] u/FarmboyJustice: If you're really only hosting 10 videos and they are only being viewed 50 times per month, and you have not left out any details, that price is incorrect.
+
+[ID:no2v5e6] u/Igradarsaurus: FrameIO.
+
+[ID:no3fabp] u/Dollhair-Scents-347: JW Player
+
+[ID:no3p2gm] u/satyam-anand: Explored many options like bunny.net, frame.io, supercut and Gumlet.com. Out of all Gumlet was the best option for me. It was impressive.
+
+[ID:no3xw3q] u/kelerian: You make it sound like you could downgrade to their starter plan and deal with migration at your own pace.
+
+[ID:no4a7wr] u/seanpritzkau:  Check out Supercut. I’ve been using it for about a year and am really impressed.
+
+[ID:no4uc4p] u/Consistent-Maybe-224: [bunny.net](http://bunny.net) saved me
+
+[ID:no5gevh] u/Overfish: [open.video](http://open.video) should work well.
+
+[ID:no5rqmi] u/[deleted]: [removed]
+
+[ID:no6dy7f] u/Russ_Abbot: I migrated to Muse.ai and very happy with it  I don’t use any of the ai bits, just the embeds/hosting
+
+[ID:no9wdrq] u/SourdoughBoomer: Just use YouTube and unlist anything you don't want to be searchable on YouTube. Or if for your website upload directly as it offers far more  flexibility anyway.
+
+[ID:noaerm4] u/philipp_roth: When discussing the bending spoons thing in this sub, we came up with that list to alternatives for Vimeo ...   - ⁠(Self Host your stuff) - Mux – developer-level infrastructure, embed/control everything. - Bunny Net - good CDN, dev friendly, cheap - Cloudflare Stream – dev-friendly, clean API-based hosting. - PeerTube – open-source &amp; decentralized, more DIY but community-driven. - Wistia – business/marketing focus, strong analytics. - Ignite Video – alternative from Europe, privacy friendly, focused on hosting for websites - Frame io (Adobe) – pro collab &amp; editing integration, team-focused. - Vidyard - great for Marketing  ⁠... YouTube, uScreen, Flowplayer, SproutVideo,...  Depends in the end a lot on the use case. With only a few views maybe just go for selfhost?
+
+[ID:noc3gen] u/[deleted]: I don’t know about this dudes bill, but i would really not suggest Vimeo to anyone. Screwed me over twice already. Should be hard pass. 
+
+[ID:nogqk8x] u/tikileaks: We just moved to Cloudflare for our video hosting. A bit tricky at first sight, but when first set up it is very stable.
+
+[ID:nohe5gp] u/ToeAccomplished8930: You should try mediazilla. Most reliable platform for video hosting and delivery. so far the best vimeo alternative.
+
+[ID:nolickg] u/Solaiman_Samir_99: MediaZilla seems like it would work perfectly for what you need   [https://mediazilla.com/](https://mediazilla.com/)
+
+[ID:nolxhdl] u/Decent_Interview9210: I hate the way Vimeo change their shite interface what seems like every 3 days. And after so many versions it’s STILL SHITE.  So these recommendations are welcome
+
+[ID:nomxpqd] u/Nukepicnic: Run away from Vimeo. Their customer “service” is a joke. Fighting them for overbilling for months now. I’m changing when my current plan expires for sure.
+
+[ID:npbmko3] u/coastalconnor: [open.video](http://open.video) is a good free option!
+
+[ID:nq27kjs] u/Quirky_Money646: We've been using both Vimeo and Dacast. Started to move most of our new assets to Dacast now.
+
+[ID:nxqhlv5] u/niceckng: I'm in the same boat trying to solve the cost issue for my wife video courses. Vimeo's new pricing feels like a tax on our growth. I'm actually building a bootstrapped alternative (52loops) focused on flat rates and 'success credits' so this doesn't happen to creators. Reviewed available solutions, and couldn't find one without solving the headache usage math.  Just curious, are you looking for deep analytics or just a reliable player?
+
+[ID:nyo2r2z] u/WeekOk5144: [ Removed by Reddit ]
+
+--- THREAD END ---
+
+--- THREAD START ---
+Title: So Vimeo changed the way review pages work... yet another poor rollout, and yet another poor redesign.
+Subreddit: r/vimeo
+[ID:noo23dj] u/_BallsDeep69_: Vimeo suffers from staff needing to justify their position so they change shit that was already working 5 years ago just for the sake of changing shit. They don't realize that thousands of professionals are hindered every couple of weeks when shit moves around, disappears, breaks or is generally more confusing to use!
+
+[ID:no76wnj] u/ImpossibleTeach2117: I share your frustrations on VIMEO. I am a filmmaker and I am desperate to find a replacement for Vimeo, I don’t even know what I pay them at the moment (I am constantly auditioning alternative plans and have moved from PRO to BUSINESS repeatedly) the price difference between the two plans is significant, I keep going back and forth only because I cannot get a straight answer from ViMEO to my specific needs. I don’t need 3/4 of their services included in the plan I use but there is no replacement for what I do use.   It is 100 % impossible to speak to a human on the phone at that company unless you are at ENTERPRISE plan level member and that is essentially for Vimeo Sales Team  to ‘UpSell’ you. My questions are not answerable via their delayed email help. The ENTERPRISE plan seems to be designed for companies with at least 100 employees. That high tier has nothing we need but for human interaction.  I cannot get a proper answer on how to permanently remove “posted date” in my website connected Vimeo collections and portfolios. Via VIMEO, I’ve been told it’s possible and NOT possible in the same week. Vimeo is cryptic when explaining how the storage works in comparing my two plans. We cannot afford to run out of space as I use this site for client interaction and collaboration with producers while on deadline.   My frustration with the “posted on” situation has to do specifically with “Replace Video” feature, which is great for me and time saving. My company constantly updates specific reels and those links remain LIVE at all times, but their damn “uploaded on” makes it appear as though they are viewing OLD WORK, this can be very confusing to clients and less than ideal for future prospects from financial investors to future clients.   Vimeo has also changed their tech in such a way that my team is scrambling to find a way to have our PORTFOLIOS/ SHOWCASES linked to our website seamlessly without the VIMEO logo plastered all over. Sometimes their random tech changes will completely render our site to DEAD AIR. Then when you ask Vimeo via email tech support what they have changed - so we can re-connect our site and get it up again the ViMEO IT support comes back with this, “Oh that’s impossible, you could never have run your site integrated with VIMEO like that”.  After we had been doing this for years!  I would happily PAY a VIMEO REP to assist in my very specific needs from the Vimeo offerings. The VIMEO FAIL LIST is long and growing.   I apologize for the rant, but I 100% relate to your frustrations. There is a market for a company to compete with Vimeo, I pray this happens soon, as I would love to never have to deal with Vimeo again. In the meantime if you have any suggestions on how to manage any of these areas in the VIMEO world, it would be greatly appreciated.  Thank you !
+
+[ID:noes3fy] u/PsyKlaupse: Oof. Dropbox Replay ftw tho
+
+[ID:nqaq647] u/rocksteadibass: This post deserves about 2,000 upvotes. I also thought my frustrations weren’t shared. Every update they implement dumbs down the UI and removes valuable controls of the video management. Funny how Vimeo entered this post and commented much further down, addressing absolutely nothing about the destruction of the review pages.
+
+[ID:nqpxcbb] u/Potential_Dish4647: This thread has been cathartic.  I thought I was the only one getting tired of Vimeo's shitty, unnecessary updates.  They are the masters at rolling out updates that no one asked for.  They break things that didn't need fixing.  The review page and entire redesign (for the millionth time) has been brutal to workflow.  It has train wrecks efficiency by requiring users to hunt and input passwords to review pages when logged in.  I don't understand the point of password protecting the main video if you have to create another password for the review page.... Why not just have a toggle that says "Use main password" for the review page and BAM.  Seamless.  I don't have to input a password to access my own link.  If anyone has a better alternative to Vimeo, I'm all ears.  Tired of their shit.
+
+[ID:no5yog1] u/Vimean22: Hi, I'd like to help out if I can and possibly offer some background as to why some changes were made. I'm curious if you've already reached out to support? If so please DM me your ticket # or account ID.  I'm also checking in with the team on your specific points. Thanks for the feedback.
+
+[ID:noay03t] u/zerochido: If Dropbox allowed me to embed videos to my web site, I’d cancel VIMEO in a heartbeat!!!! It’s sooooo SHIT.
+
+[ID:noe1qdg] u/Super_Phones_3630: Also... why does the review page have to have an expiration date?? Why do i even have to 'create' a review page? They were automatic before. And why does the expiration default to that very night? It's insane. I already had preferences set for review pages, including a password. Now I have to set those every single time?? Ugh. I am gone from vimeo as soon as is humanly possible. They seriously don't understand their user base.
+
+[ID:nqsub0e] u/Super_Phones_3630: I also figured out something else (through a terribly stupid process) to get from the review page, back to the management page (this is necessary as a review page link is what clients will send to me in order to direct me to a video that i made, often over a month ago, that requires updates).      From the review page, in the upper right corner, click on the X to get rid of the comments.  That will alter/change the bar at the bottom of the video, and now you will see the word "Vimeo" on the bottom bar of the video.      Click the word "Vimeo", and for some insane reason... that generates a pop-up of the management page for that video.      Once again, having to figure out foolish workarounds is what we are all up against here. You used to just be able to see the path in the upper left (as admin) and click back to the management page... now it's a exhausting series of counterintuitive clicks.  Anyway, hope this helped someone! I know it helped the hundreds of people at my agency that are beyond frustrated with these changes.
+
+[ID:nrm9tkd] u/ImpossibleTeach2117: Thank you for this. I do wish there was an emergency increase storage option. Actual storage has never been a problem for me but the ability to keep replacing a cut counts as STORAGE in my plan. Meaning that for instance there is a 10 gb piece that I may need to keep updating multiple times in the given period and each time I replace or update the piece the upload counts against storage. I don’t need to STORE the old cuts on Vimeo but the act of replacing the work does count as storage. It would be nice to see an “upload” vs “storage” plan option.   I can remove tons of material but that doesn’t help me if I have already hit my 20gb in the given period. That is an actual problem I have run into a number of times to where I have had to switch to sharing via Wetransfer mid project because although I had removed lots of material I was not allowed to upload anything further until that click ticked over.   Thank you again for the help!   Nothing I can do about this unless I go Enterprise but that is beyond our budget
+
+[ID:nug9p5m] u/Embarrassed_Pin_8269: Yeah, I’m seeing another workflow regression tied to this redesign: **Review Link comments no longer default to time-coded notes** unless the reviewer explicitly clicks the timeline first. This appears to have rolled out **late Nov–early Dec 2025** and it’s intentional, not a bug. In real use, clients just type feedback, so editors end up with dozens of untraceable comments and extra back-and-forth. For a video review tool, that breaks the core purpose — at minimum there should be a toggle to force time-coded comments by default.
+
+--- THREAD END ---
+
+--- THREAD START ---
+Title: Experience with Gumlet?
+Subreddit: r/appsumo
+[ID:nqe23qf] u/[deleted]: [deleted]
+
+[ID:nq60nsl] u/Few-Bar3123: 4K starts from Tier 4. It's too expensive.
+
+[ID:nq5qtrl] u/gizmo2501: Mostly very good. Definitely recommend. Only got better over time.   Using it as a Vimeo alternative to host website videos, deliver client videos, and host professional videos. Would never use YouTube for that, as it looks so unprofessional.    Works well. Occasional bug, but they are responsive to fix.    UI can be confusing, but no more than vimeos.
+
+[ID:nqnkvqu] u/lbdesign: As a wordpress person primarily, we looked at all the options and went with Jetpack Videopress. $110 a year for essentially unlimited service on one wordpress site. And they won't Heavy Heart anytime soon.   For my other e-learning business, we have so much on Vimeo that I figure we're stuck with them. And also, these assets are so valuable (to us) that I want a very, very reliable service.
+
+[ID:nrap4qy] u/Workreap: I like it a lot actually, I hope they stick around.  Handy, especially since storage space is a commodity.
+
+[ID:nq4o4f3] u/aapta: Not related to Gumlet - but what happened to Adilo similar tool to this one
+
+[ID:nq4gjry] u/TrevorHikes: Too notch but I would use for proprietary content. DRM features
+
+[ID:o2dkgek] u/fezfrascati: Been using it since the Black Friday deal and liking it so far. I work for an organization that makes educational kids content, but a lot of schools block YouTube so we needed an alternative host. We briefly used Vimeo, but after about a year they wanted to significantly increase our subscription cost because of the amount of bandwidth used. As long as Gumlet sticks to their promise of unlimited bandwidth, it is the solution we've been looking for.
+
+--- THREAD END ---
+
+--- THREAD START ---
+Title: Vimeo admitting all my source files have been deleted without telling me. Wow a new low.
+Subreddit: r/vimeo
+[ID:num7i9d] u/hotmush69: The best part? My account still says it has 9.5gb on it. So where tf are those files? All they're saying they have are these 15mb HD web compressed versions.
+
+[ID:nunolof] u/mcmorkys11: Vimeo is THE worst. Absolute shit. They seem to hate their customers, and then they lose them forever ( myself included ).
+
+[ID:nuo362p] u/r2tincan: Wait what our originals don't exist on there anymore?
+
+[ID:nuo6fbx] u/rosaliciously: Apologize? How about compensate? They should at the very least pay you back the money they charged you over the years specifically to host those files. Sue them if you can.
+
+[ID:nuoox3m] u/jbjimbo: I can't believe I haven't canceled yet but now I have absolutely no reason to stick around
+
+[ID:nuouh9m] u/whatarereddits: i finally cleared out my channel, downloading my videos. i had a few source files missing as well. ended my subscription. such a weight lifted to be done w Vimeo
+
+[ID:nuqyvk5] u/Assimilaatikko_1460: The shittiness of Vimeo is unfathomable.
+
+[ID:nuls40f] u/TabascoWolverine: Ugh, sorry OP.  You can download pretty high bitrate rips using 4K Video Downloader. Won't be "source" but obviously your options here are nil.  They did me dirty a few years ago when audio suddenly disappeared from a bunch of 2018 videos. It was so frustrating that I stopped exploring how deep the issue was. They never gave me an explanation that made sense as to how it happened.
+
+[ID:num18t3] u/_BreakingGood_: Thats fucked up but it's a good reminder to ALWAYS keep a local hardware backup of all source files. A million things could happen to the cloud provider that causes you files to disappear, including user error, a meteor hitting the data center, or sudden bankruptcy.  I encourage everybody reading this post to think for a moment about how fucked you would be if Vimeo disappeared tonight. How many month or years of work would you lose? It's worth buying a $50 HDD, nothing fancy, backup all your stuff, and keep it in a closet.
+
+[ID:nvk3h27] u/Assimilaatikko_1460: The question is not which service to go next? I find it strange the utter lack of competition in this market.
+
+[ID:nurpbsa] u/Silent_Confidence_39: People jump into any technology face first. Cloud is a good example. Storing video is part of you job if you make videos.
+
+[ID:o0enbu7] u/hotmush69: update: to date Vimeo have not given a solution except for 'try deleting unwanted videos from your library and re-upload as new links'.  This company is going under soon surely
+
+[ID:o16do4m] u/hotmush69: For anyone still in a similar situation - In a new development, after I enquired what the legal standing for limiting my account as 'full' of data I cannot access, replace or download. I questioned how they can charge a subscription fee for data bandwidth that seemingly does not exist.   Magically today I logged on to discover they have wiped my entire bandwidth to 0mb. So keep complaining if this has happened to you. They can't delete your original files and also keep charging you for it as part of your storage as if it still exists.
+
+--- THREAD END ---
+
+--- THREAD START ---
+Title: Urgent problem and Vimeo support simply won't respond?? I'm desperate
+Subreddit: r/vimeo
+[ID:nvgil36] u/Vimean22: Hi, could you send me a DM with your account ID? I'd like to help out if I can.
+
+[ID:nvg6plr] u/ProStreamer99: Hard truth is that your videos may either be lost permanently or lost in the vimeo machine requiring engineering team to solve which is why nobodies responding, because customer support can't help you. They've seen the ticket, merged it, likely added notes internally and are waiting for help from higher up. If you look through the threads here nothing new unfortunately, just another day at Vimeo. Swallow the truth, collect what you can and find a new platform, but always always always keep your own copy locally.
+
+[ID:nvg4u2j] u/therolli: If you look through this sub to responses, there was a guy called Vimean 22 or something like that who worked for Vimeo and used to help people resolve things. Vimeo has just changed hands, so I don’t know if he’s still around.
+
+[ID:nvhv1eg] u/Consistent-Maybe-224: Hopefully your tickets get answered soon, I manage a platform with thousands of customers too and thats why I decided to run away from Vimeo after two incidents where I told them our videos were getting stolen due a security bug in their player and were ignored... switched over to bunny, no more videos getting stolen and paying a 10th of what we were paying at vimeo for the same bandwidth amounts.
+
+[ID:nweg4ds] u/Salty-Astronomer-393: Update: my problem was solved. Thanks guys!
+
+[ID:nvfyd0p] u/LalalaSherpa: Lol, Vimeo ownership changed, but not their customer service.
+
+[ID:nvhj4m9] u/Sorry-Zombie5242: Well, using Vimeo to host all your clients' videos was your first mistake.
+
+[ID:nyou1o2] u/sagedrummer: Bending spoons who acquired Vimeo late last year or most likely layoff 75% of the staff so expect horrible customer service going forward
+
+[ID:nvh4oc6] u/Silent_Confidence_39: Are you using Vimeo on your own platform ? That might be against the terms and conditions.
+
+[ID:nvjpzgg] u/cugrad16: Sorry to 'inform' or update you ...  But Vimeo went to trash.   I'd set up a budding filmmakers account, loading 6 short films - for the platform to glitch on me, losing three of them.  No support anywhere, including the supposed 'help page'  to contact them, or file a ticket.  Forcing me a Google search to find ANYTHING that woould show me something where I could at least chat with a support bot.  Weeks Later, a Bot email asking me "what was wrong"  So I'd studidly shared my web page to show the error,  for that Bot to respond "they could see everything fine on there and didn't know what my problem was, perhaps refresh the page"  bee ess.  So  I'd closed my page, and reopened, to now see all 6 videos back in place.  But not a single one of them would play, the page freezing, unresponsive. Total joke.    Waited a week, and removed all 6 videos, deleting that film account.    Avoid Vimeo
+
+[ID:nvkkmbm] u/TLDR_R3ddit: I had a similar problem, cost me dearly and was never really resolved. Fuck Vimeo, big time
+
+--- THREAD END ---
+
+--- THREAD START ---
+Title: Vimeo is going down the pan – what are people using instead?
+Subreddit: r/vimeo
+[ID:o1fhqul] u/[deleted]: [removed]
+
+[ID:o1gnet8] u/Clear_Astronomer_867: Everything Bending Spoon buys (Evernote ie) are heading towards a slow death. Sad for Vimeo but they will never be a good choice again.
+
+[ID:o34mq5n] u/Campbell2011zek3ry: The best alternative is Bunny Stream, hands down. You will be surprised how platforms like Vimeo, Wistia, Vidyard, and almost all other "hosting" platforms are ripping you off when you use something like Bunny Stream. It's a direct infra provider, which means they own/rent their own servers across the globe and have their own CDN (video delivery network) so the prices are very cheap and the performance is top-notch.   You can use Bunny Stream with [Skippz.com](http://Skippz.com) to get the Vimeo like experience to have private branded share pages, replace videos without having to change the links, advance embeds, etc. for the fraction of the cost of Vimeo while literally having no limits or being forced to upgrade your packages as your content amount grows.
+
+[ID:o1fcl9l] u/ochreshrew: also would like to know. wanna avoid just using youtube
+
+[ID:o1h2mxj] u/Mikefilmguy: Poor media maker here - they’re all crap at the free level, but they’re are ways to get around some YouTube crap by using unpublished YouTube links - they’re not subject to copyright takedowns but links can be freely shared, doesn’t seem to have ads associated with it, and has seemingly unlimited storage, which free Vimeo caps at 5GB.
+
+[ID:o1ilcef] u/bootheref: Check out Wistia. It’s ideal for private links and swapping cuts. I’ve personally only used Vimeo for the social aspect and Wistia for business.
+
+[ID:o1oxaeh] u/azizk: After 17 years of plus membership, i also stopped paying them this year. They’ve literally ruined an amazing community and made every possible thing the worst they could.   I uploaded my videos to a hosting service but also will keep looking for new options.
+
+[ID:o1p1zpw] u/PlantsmanJoe: Have you checked out Elevate.io?
+
+[ID:o1qk74b] u/Internal_Plastic_284: Box and DropBox work surprisingly well for videos.
+
+[ID:o1qujxd] u/hopkins802: The problem with moving anywhere for me is exactly what you said…you cancel and your videos are gone. It’s going to take hours…well, weeks for me to swap pre-existing gallery links. Ugh. Why, Vimeo? Why?
+
+[ID:o1rtr4h] u/TraceurFenix: Anyone here using [Gallerio.co](http://Gallerio.co) or [VidFlow.co](http://VidFlow.co) ?? Mostly just trying to find a way to host polished looking video galleries for corporate clients and wedding clients. I loved making the custom URLs with the company name, having  thumbnail header, etc.
+
+[ID:o1sdvsx] u/cut-it: Agree they are idiots and I will move off their service
+
+[ID:o24m4nd] u/L-TDN: https://sinima.ai (direct bulk import from Vimeo. Supreme hosting, modern portfolio, IP protection, IP marketplace) 🙌🏼
+
+[ID:o2bd1u8] u/[deleted]: [removed]
+
+[ID:o2ek93e] u/LessImagination3799: We've actually been using Mediasite for a while now. We left Vimeo as it just wasn't practical to scale video management with them. Managing the amount of creators we have was impossible. While Vimeo had some flashy features and more of a push for AI, the stability and scalability of the core video management and delivery is sooooo much better with Mediasite.
+
+[ID:o2nn1ha] u/HutoelewaPictures: I don’t think there is a clean Vimeo replacement anymore in the way Vimeo used to be. Most people I know who bailed successfully either: a.	went fully product (Frame.io / boutique tools like the ones popping up here) OR b.	stopped using a “video platform” at all and moved to infrastructure + their own front end. On the latter: a few festivals and agencies I’ve worked with use Cloudinary purely for hosting + playback, then handle privacy, passwords, cut swaps, etc. at the app level. Same link, new file, no re-submitting, no surprise deletions because you canceled a plan. Really sorry that happened to you. Losing work like that is brutal.
+
+[ID:o3ie0kf] u/One_Bandicoot8104: I'm building Frendr.co. It's shaping up to be everything we need, just taking a little while to build it right. :)
+
+[ID:o3ie8mm] u/One_Bandicoot8104: Currently building [frendr.co](http://frendr.co)  Still in the product design phase but it's coming together great. Can't wait to share in 2-3 months.
+
+[ID:o3s7jdj] u/gjdloftus: [www.rushes.cc](http://www.rushes.cc) \- early days but trying to get the community thing going again.  age verification unfortunately for platforms serving the UK/EU is just going to happen if they are serving videos that could in theory be viewed by children and that could in theory have content that could be harmful. If you just looking to host private links, totally agree bunny is probs the way to go
+
+--- THREAD END ---
+
+
+================ MASTER PROMPT END ================
+
+
+✨ Master prompt generated. Copy the section above into Vertex AI Studio.

@@ -1,6 +1,24 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { FetchDemo } from '../components/FetchDemo';
+import { 
+    Search, 
+    ArrowRight, 
+    Download, 
+    Zap, 
+    ShieldCheck, 
+    Users, 
+    Layers, 
+    Briefcase, 
+    CheckCircle2, 
+    XCircle,
+    FileText,
+    TrendingUp,
+    MessageSquare,
+    MousePointer2,
+    BarChart3
+} from 'lucide-react';
+
 const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
 ---
 
@@ -8,85 +26,169 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
 	<section class="hero-section">
 		<div class="container">
 			<div class="hero-content">
-				<h1 class="hero-title">Strategic Market <br class="md:hidden" />Intelligence on Autopilot</h1>
+                <div class="hero-bullets">
+                    <span><CheckCircle2 size={18} class="inline mr-2 text-accent" /> Reddit Insights</span>
+                    <span><CheckCircle2 size={18} class="inline mr-2 text-accent" /> Competitor Intelligence</span>
+                    <span><CheckCircle2 size={18} class="inline mr-2 text-accent" /> Pain Point Detection</span>
+                </div>
+				<h1 class="hero-title">Extract Signal from the <br class="md:hidden" />Reddit Noise.</h1>
 				<p class="hero-subtitle">
-					Analyze discussions, spot trends, and extract high-value insights from Reddit.
-					<br class="hidden md:block" />
-					Join 1000+ researchers using OpinionDeck to understand the conversation.
+					Analyze thousands of discussions in seconds. Spot pain points, identify competitor gaps, and validate your next feature with AI-powered market intelligence.
 				</p>
 				
                 <div class="interactive-demo">
+                    <div class="demo-label">
+                        <span class="badge">Live Demo</span>
+                    </div>
                     <FetchDemo client:load />
+                    <p class="demo-subtext">Try it for yourself. Paste a Reddit URL above to see the magic.</p>
                 </div>
 			</div>
 		</div>
 	</section>
 
-	<section class="features-section" id="features">
-		<div class="container">
+    <!-- Signal Gap Section -->
+    <section class="problem-solution-section" id="why">
+        <div class="container">
             <div class="section-header">
-			    <h2 class="section-title">Everything you need to <span class="text-gradient">understand</span> the conversation</h2>
-                <p class="section-subtitle">Stop copy-pasting. Start analyzing.</p>
+                <h2 class="section-title">The <span class="text-gradient">Signal Gap</span></h2>
+                <p class="section-subtitle">Why most product research fails to find the truth.</p>
             </div>
-			<div class="features-grid">
-				<div class="feature-card">
-					<div class="feature-icon">🧠</div>
-					<h3>Strategic Analysis</h3>
-					<p>Instant executive summaries, sentiment breakdown, and our unique <strong>Research Quality Score</strong> to filter out low-value noise.</p>
-				</div>
-				<div class="feature-card">
-					<div class="feature-icon">🎯</div>
-					<h3>Actionable Insights</h3>
-					<p>Automatically detect <strong>Pain Points</strong> (with severity ratings), Feature Requests, and Buying Intent signals.</p>
-				</div>
-				<div class="feature-card">
-					<div class="feature-icon">🔌</div>
-					<h3>Browser Bridge</h3>
-					<p>Bypass anti-bot blocks! Our smart fetch technology instantly imports data from Reddit & Hacker News via your browser.</p>
-				</div>
-                <div class="feature-card">
-					<div class="feature-icon">🚀</div>
-					<h3>Lead Generation</h3>
-					<p>Identify users actively looking for solutions or comparing competitors. Turn discussions into outreach opportunities.</p>
-				</div>
-                <div class="feature-card">
-					<div class="feature-icon">🗄️</div>
-					<h3>Organization</h3>
-					<p>Group research by project folders. Keep a permanent archive of threads even if the original post is deleted.</p>
-				</div>
-                <div class="feature-card">
-					<div class="feature-icon">📝</div>
-					<h3>Export & Share</h3>
-					<p>One-click export to Clean Markdown (for Notion/Obsidian) or JSON (for developers). You own your data.</p>
-				</div>
-			</div>
-		</div>
-	</section>
+
+            <div class="signal-gap-container">
+                <div class="gap-card chaos">
+                    <div class="icon-wrap negative"><XCircle size={32} /></div>
+                    <h3>Manual Chaos</h3>
+                    <div class="gap-item">
+                        <span class="step-label">The Process</span>
+                        <p>Endless scrolling through threads, copy-pasting into Notion.</p>
+                    </div>
+                    <div class="gap-item">
+                        <span class="step-label"> The Result</span>
+                        <p>Cherry-picked data, survivorship bias, and missed patterns.</p>
+                    </div>
+                </div>
+
+                <div class="gap-divider">
+                    <div class="divider-icon">
+                        <Zap size={24} />
+                    </div>
+                </div>
+
+                <div class="gap-card leverage">
+                    <div class="icon-wrap accent"><Search size={32} /></div>
+                    <h3>Automated Leverage</h3>
+                    <div class="gap-item">
+                        <span class="step-label">The Process</span>
+                        <p>OpinionDeck scans 10,000+ words of conversation in seconds.</p>
+                    </div>
+                    <div class="gap-item">
+                        <span class="step-label">The Result</span>
+                        <p>Quantified pain points, ranked build priorities, and raw truth.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <!-- Workflow Section -->
     <section class="workflow-section" id="how-it-works">
         <div class="container">
             <div class="section-header">
-                <h2 class="section-title">From chaos to clarity in <span class="text-gradient">3 steps</span></h2>
-                <p class="section-subtitle">Stop manual reading. Start automated intelligence.</p>
+                <h2 class="section-title">From Reddit to <span class="text-gradient">Strategic Roadmap</span></h2>
+                <p class="section-subtitle">Our 3-step intelligence pipeline.</p>
             </div>
-            <div class="workflow-grid">
-                <div class="step-card">
-                    <div class="step-number">01</div>
-                    <h3>Capture & Dump</h3>
-                    <p>Install our plugin to instantly collect thousands of comments. Just dump threads into a Research Folder—we handle the mess.</p>
+            
+            <div class="workflow-steps">
+                <div class="step-item">
+                    <div class="step-num">01</div>
+                    <div class="step-content">
+                        <h3>Connect the Signal</h3>
+                        <p>Paste any Reddit thread or subreddit. Our browser-bridge bypasses bots to capture the raw, unfiltered conversation safely.</p>
+                    </div>
                 </div>
-                <div class="step-arrow">→</div>
-                <div class="step-card">
-                    <div class="step-number">02</div>
-                    <h3>Reveal the Invisible</h3>
-                    <p>Our AI identifies non-obvious patterns, pain points, and opportunities that are impossible to find with manual effort.</p>
+
+                <div class="step-item">
+                    <div class="step-num">02</div>
+                    <div class="step-content">
+                        <h3>Distill Intelligence</h3>
+                        <p>OpinionDeck's proprietary models categorize intent, calculate sentiment intensity, and identify specific competitor switching triggers.</p>
+                    </div>
                 </div>
-                <div class="step-arrow">→</div>
-                <div class="step-card">
-                    <div class="step-number">03</div>
-                    <h3>Take Action</h3>
-                    <p>Turn validated insights into shipping features, writing content, or closing leads. No more guessing.</p>
+
+                <div class="step-item">
+                    <div class="step-num">03</div>
+                    <div class="step-content">
+                        <h3>Map the Opportunity</h3>
+                        <p>Generate a <strong>Competitive Blueprint</strong>. Get a ranked list of exactly what to build, how to position it, and who to target.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Outcomes Section -->
+    <section class="outcomes-section">
+        <div class="container">
+            <h2 class="section-title text-center">Outcome-Driven Research</h2>
+            <div class="outcomes-grid">
+                <div class="outcome-card">
+                    <div class="outcome-header">
+                        <TrendingUp size={24} class="text-accent" />
+                        <h3>Market Sizing</h3>
+                    </div>
+                    <div class="outcome-comparison">
+                        <div class="outcome-old">"Vague hunch"</div>
+                        <div class="outcome-arrow"><ArrowRight size={16} /></div>
+                        <div class="outcome-new">"85% of users mention X"</div>
+                    </div>
+                </div>
+
+                <div class="outcome-card">
+                    <div class="outcome-header">
+                        <MessageSquare size={24} class="text-accent" />
+                        <h3>Messaging</h3>
+                    </div>
+                    <div class="outcome-comparison">
+                        <div class="outcome-old">Stock copy</div>
+                        <div class="outcome-arrow"><ArrowRight size={16} /></div>
+                        <div class="outcome-new">Use their exact words</div>
+                    </div>
+                </div>
+
+                <div class="outcome-card">
+                    <div class="outcome-header">
+                        <Layers size={24} class="text-accent" />
+                        <h3>Prioritization</h3>
+                    </div>
+                    <div class="outcome-comparison">
+                        <div class="outcome-old">Loudest user wins</div>
+                        <div class="outcome-arrow"><ArrowRight size={16} /></div>
+                        <div class="outcome-new">Data-backed urgency</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Audience Section -->
+    <section class="audience-section">
+        <div class="container">
+            <div class="audience-grid">
+                <div class="audience-item">
+                    <Users size={32} />
+                    <h3>Founders</h3>
+                    <p>Validate your MVP before spending a single dollar on dev.</p>
+                </div>
+                <div class="audience-item">
+                    <Briefcase size={32} />
+                    <h3>Product Managers</h3>
+                    <p>Build roadmaps backed by objective community sentiment.</p>
+                </div>
+                <div class="audience-item">
+                    <BarChart3 size={32} />
+                    <h3>Marketers</h3>
+                    <p>Find the high-intent keywords and "switching triggers" your competitors missed.</p>
                 </div>
             </div>
         </div>
@@ -94,92 +196,113 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
 
     <section class="pricing-section" id="pricing">
         <div class="container">
-            <h2 class="section-title">Simple, transparent pricing</h2>
-            <p class="section-subtitle">The intelligence you need, priced for scale.</p>
-            
-
+            <h2 class="section-title">Simple during beta. Built for early founders.</h2>
             
             <div class="pricing-grid">
-                <!-- Free Plan -->
+                <!-- Free Exploration -->
                 <div class="pricing-card">
                     <div class="pricing-header">
-                        <span class="plan-emoji">🌱</span>
-                        <h3>Free Trial</h3>
-                        <div class="price">$0 <span class="period">/ month</span></div>
+                        <div class="plan-icon"><MousePointer2 size={32} /></div>
+                        <h3>🟢 Free Exploration</h3>
+                        <div class="price">$0</div>
+                        <p class="billing-msg">Validate before you commit.</p>
                     </div>
                     <ul class="features-list">
-                        <li><span>5</span> AI Reports (One-time)</li>
-                        <li><span>1</span> Research Folder</li>
-                        <li><span>30</span> Saved Threads</li>
-                        <li>Max <strong>50</strong> comments / thread</li>
-                        <li>Unlimited Thread Exports</li>
+                        <li>Unlimited competitor search</li>
+                        <li>Save up to 5 threads total</li>
+                        <li>Create up to 2 decks</li>
+                        <li>Up to 100 comments per thread</li>
+                        <li class="blueprint-feature">
+                            <strong>1 Limited-Depth Blueprint</strong>
+                            <div class="blueprint-details">
+                                <span>Limited-depth reports include:</span>
+                                <ul>
+                                    <li>Top pain points</li>
+                                    <li>High-level signal summary</li>
+                                    <li>Basic opportunity highlights</li>
+                                </ul>
+                            </div>
+                        </li>
                     </ul>
-                    <a href={dashboardUrl} class="btn btn-secondary btn-block">Start Free</a>
+                    <div class="cta-wrap">
+                        <a href={dashboardUrl} class="btn btn-secondary btn-block">Start Free</a>
+                        <p class="cta-note">Designed to test value before upgrading.</p>
+                        <p class="cta-subnote">Upgrade for full-depth analysis and advanced signal extraction.</p>
+                    </div>
                 </div>
 
-                <!-- Pro Plan -->
-                <div class="pricing-card pro active">
-                    <div class="badge">Most Popular</div>
+                <!-- Founding Access -->
+                <div class="pricing-card active">
+                    <div class="badge">Early access pricing</div>
                     <div class="pricing-header">
-                        <span class="plan-emoji">💎</span>
-                        <h3>OpinionDeck Pro</h3>
-                        <div class="card-toggle-row">
-                            <span class="toggle-label">Monthly</span>
-                            <button class="pricing-toggle year" aria-label="Toggle billing">
-                                <div class="toggle-handle"></div>
-                            </button>
-                            <span class="toggle-label active">Yearly</span>
-                        </div>
-                        <div class="price"><span class="price-amount">$7.50</span> <span class="period">/ month</span></div>
-                        <div class="billing-msg">Billed $90 yearly</div>
+                        <div class="plan-icon text-accent"><Zap size={32} /></div>
+                        <h3>🚀 Founding Access (Beta)</h3>
+                        <div class="price">$19 <span class="period">one-time</span></div>
+                        <p class="billing-msg">Built for founders preparing to ship.</p>
                     </div>
                     <ul class="features-list">
-                        <li><span>50</span> AI Reports / month</li>
-                        <li class="highlight"><span>Next-Gen</span> AI Models</li>
-                        <li class="highlight">Max <strong>5,000</strong> comments / thread</li>
-                        <li class="highlight"><span>Unlimited</span> Folders</li>
-                        <li class="highlight"><span>5,000</span> Saved Threads</li>
-                        <li class="highlight">Lead Extraction ✅</li>
-                        <li class="highlight">Priority Support</li>
+                        <li>Save unlimited threads</li>
+                        <li>Unlimited decks</li>
+                        <li>Up to 5,000 comments per thread</li>
+                        <li class="blueprint-feature">
+                            <strong>10 Full Competitive Blueprints</strong>
+                            <ul class="sub-features">
+                                <li>High-intensity pain scoring</li>
+                                <li>Switching Trigger Detection</li>
+                                <li>Ranked Build Priorities</li>
+                                <li>Feature Gap Analysis</li>
+                                <li>Positioning & Messaging Angles</li>
+                                <li>Exportable Report</li>
+                                <li>Direct feedback channel</li>
+                            </ul>
+                        </li>
                     </ul>
-                    <a href={`${dashboardUrl}?billing=year`} class="btn btn-primary btn-block">Upgrade to Pro</a>
+                    <div class="cta-wrap">
+                        <a href={`${dashboardUrl}?plan=founding`} class="btn btn-primary btn-block">Unlock Founding Access</a>
+                        <p class="cta-note">This is discounted beta pricing. Future plans will expand in scope and price.</p>
+                        <p class="cta-subnote">One-time payment. No subscription. Limited early pricing.</p>
+                    </div>
                 </div>
+
+                <!-- Standard Plan -->
+                <div class="pricing-card coming-soon">
+                    <div class="pricing-header">
+                        <div class="plan-icon"><ShieldCheck size={32} /></div>
+                        <h3>🔒 Standard Plan (Coming Soon)</h3>
+                        <div class="price">$39+</div>
+                        <p class="billing-msg">Full access tier launching after beta.</p>
+                    </div>
+                    <div class="coming-soon-content">
+                        <p>Will include:</p>
+                        <ul class="features-list">
+                            <li>Expanded blueprint limits</li>
+                            <li>Multi-platform support</li>
+                            <li>Advanced opportunity scoring</li>
+                            <li>Ongoing competitive tracking</li>
+                        </ul>
+                    </div>
+                    <div class="cta-wrap mt-auto">
+                        <button class="btn btn-secondary btn-block" disabled>Available after beta</button>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- FAQ Section -->
-    <section class="faq-section">
-        <div class="container">
-            <h2 class="section-title">Frequently Asked Questions</h2>
-            <div class="faq-grid">
-                <div class="faq-item">
-                    <h3>Is it really free?</h3>
-                    <p>Yes! You can fetch and export unlimited threads for free. We only limit the number of comments to 50 per thread on the free plan.</p>
-                </div>
-                <div class="faq-item">
-                    <h3>What formats do you support?</h3>
-                    <p>We export to Clean Markdown (great for reading), JSON (for developers), and Plain Text (for copying).</p>
-                </div>
-                <div class="faq-item">
-                    <h3>Do you support NSFW content?</h3>
-                    <p>Yes, but you must be signed in to verify your age, per Reddit's API policies.</p>
-                </div>
-                <div class="faq-item">
-                    <h3>Can I cancel anytime?</h3>
-                    <p>Absolutely. You can cancel your Pro subscription with one click from your dashboard. You'll keep access until the end of your billing cycle.</p>
-                </div>
-            </div>
-        </div>
-    </section>
+    <!-- FAQ Section Removed for brevity, or kept if needed -->
 
-    <!-- Call to Action -->
+    <!-- Call to Action Premium -->
     <section class="cta-section">
         <div class="container">
-            <div class="cta-content">
-                <h2>Ready to streamline your research?</h2>
-                <a href={dashboardUrl} class="btn btn-primary btn-xl">Get Started Now</a>
+            <div class="cta-card">
+                <div class="cta-content">
+                    <h2 class="hero-title text-white">Stop Guessing. <br />Start Extracting.</h2>
+                    <p class="hero-subtitle text-white/80">Join the founders building products that communities actually want.</p>
+                    <div class="cta-wrap">
+                        <a href={dashboardUrl} class="btn btn-primary btn-xl">Get Started for Free</a>
+                        <p class="cta-note text-white/60">No credit card required. Beta access limited.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -242,291 +365,344 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
 <style>
     /* Hero Section */
 	.hero-section {
-		padding: 80px 0 60px;
+		padding: 140px 0 100px;
         text-align: center;
-        background: radial-gradient(circle at 50% 20%, rgba(255, 69, 0, 0.05) 0%, transparent 60%);
+        background: radial-gradient(circle at 50% 20%, rgba(255, 69, 0, 0.12) 0%, transparent 60%);
 	}
 
-    /* Toggle Switch Styles */
-    .pricing-toggle-wrapper {
+    .hero-bullets {
         display: flex;
-        align-items: center;
         justify-content: center;
-        gap: 12px;
-        margin-top: 40px;
+        gap: 32px;
+        margin-bottom: 48px;
         font-weight: 600;
         color: var(--text-secondary);
     }
 
-    .toggle-label.active {
-        color: var(--text-primary);
-    }
-
-    .pricing-toggle {
-        width: 52px;
-        height: 28px;
-        background: var(--bg-secondary);
-        border: 1px solid var(--border);
-        border-radius: 14px;
-        position: relative;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        padding: 0;
-    }
-
-    .pricing-toggle.year {
-        background: var(--bg-accent);
-        border-color: var(--bg-accent);
-    }
-
-    .toggle-handle {
-        width: 22px;
-        height: 22px;
-        background: white;
-        border-radius: 50%;
-        position: absolute;
-        top: 2px;
-        left: 2px;
-        transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-
-    .pricing-toggle.year .toggle-handle {
-        transform: translateX(24px);
-    }
-
-    .save-badge {
-        background: #dcfce7;
-        color: #166534;
-        font-size: 0.7rem;
-        padding: 2px 8px;
-        border-radius: 12px;
-        margin-left: 8px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
     .hero-title {
-        font-size: 3.5rem;
-        line-height: 1.1;
+        font-size: 4.5rem;
+        line-height: 1.05;
         font-weight: 800;
         margin-bottom: 24px;
         background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
+        max-width: 1000px;
+        margin-left: auto;
+        margin-right: auto;
+        letter-spacing: -0.03em;
     }
 
     .hero-subtitle {
-        font-size: 1.25rem;
+        font-size: 1.65rem;
         color: var(--text-secondary);
-        max-width: 600px;
+        max-width: 800px;
         margin: 0 auto 40px;
+        line-height: 1.5;
     }
 
     .interactive-demo {
-        max-width: 700px;
-        margin: 0 auto;
+        max-width: 800px;
+        margin: 60px auto 0;
     }
 
-    /* Features Section */
-    .features-section {
-        padding: 80px 0;
-        background: var(--bg-tertiary); /* Slight contrast */
+    .demo-label {
+        margin-bottom: 24px;
     }
 
-    .section-header {
-        text-align: center;
-        max-width: 600px;
-        margin: 0 auto 48px;
+    .demo-subtext {
+        margin-top: 24px;
+        font-size: 1rem;
+        color: var(--text-tertiary);
     }
 
-    .section-title {
-        font-size: 2.5rem;
-        font-weight: 700;
-        margin-bottom: 16px;
+    /* Signal Gap Section (Redesigned for PREMIUM feel) */
+    .problem-solution-section {
+        padding: 140px 0;
+        background: var(--bg-secondary);
+        position: relative;
     }
 
-    .text-gradient {
-        background: linear-gradient(135deg, #FF4500 0%, #FF8717 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+    .signal-gap-container {
+        display: flex;
+        align-items: stretch;
+        gap: 0;
+        margin-top: 80px;
+        max-width: 1100px;
+        margin-left: auto;
+        margin-right: auto;
     }
 
-    .section-subtitle {
-        font-size: 1.1rem;
-        color: var(--text-secondary);
-    }
-
-    .features-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 32px;
-    }
-
-    .feature-card {
-        background: var(--bg-card);
-        padding: 32px;
-        border-radius: var(--radius-xl);
+    .gap-card {
+        flex: 1;
+        padding: 60px;
+        border-radius: var(--radius-2xl);
+        background: var(--bg-primary);
         border: 1px solid var(--border);
-        transition: transform 0.2s, box-shadow 0.2s;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
     }
 
-    .feature-card:hover {
-        transform: translateY(-5px);
-        box-shadow: var(--shadow-lg);
+    .gap-card.chaos {
+        border-right: none;
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+
+    .gap-card.leverage {
+        border-left: none;
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
         border-color: var(--bg-accent);
+        background: linear-gradient(180deg, var(--bg-primary) 0%, rgba(255, 69, 0, 0.05) 100%);
     }
 
-    .feature-icon {
-        font-size: 3rem;
-        margin-bottom: 20px;
+    .icon-wrap {
+        width: 64px;
+        height: 64px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 32px;
     }
 
-    .feature-card h3 {
+    .icon-wrap.negative {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--score-negative);
+    }
+
+    .icon-wrap.accent {
+        background: rgba(255, 69, 0, 0.1);
+        color: var(--bg-accent);
+    }
+
+    .gap-card h3 {
+        font-size: 2rem;
+        margin-bottom: 40px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+    }
+
+    .gap-item {
+        margin-bottom: 32px;
+    }
+
+    .gap-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .step-label {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        font-weight: 800;
+        letter-spacing: 0.15em;
+        color: var(--text-tertiary);
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    .gap-item p {
+        font-size: 1.25rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+        line-height: 1.4;
+    }
+
+    .leverage .gap-item p {
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+
+    .gap-divider {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 4px;
+        background: var(--border);
+        position: relative;
+        z-index: 10;
+    }
+
+    .divider-icon {
+        width: 56px;
+        height: 56px;
+        background: var(--bg-accent);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0 30px rgba(255, 69, 0, 0.4);
+        position: absolute;
+    }
+
+    /* Workflow Section */
+    .workflow-section {
+        padding: 140px 0;
+        background: var(--bg-primary);
+    }
+
+    .workflow-steps {
+        max-width: 900px;
+        margin: 100px auto 0;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+    }
+
+    .step-item {
+        display: flex;
+        gap: 40px;
+        padding: 40px 0;
+        border-bottom: 1px solid var(--border);
+        position: relative;
+    }
+
+    .step-num {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--bg-accent);
+        opacity: 0.5;
+        font-family: monospace;
+    }
+
+    .step-content h3 {
         font-size: 1.5rem;
         margin-bottom: 12px;
+        font-weight: 700;
     }
 
-    .feature-card p {
+    .step-content p {
+        font-size: 1.15rem;
         color: var(--text-secondary);
+        line-height: 1.6;
+    }
+
+    /* Outcomes Section */
+    .outcomes-section {
+        padding: 140px 0;
+        background: var(--bg-secondary);
+    }
+
+    .outcomes-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 32px;
+        margin-top: 80px;
+    }
+
+    .outcome-card {
+        background: var(--bg-primary);
+        padding: 40px;
+        border-radius: var(--radius-2xl);
+        border: 1px solid var(--border);
+    }
+
+    .outcome-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 32px;
+    }
+
+    .outcome-header h3 {
+        font-size: 1.25rem;
+        font-weight: 700;
+    }
+
+    .outcome-comparison {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .outcome-old {
+        font-size: 0.9rem;
+        color: var(--text-tertiary);
+        text-decoration: line-through;
+    }
+
+    .outcome-new {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    /* Audience Section */
+    .audience-section {
+        padding: 140px 0;
+        background: var(--bg-primary);
+    }
+
+    .audience-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 60px;
+    }
+
+    .audience-item {
+        text-align: center;
+    }
+
+    .audience-item h3 {
+        font-size: 1.5rem;
+        margin: 24px 0 16px;
+    }
+
+    .audience-item p {
+        color: var(--text-secondary);
+        line-height: 1.6;
     }
 
     /* Pricing Section */
     .pricing-section {
-        padding: 100px 0;
-        text-align: center;
+        padding: 140px 0;
     }
 
     .pricing-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 400px)); /* Wider cards */
+        grid-template-columns: repeat(3, 1fr);
         gap: 32px;
-        justify-content: center;
-        margin-top: 40px;
-        align-items: center; /* Vertical center alignment */
-    }
-
-    /* Toggle Switch Styles */
-    .pricing-toggle-wrapper {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 12px;
-        margin-top: 40px;
-        font-weight: 600;
-        color: var(--text-secondary);
-    }
-
-    .toggle-label.active {
-        color: var(--text-primary);
-    }
-
-    .pricing-toggle {
-        width: 52px;
-        height: 28px;
-        background: var(--bg-secondary);
-        border: 1px solid var(--border);
-        border-radius: 14px;
-        position: relative;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        padding: 0;
-    }
-
-    .pricing-toggle.year {
-        background: var(--bg-accent);
-        border-color: var(--bg-accent);
-    }
-
-    .toggle-handle {
-        width: 22px;
-        height: 22px;
-        background: white;
-        border-radius: 50%;
-        position: absolute;
-        top: 2px;
-        left: 2px;
-        transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-
-    .pricing-toggle.year .toggle-handle {
-        transform: translateX(24px);
-    }
-
-    .save-badge {
-        background: #dcfce7;
-        color: #166534;
-        font-size: 0.7rem;
-        padding: 2px 8px;
-        border-radius: 12px;
-        margin-left: 8px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        margin-top: 80px;
+        align-items: stretch;
     }
 
     .pricing-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-xl);
         padding: 40px;
-        text-align: left;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-2xl);
         position: relative;
     }
 
-    .pricing-card.pro {
+    .pricing-card.active {
+        transform: scale(1.05);
         border-color: var(--bg-accent);
-        box-shadow: 0 0 0 1px var(--bg-accent), var(--shadow-lg);
-        transform: scale(1.05); /* Slightly bigger */
-        z-index: 1;
-    }
-
-    .pricing-header h3 {
-        font-size: 1.5rem;
-        margin: 12px 0;
+        box-shadow: var(--shadow-lg);
+        z-index: 2;
     }
 
     .price {
-        font-size: 2.5rem;
+        font-size: 3.5rem;
         font-weight: 800;
+        letter-spacing: -0.05em;
+        margin: 10px 0;
         color: var(--text-primary);
     }
 
-    .period {
-        font-size: 1rem;
-        font-weight: 500;
-        color: var(--text-tertiary);
+    .pricing-header {
+        margin-bottom: 32px;
     }
 
-    .features-list {
-        list-style: none;
-        padding: 0;
-        margin: 32px 0;
-    }
-
-    .features-list li {
-        padding: 12px 0;
-        border-bottom: 1px solid var(--border-light);
-        color: var(--text-secondary);
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    
-    .features-list li::before {
-        content: "✓";
-        color: var(--score-positive);
-        font-weight: bold;
-    }
-
-    .features-list li.highlight {
-        font-weight: 600;
-        color: var(--text-primary);
-    }
-
-    .features-list li span {
-        font-weight: 700;
-        color: var(--text-primary);
+    .plan-icon {
+        margin-bottom: 16px;
     }
 
     .badge {
@@ -534,12 +710,100 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
         top: -12px;
         left: 50%;
         transform: translateX(-50%);
-        background: linear-gradient(135deg, #FF4500 0%, #FF8717 100%);
+        background: var(--bg-accent);
         color: white;
-        padding: 4px 12px;
+        padding: 4px 16px;
         border-radius: var(--radius-full);
         font-size: 0.8rem;
         font-weight: 700;
+        box-shadow: 0 4px 12px rgba(255, 69, 0, 0.3);
+        white-space: nowrap;
+    }
+
+    .billing-msg {
+        color: var(--text-secondary);
+        font-size: 1rem;
+        font-weight: 500;
+    }
+
+    .period {
+        font-size: 1rem;
+        color: var(--text-tertiary);
+        font-weight: normal;
+    }
+
+    .features-list {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 40px 0;
+    }
+
+    .features-list li {
+        margin-bottom: 12px;
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .blueprint-feature {
+        flex-direction: column !important;
+        background: rgba(255, 69, 0, 0.03);
+        padding: 16px;
+        border-radius: 12px;
+        border: 1px dashed rgba(255, 69, 0, 0.2);
+        margin-top: 12px;
+    }
+
+    .blueprint-details {
+        margin-top: 8px;
+        font-size: 0.9rem;
+        color: var(--text-tertiary);
+    }
+
+    .blueprint-details ul, .sub-features {
+        margin-top: 8px;
+        list-style: disc;
+        padding-left: 20px;
+    }
+
+    .blueprint-details li, .sub-features li {
+        margin-bottom: 4px;
+        font-weight: normal;
+    }
+
+    .sub-features {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+    }
+
+    .cta-wrap {
+        margin-top: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .cta-note {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-align: center;
+    }
+
+    .cta-subnote {
+        font-size: 0.8rem;
+        color: var(--text-tertiary);
+        text-align: center;
+    }
+
+    .pricing-card.coming-soon {
+        opacity: 0.8;
+        border-style: dashed;
+    }
+
+    .coming-soon-content {
+        margin: 20px 0;
+        color: var(--text-tertiary);
     }
 
     .btn-block {
@@ -571,26 +835,37 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
         line-height: 1.6;
     }
 
-    /* CTA Section */
+    /* CTA Section Premium */
     .cta-section {
-        padding: 100px 0;
-        background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-input) 100%);
+        padding: 140px 0;
+        background: var(--bg-primary);
+    }
+
+    .cta-card {
+        background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+        padding: 100px 60px;
+        border-radius: var(--radius-2xl);
+        border: 1px solid var(--border);
         text-align: center;
+        box-shadow: var(--shadow-xl);
+        position: relative;
+        overflow: hidden;
     }
-    
+
+    .cta-card::before {
+        content: "";
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle at center, rgba(255, 69, 0, 0.05) 0%, transparent 50%);
+        z-index: 0;
+    }
+
     .cta-content {
-        max-width: 600px;
-        margin: 0 auto;
-    }
-
-    .cta-content h2 {
-        font-size: 2.5rem;
-        margin-bottom: 32px;
-    }
-
-    .btn-xl {
-        padding: 20px 40px;
-        font-size: 1.25rem;
+        position: relative;
+        z-index: 1;
     }
 
     /* Demo Component Styles */
@@ -628,77 +903,6 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
 
     :global(.demo-btn) {
         white-space: nowrap;
-    }
-
-    /* Workflow Section */
-    .workflow-section {
-        padding: 80px 0;
-        background: var(--bg-primary);
-        position: relative;
-    }
-
-    .workflow-grid {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        flex-wrap: wrap;
-        gap: 24px;
-        margin-top: 48px;
-    }
-
-    .step-card {
-        flex: 1;
-        min-width: 280px;
-        background: var(--bg-secondary);
-        padding: 32px;
-        border-radius: var(--radius-xl);
-        border: 1px solid var(--border);
-        position: relative;
-        text-align: left;
-    }
-
-    .step-number {
-        font-size: 3rem;
-        font-weight: 800;
-        color: var(--bg-accent);
-        opacity: 0.2;
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        line-height: 1;
-    }
-
-    .step-card h3 {
-        font-size: 1.25rem;
-        margin-bottom: 12px;
-        position: relative;
-        z-index: 1;
-    }
-
-    .step-card p {
-        color: var(--text-secondary);
-        font-size: 0.95rem;
-        line-height: 1.6;
-        position: relative;
-        z-index: 1;
-    }
-
-    .step-arrow {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 2rem;
-        color: var(--text-tertiary);
-        padding-top: 40px;
-    }
-
-    @media (max-width: 900px) {
-        .step-arrow {
-            display: none;
-        }
-        .workflow-grid {
-            flex-direction: column;
-        }
     }
 
     :global(.demo-hint) {
@@ -816,30 +1020,39 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
         white-space: pre-wrap;
     }
 
-    :global(.cta-overlay) {
-        position: relative;
-        background: var(--bg-card);
-        padding: 32px;
-        text-align: center;
-        border-top: 1px solid var(--border);
-        margin-top: -20px; /* Overlap slightly */
-        z-index: 10;
-    }
-    
-    :global(.cta-content p) {
-        margin-bottom: 16px;
-        font-weight: 600;
-        color: var(--text-primary);
-    }
-
-    :global(.cta-buttons) {
-        display: flex;
-        gap: 16px;
-        justify-content: center;
-    }
-
     @keyframes slideIn {
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 992px) {
+        .pricing-grid, .outcomes-grid, .audience-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .signal-gap-container {
+            flex-direction: column;
+        }
+
+        .gap-card.chaos, .gap-card.leverage {
+            border: 1px solid var(--border);
+            border-radius: var(--radius-2xl);
+        }
+
+        .gap-divider {
+            height: 40px;
+            width: 100%;
+            background: transparent;
+        }
+
+        .divider-icon {
+            transform: rotate(90deg);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .hero-title {
+            font-size: 3rem;
+        }
     }
 </style>

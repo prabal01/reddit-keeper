@@ -13,3 +13,5 @@
 - shallow save vs deep save.
 - add to discovery to type a idea -> it will find the related product -> user checks and tickmark the products. -> Find pain points for those user.-> idea
 - redirect to folder after discovery.
+- add a info about extension connection in sidepannel.
+- redis filling up, why?

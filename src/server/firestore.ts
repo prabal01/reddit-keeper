@@ -444,7 +444,7 @@ export interface AnalysisDoc {
     createdAt: string;
 }
 
-export async function saveAnalysis(uid: string, folderId: string, data: any, modelName: string): Promise<void> {
+export async function saveAnalysis(uid: string, folderId: string, data: any, modelName: string, usage?: any): Promise<void> {
     if (!db) {
         console.error("[FIRESTORE] DB not initialized. Cannot save analysis.");
         return;
@@ -455,6 +455,7 @@ export async function saveAnalysis(uid: string, folderId: string, data: any, mod
             folderId,
             uid,
             data,
+            usage, // Private usage metadata (tokens, etc.)
             model: modelName,
             createdAt: new Date().toISOString()
         });

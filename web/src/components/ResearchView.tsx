@@ -90,13 +90,40 @@ export const ResearchView: React.FC = () => {
         const steps = [
             { id: 'ext', label: 'Checking extension connectivity', status: 'loading' as const },
             { id: 'query', label: 'Generating surgical search queries', status: 'pending' as const },
-            { id: 'reddit', label: 'Deep-scanning relevant subreddits', status: 'pending' as const },
+            { id: 'pains', label: 'Scanning competitor pain points', status: 'pending' as const },
+            { id: 'alts', label: 'Scouting brand alternatives', status: 'pending' as const },
+            { id: 'niche', label: 'Processing niche brand mentions', status: 'pending' as const },
             { id: 'rank', label: 'Ranking by intent and relevance', status: 'pending' as const },
-            { id: 'finish', label: 'Finalizing insights', status: 'pending' as const }
+            { id: 'filter', label: 'Filtering noise & promotional signal', status: 'pending' as const },
+            { id: 'weights', label: 'Calibrating relevance weights', status: 'pending' as const },
+            { id: 'dashboard', label: 'Preparing intelligence dashboard', status: 'pending' as const }
         ];
         setLoadingSteps(steps);
 
+        if (extensionConnected === false) {
+            setTimeout(() => {
+                setLoadingSteps(prev => prev.map(s => s.id === 'ext' ? { ...s, status: 'error', label: 'Extension not detected' } : s));
+                setStatus("Please install or enable the extension to perform discovery.");
+            }, 800);
+            return;
+        }
+
         const requestId = Math.random().toString(36).substring(7);
+
+        const handleProgress = (event: MessageEvent) => {
+            if (event.data.type === "OPINION_DECK_DISCOVERY_PROGRESS") {
+                const { stepId } = event.data;
+                setLoadingSteps(prev => {
+                    const stepIndex = prev.findIndex(s => s.id === stepId);
+                    if (stepIndex === -1) return prev;
+                    return prev.map((s, idx) => {
+                        if (idx < stepIndex) return { ...s, status: 'complete' as const };
+                        if (idx === stepIndex) return { ...s, status: 'loading' as const };
+                        return s;
+                    });
+                });
+            }
+        };
 
         const handleMessage = (event: MessageEvent) => {
             if (event.data.type === "OPINION_DECK_DISCOVERY_RESPONSE" && event.data.id === requestId) {
@@ -112,19 +139,12 @@ export const ResearchView: React.FC = () => {
                 }
                 setTimeout(() => setLoading(false), 800);
                 window.removeEventListener('message', handleMessage);
+                window.removeEventListener('message', handleProgress);
             }
         };
 
         window.addEventListener('message', handleMessage);
-
-        // Simulate granular updates for "magic" feel
-        setTimeout(() => {
-            setLoadingSteps(prev => prev.map(s => s.id === 'ext' ? { ...s, status: 'complete' } : s.id === 'query' ? { ...s, status: 'loading' } : s));
-        }, 800);
-
-        setTimeout(() => {
-            setLoadingSteps(prev => prev.map(s => s.id === 'query' ? { ...s, status: 'complete' } : s.id === 'reddit' ? { ...s, status: 'loading' } : s));
-        }, 1800);
+        window.addEventListener('message', handleProgress);
 
         window.postMessage({
             type: "OPINION_DECK_DISCOVERY_REQUEST",
@@ -132,15 +152,7 @@ export const ResearchView: React.FC = () => {
             competitor: competitor.trim()
         }, window.location.origin);
 
-        setTimeout(() => {
-            setLoadingSteps(prev => prev.map(s => s.id === 'reddit' ? { ...s, status: 'complete' } : s.id === 'rank' ? { ...s, status: 'loading' } : s));
-        }, 4000);
-
-        setTimeout(() => {
-            setLoadingSteps(prev => prev.map(s => s.id === 'rank' ? { ...s, status: 'complete' } : s.id === 'finish' ? { ...s, status: 'loading' } : s));
-        }, 5500);
-
-    }, [competitor]);
+    }, [competitor, extensionConnected]);
 
     const toggleSelection = (id: string) => {
         const newSelected = new Set(selectedIds);
@@ -342,11 +354,6 @@ export const ResearchView: React.FC = () => {
             {loading && !!loadingSteps.length && (
                 <div className="discovery-loading-view">
                     <div className="loading-content-discovery">
-                        <div className="magic-spinner-container">
-                            <div className="pulse-spinner-outer"></div>
-                            <div className="pulse-spinner-inner"></div>
-                            <Loader2 className="animate-spin main-loader-icon" size={32} />
-                        </div>
                         <h2>
                             {loadingSteps.some(s => s.id === 'prep') ? 'Syncing Research...' : `Analyzing Reddit for ${competitor}...`}
                         </h2>

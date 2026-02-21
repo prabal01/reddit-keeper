@@ -1,117 +1,161 @@
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { SchemaType } from "@google/generative-ai";
+const apiKey = process.env.GEMINI_API_KEY || "";
+if (!apiKey) {
+    console.error("[AI] ERROR: GEMINI_API_KEY is not set in environment variables!");
+}
+console.log(`[AI] Initializing Google Generative AI (AI Studio SDK)... Key present: ${!!apiKey}`);
 
-const API_KEY = process.env.GEMINI_API_KEY;
+const genAI = new GoogleGenerativeAI(apiKey);
 
-// Initialize Gemini 1.5 Flash (high context, fast, free tier friendly)
-const genAI = new GoogleGenerativeAI(API_KEY || "");
-const model = genAI.getGenerativeModel({
-    model: "gemini-flash-latest",
-    generationConfig: {
-        responseMimeType: "application/json",
-        responseSchema: {
+const responseSchema = {
+    type: SchemaType.OBJECT,
+    properties: {
+        market_attack_summary: {
             type: SchemaType.OBJECT,
             properties: {
-                executive_summary: { type: SchemaType.STRING },
-                themes: {
-                    type: SchemaType.ARRAY,
-                    items: {
-                        type: SchemaType.OBJECT,
-                        properties: {
-                            title: { type: SchemaType.STRING },
-                            description: { type: SchemaType.STRING },
-                            confidence: { type: SchemaType.INTEGER },
-                            sentiment: { type: SchemaType.STRING, enum: ["Positive", "Neutral", "Negative"], format: "enum" },
-                            citations: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } }
-                        },
-                        required: ["title", "description", "confidence", "sentiment", "citations"]
-                    }
-                },
-                feature_requests: {
-                    type: SchemaType.ARRAY,
-                    items: {
-                        type: SchemaType.OBJECT,
-                        properties: {
-                            feature: { type: SchemaType.STRING },
-                            frequency: { type: SchemaType.STRING, enum: ["High", "Medium", "Low"], format: "enum" },
-                            context: { type: SchemaType.STRING }
-                        },
-                        required: ["feature", "frequency", "context"]
-                    }
-                },
-                pain_points: {
-                    type: SchemaType.ARRAY,
-                    items: {
-                        type: SchemaType.OBJECT,
-                        properties: {
-                            issue: { type: SchemaType.STRING },
-                            severity: { type: SchemaType.STRING, enum: ["Critical", "Major", "Minor"], format: "enum" },
-                            description: { type: SchemaType.STRING }
-                        },
-                        required: ["issue", "severity", "description"]
-                    }
-                },
-                sentiment_breakdown: {
+                core_frustration: { type: SchemaType.STRING },
+                primary_competitor_failure: { type: SchemaType.STRING },
+                immediate_opportunity: { type: SchemaType.STRING },
+                confidence_basis: {
                     type: SchemaType.OBJECT,
                     properties: {
-                        positive: { type: SchemaType.INTEGER },
-                        neutral: { type: SchemaType.INTEGER },
-                        negative: { type: SchemaType.INTEGER }
+                        threads_analyzed: { type: SchemaType.INTEGER },
+                        total_complaint_mentions: { type: SchemaType.INTEGER }
                     },
-                    required: ["positive", "neutral", "negative"]
-                },
-                // New Fields for Competitor/Research Intelligence
-                quality_score: { type: SchemaType.INTEGER, description: "0-100 score of how valuable this research data is" },
-                quality_reasoning: { type: SchemaType.STRING, description: "Explanation for why this score was given (e.g. 'High distinct pain points' or 'Vague general discussion')" },
-                relevance_explanation: { type: SchemaType.STRING },
-                buying_intent_signals: {
-                    type: SchemaType.ARRAY,
-                    items: {
-                        type: SchemaType.OBJECT,
-                        properties: {
-                            signal: { type: SchemaType.STRING },
-                            context: { type: SchemaType.STRING },
-                            confidence: { type: SchemaType.STRING, enum: ["High", "Medium", "Low"], format: "enum" }
-                        },
-                        required: ["signal", "context", "confidence"]
-                    }
-                },
-                engagement_opportunities: {
-                    type: SchemaType.ARRAY,
-                    items: {
-                        type: SchemaType.OBJECT,
-                        properties: {
-                            thread_id: { type: SchemaType.STRING },
-                            reason: { type: SchemaType.STRING },
-                            talking_points: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } }
-                        },
-                        required: ["thread_id", "reason", "talking_points"]
-                    }
-                },
-                potential_leads: {
-                    type: SchemaType.ARRAY,
-                    items: {
-                        type: SchemaType.OBJECT,
-                        properties: {
-                            username: { type: SchemaType.STRING, description: "Username of the potential customer" },
-                            platform: { type: SchemaType.STRING, description: "Platform (Reddit, X, HN)" },
-                            intent_context: { type: SchemaType.STRING, description: "Why they are a good lead (pain point, seeking solution)" },
-                            original_post_id: { type: SchemaType.STRING, description: "ID of the post/comment for reference" }
-                        },
-                        required: ["username", "platform", "intent_context", "original_post_id"]
-                    },
-                    description: "List of users who expressed strong pain points or buying intent for outreach goals"
+                    required: ["threads_analyzed", "total_complaint_mentions"]
                 }
             },
-            required: [
-                "executive_summary", "themes", "feature_requests",
-                "pain_points", "sentiment_breakdown",
-                "quality_score", "quality_reasoning", "relevance_explanation",
-                "buying_intent_signals", "engagement_opportunities",
-                "potential_leads"
-            ]
+            required: ["core_frustration", "primary_competitor_failure", "immediate_opportunity", "confidence_basis"]
+        },
+        high_intensity_pain_points: {
+            type: SchemaType.ARRAY,
+            items: {
+                type: SchemaType.OBJECT,
+                properties: {
+                    title: { type: SchemaType.STRING },
+                    mention_count: { type: SchemaType.INTEGER },
+                    threads_covered: { type: SchemaType.INTEGER },
+                    intensity: { type: SchemaType.STRING, enum: ["Low", "Medium", "High"] },
+                    representative_quotes: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                    why_it_matters: { type: SchemaType.STRING }
+                },
+                required: ["title", "mention_count", "threads_covered", "intensity", "representative_quotes", "why_it_matters"]
+            }
+        },
+        switch_triggers: {
+            type: SchemaType.ARRAY,
+            items: {
+                type: SchemaType.OBJECT,
+                properties: {
+                    trigger: { type: SchemaType.STRING },
+                    evidence_mentions: { type: SchemaType.INTEGER },
+                    representative_quotes: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                    strategic_implication: { type: SchemaType.STRING }
+                },
+                required: ["trigger", "evidence_mentions", "representative_quotes", "strategic_implication"]
+            }
+        },
+        feature_gaps: {
+            type: SchemaType.ARRAY,
+            items: {
+                type: SchemaType.OBJECT,
+                properties: {
+                    missing_or_weak_feature: { type: SchemaType.STRING },
+                    demand_signal_strength: { type: SchemaType.STRING, enum: ["Low", "Medium", "High"] },
+                    mention_count: { type: SchemaType.INTEGER },
+                    context_summary: { type: SchemaType.STRING },
+                    opportunity_level: { type: SchemaType.STRING, enum: ["Low", "Medium", "High"] }
+                },
+                required: ["missing_or_weak_feature", "demand_signal_strength", "mention_count", "context_summary", "opportunity_level"]
+            }
+        },
+        competitive_weakness_map: {
+            type: SchemaType.ARRAY,
+            items: {
+                type: SchemaType.OBJECT,
+                properties: {
+                    competitor: { type: SchemaType.STRING },
+                    perceived_strength: { type: SchemaType.STRING },
+                    perceived_weakness: { type: SchemaType.STRING },
+                    exploit_opportunity: { type: SchemaType.STRING }
+                },
+                required: ["competitor", "perceived_strength", "perceived_weakness", "exploit_opportunity"]
+            }
+        },
+        ranked_build_priorities: {
+            type: SchemaType.ARRAY,
+            items: {
+                type: SchemaType.OBJECT,
+                properties: {
+                    priority_rank: { type: SchemaType.INTEGER },
+                    initiative: { type: SchemaType.STRING },
+                    justification: { type: SchemaType.STRING },
+                    evidence_mentions: { type: SchemaType.INTEGER },
+                    expected_impact: { type: SchemaType.STRING, enum: ["Low", "Medium", "High"] }
+                },
+                required: ["priority_rank", "initiative", "justification", "evidence_mentions", "expected_impact"]
+            }
+        },
+        messaging_and_positioning_angles: {
+            type: SchemaType.ARRAY,
+            items: {
+                type: SchemaType.OBJECT,
+                properties: {
+                    angle: { type: SchemaType.STRING },
+                    supporting_emotional_driver: { type: SchemaType.STRING },
+                    supporting_evidence_quotes: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } }
+                },
+                required: ["angle", "supporting_emotional_driver", "supporting_evidence_quotes"]
+            }
+        },
+        risk_flags: {
+            type: SchemaType.ARRAY,
+            items: {
+                type: SchemaType.OBJECT,
+                properties: {
+                    risk: { type: SchemaType.STRING },
+                    evidence_basis: { type: SchemaType.STRING }
+                },
+                required: ["risk", "evidence_basis"]
+            }
+        },
+        analysis_metadata: {
+            type: SchemaType.OBJECT,
+            properties: {
+                platform: { type: SchemaType.STRING },
+                competitor_analyzed: { type: SchemaType.STRING },
+                total_threads: { type: SchemaType.INTEGER },
+                total_comments_analyzed: { type: SchemaType.INTEGER },
+                analysis_depth: { type: SchemaType.STRING, enum: ["Lean", "Moderate", "Deep"] }
+            },
+            required: ["platform", "competitor_analyzed", "total_threads", "total_comments_analyzed", "analysis_depth"]
+        },
+        launch_velocity_90_days: {
+            type: SchemaType.OBJECT,
+            properties: {
+                core_feature_to_ship: { type: SchemaType.STRING },
+                positioning_angle: { type: SchemaType.STRING },
+                target_segment: { type: SchemaType.STRING },
+                pricing_strategy: { type: SchemaType.STRING },
+                primary_differentiator: { type: SchemaType.STRING }
+            },
+            required: ["core_feature_to_ship", "positioning_angle", "target_segment", "pricing_strategy", "primary_differentiator"]
         }
+    },
+    required: [
+        "market_attack_summary", "high_intensity_pain_points", "switch_triggers",
+        "feature_gaps", "competitive_weakness_map", "ranked_build_priorities",
+        "messaging_and_positioning_angles", "risk_flags", "analysis_metadata",
+        "launch_velocity_90_days"
+    ]
+};
+
+const model = genAI.getGenerativeModel({
+    model: "gemini-2.5-flash",
+    generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: responseSchema as any
     }
 });
 
@@ -119,11 +163,11 @@ interface ThreadContext {
     id: string;
     title: string;
     subreddit: string;
-    comments: any[]; // Full comment tree
+    comments: any[];
 }
 
 // Helper to minify comments and save tokens
-function minifyComments(comments: any[], depth = 0): string {
+export function minifyComments(comments: any[], depth = 0): string {
     if (!comments || comments.length === 0) return "";
 
     return comments.map((c: any) => {
@@ -135,73 +179,100 @@ function minifyComments(comments: any[], depth = 0): string {
     }).join("\n");
 }
 
-export async function analyzeThreads(threads: ThreadContext[], context?: string): Promise<any> {
-    if (!API_KEY) {
-        throw new Error("GEMINI_API_KEY is not set");
-    }
+export async function analyzeThreads(threads: ThreadContext[], context?: string, totalComments: number = 0) {
+    const threadData = threads.map(t => ({
+        title: t.title,
+        subreddit: t.subreddit,
+        id: t.id,
+        content: minifyComments(t.comments)
+    }));
 
     const systemPrompt = `
-You are a Strategic Market Researcher and Data Analyst. Your job is to analyze this collection of Reddit threads to extract actionable insights, recurring themes, user sentiment, and business opportunities.
+You are a competitive intelligence analyst.
+Your job is to transform raw customer discussion threads into a strategic competitive advantage blueprint.
 
-**Context:** ${context || "General market research"}
-    
-**Analysis Goals:**
-1. **Analyze Quality**: Score the research value (0-100) based on detail, relevance to the context, and insight depth.
-   - **<40**: Low value (memes, off-topic, very short comments).
-   - **40-70**: Average value (general discussion, some opinions).
-   - **>70**: High value (detailed reviews, specific pain points, feature requests, buying intent).
-   - **>90**: Goldmine (proven buyers, detailed comparison of competitors, urgent problems).
-   - *CRITICAL*: Use the full range of scores. Do not default to 70-80.
-2. **Identify Signals**: Find specific "Buying Intent" signals (people looking for solutions, expressing willingness to pay).
-3. **Spot Opportunities**: Identify threads where engagement (replying) would be valuable.
-4. **Extract Themes**: Identify top recurring themes and feature requests with specific citation IDs.
-5. **Assess Sentiment**: Calculate overall sentiment breakdown (Essential: the percentages MUST sum to exactly 100%).
-6. **Identify Potential Leads**: Find specific users/usernames who are complaining about existing solutions or actively seeking a new tool. These are candidates for cold outreach.
+You must return a JSON object that EXACTLY follows this structure:
+{
+  "market_attack_summary": {
+    "core_frustration": "string",
+    "primary_competitor_failure": "string",
+    "immediate_opportunity": "string",
+    "confidence_basis": { "threads_analyzed": number, "total_complaint_mentions": number }
+  },
+  "high_intensity_pain_points": [],
+  "switch_triggers": [],
+  "feature_gaps": [],
+  "competitive_weakness_map": [],
+  "ranked_build_priorities": [],
+  "messaging_and_positioning_angles": [],
+  "risk_flags": [],
+  "analysis_metadata": { "platform": "Reddit", "competitor_analyzed": "${context || 'Unknown'}", "total_threads": ${threads.length}, "total_comments_analyzed": ${totalComments}, "analysis_depth": "Deep" },
+  "launch_velocity_90_days": {
+    "core_feature_to_ship": "string",
+    "positioning_angle": "string",
+    "target_segment": "string",
+    "pricing_strategy": "string",
+    "primary_differentiator": "string"
+  }
+}
 
-**Data Handling:**
-- You are provided with a minified text representation of threads.
-- READ EVERYTHING. Do not hallucinate.
-- Use the provided 'ID:xyz' format in comments for citations.
-- When extracting leads, provide the platform and username accurately from the text.
+You are extracting:
+- Emotional pain -> high_intensity_pain_points
+- Repeated complaints -> market_attack_summary.total_complaint_mentions
+- Switching triggers -> switch_triggers
+- Feature gaps -> feature_gaps
+- Strategic opportunities -> immediate_opportunity
+- Launch roadmap -> launch_velocity_90_days (Actionable, tactical 90-day strike plan)
+- Messaging leverage -> messaging_and_positioning_angles
+
+You must ONLY use the provided threads as evidence.
+Quotes must be copied verbatim.
+Keep language strategic, decisive, and actionable.
+
+INPUT
+Competitor Name: ${context || "Unknown"}
+Platform: Reddit
+Total Threads Provided: ${threads.length}
+
+Thread Data:
+${threadData.map(t => `--- THREAD START ---\nTitle: ${t.title}\nSubreddit: r/${t.subreddit}\n${t.content}\n--- THREAD END ---`).join("\n\n")}
 `;
 
-    const contextParts = threads.map(t => {
-        return `
---- THREAD START ---
-ID: ${t.id}
-Subreddit: r/${t.subreddit}
-Title: ${t.title}
+    try {
+        console.log(`[AI] Calling Gemini AI Studio SDK with ${threads.length} threads...`);
+        const result = await model.generateContent(systemPrompt);
+        const response = result.response;
+        const text = response.text();
 
-${minifyComments(t.comments)}
---- THREAD END ---
-`;
-    }).join("\n\n");
+        if (!text) throw new Error("No response from AI");
 
-    // Retry Logic with Exponential Backoff
-    let attempts = 0;
-    const maxAttempts = 3;
-    let delay = 2000; // Start with 2 seconds
+        console.log("[AI] Raw Response received. Parsing JSON...");
+        const parsed = JSON.parse(text);
+        console.log("[AI] DEBUG - Response Keys:", Object.keys(parsed));
 
-    while (attempts < maxAttempts) {
-        try {
-            const result = await model.generateContent([
-                systemPrompt,
-                "Here is the data to analyze:",
-                contextParts
-            ]);
-            return result.response.text();
-        } catch (err: any) {
-            attempts++;
-            const isOverloaded = err.message?.includes("503") || err.message?.includes("Overloaded");
-            const isRateLimit = err.message?.includes("429");
-
-            if ((isOverloaded || isRateLimit) && attempts < maxAttempts) {
-                console.warn(`[AI] Attempt ${attempts} failed (${err.message}). Retrying in ${delay}ms...`);
-                await new Promise(resolve => setTimeout(resolve, delay));
-                delay *= 2; // Exponential backoff (2s -> 4s -> 8s)
-            } else {
-                throw err; // Fatal error or max attempts reached
-            }
+        // Defensive check to avoid 500 error
+        if (!parsed.market_attack_summary) {
+            console.warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            console.warn("[AI] CRITICAL WARNING: market_attack_summary MISSING!");
+            console.warn("[AI] Available Keys:", Object.keys(parsed));
+            console.warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            parsed.market_attack_summary = {
+                core_frustration: "Data unavailable",
+                primary_competitor_failure: "Data unavailable",
+                immediate_opportunity: "Data unavailable",
+                confidence_basis: { threads_analyzed: threads.length, total_complaint_mentions: 0 }
+            };
         }
+
+        // Backward compatibility mapping for executive_summary
+        parsed.executive_summary = parsed.market_attack_summary.core_frustration + "\n\n" + parsed.market_attack_summary.immediate_opportunity;
+
+        return {
+            analysis: parsed,
+            usage: response.usageMetadata
+        };
+    } catch (error) {
+        console.error("AI Analysis Error:", error);
+        throw error;
     }
 }

@@ -77,6 +77,7 @@ process.on("uncaughtException", (err: Error) => {
 // CORS Configuration
 const allowedOrigins = [
     "http://localhost:5173",
+    "http://localhost:5174",
     "http://localhost:4321",
     ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(/[;,]/) : [
         "https://redditkeeperprod.web.app",
@@ -310,6 +311,21 @@ const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
 const analysisQueue = new Queue("analysis", {
     connection: {
         url: redisUrl
+    },
+    defaultJobOptions: {
+        removeOnComplete: {
+            count: 100, // Keep last 100 jobs to avoid race conditions with waitUntilFinished
+            age: 24 * 3600 // or keep for 24 hours
+        },
+        removeOnFail: {
+            count: 1000,
+            age: 7 * 24 * 3600
+        },
+        attempts: 2,
+        backoff: {
+            type: 'exponential',
+            delay: 10000
+        }
     }
 });
 console.log("[INIT] BullMQ Analysis Queue initialized.");
@@ -323,8 +339,9 @@ console.log("[INIT] BullMQ Queue Events initialized.");
 
 // Worker Processor
 const analysisWorker = new Worker("analysis", async (job) => {
-    const { threadsContext, folderContext, userUid, folderId, plan } = job.data;
-    console.log(`[Worker] Processing analysis for folder ${folderId} (User: ${userUid})`);
+    console.log(">>>>>>>>>>>>>>>>>>>> WORKER PICKED UP JOB:", job.id);
+    const { threadsContext, folderContext, userUid, folderId, plan, totalComments } = job.data;
+    console.log(`[Worker] Processing analysis for folder ${folderId} (User: ${userUid}) with ${totalComments} comments.`);
 
     try {
         // HYBRID STORAGE: Resolve external content before analysis
@@ -360,22 +377,24 @@ const analysisWorker = new Worker("analysis", async (job) => {
             return t;
         }));
 
-        const result = await analyzeThreads(resolvedThreads, folderContext);
+        // IMPORTANT: DO NOT break this token tracking logic as it is used for billing and usage monitoring.
+        const { analysis, usage } = await analyzeThreads(resolvedThreads, folderContext, totalComments);
+        console.log(`[Worker] AI Analysis Result received for ${folderId}. Keys:`, Object.keys(analysis));
+        console.log(`[Worker] Token Usage:`, usage);
 
         // Calculate total comments (approximate from context or passed data)
         // For simplicity in worker, we might need to pass this count or recalculate
         // Let's assume the mutation of user stats happens here or we return result
 
-        const parsedResult = JSON.parse(result);
+        const parsedResult = analysis;
         parsedResult.createdAt = new Date().toISOString();
 
-        // Save to Firestore
-        await saveAnalysis(userUid, folderId, parsedResult, "gemini-flash-latest");
+        // Save to Firestore (Private usage metadata included)
+        await saveAnalysis(userUid, folderId, parsedResult, "gemini-2.5-flash", usage);
 
         // Deduct Credit (Increment Usage)
-        // We need to calculate total comments again or pass it in job data
-        // For now, let's pass it in job.data to avoid recalculation
-        const { totalComments, threadCount } = job.data;
+        // threadCount is also available in job.data as threadCount
+        const threadCount = job.data.threadCount;
 
         await updateStats(userUid, {
             reportsGenerated: 1,
@@ -439,6 +458,8 @@ app.post("/api/folders/:id/analyze", async (req: express.Request, res: express.R
             id: t.id,
             title: t.title,
             subreddit: t.subreddit,
+            // REVERT: Sending full comments to Redis again to ensure AI has context
+            // We'll rely on BullMQ job retention for Redis cleanup instead of payload reduction for now
             comments: (t.data as any)?.comments || null,
             storageUrl: (t as any).storageUrl || null
         }));
@@ -463,23 +484,20 @@ app.post("/api/folders/:id/analyze", async (req: express.Request, res: express.R
         // Note: serverless functions might time out, but we are on Render/Cloud Run so we have some time.
 
         try {
-            const result = await job.waitUntilFinished(analysisQueueEvents);
-            // Warning: waitUntilFinished requires QueueEvents. 
-            // If we don't want to set up QueueEvents yet, we can't wait.
-            // Actually, for MVP, if we switch to async, the frontend breaks.
-            // Let's try to keep it pseudo-sync or return "Processing started"
-
-            // DECISION: To avoid breaking the frontend "Analyze" button which expects a result,
-            // we will implement a simple Polling mechanism or just simple "await job.finished()".
-            // BullMQ job.finished() is what we want.
-
-            const finishedResult = await job.waitUntilFinished(new QueueEvents('analysis', { connection: { url: redisUrl } }));
+            const finishedResult = await job.waitUntilFinished(analysisQueueEvents);
 
             let responsePayload = finishedResult;
 
             // Redact for Free Users immediately
             if (req.user.plan === 'free') {
                 responsePayload = redactAnalysis(finishedResult);
+            }
+
+            console.log(`[API] Sending analysis response. Keys present:`, Object.keys(responsePayload));
+            if (responsePayload.market_attack_summary) {
+                console.log(`[API] market_attack_summary confirmed in payload.`);
+            } else {
+                console.warn(`[API] WARNING: market_attack_summary MISSING in final payload!`);
             }
 
             res.json(responsePayload);
@@ -497,83 +515,95 @@ app.post("/api/folders/:id/analyze", async (req: express.Request, res: express.R
 
 // Helper to redact reports for Free Users
 function redactAnalysis(data: any): any {
-    const redacted = { ...data };
+    console.log("[SERVER] Redacting analysis for free user...");
+    const redacted = {
+        ...data,
+        market_attack_summary: data.market_attack_summary // Explicitly preserve
+    };
 
     // Metadata for the "Unlock" UI
     redacted.locked_counts = {
-        leads: data.potential_leads?.length || 0,
-        intent: data.buying_intent_signals?.length || 0,
-        engagement: data.engagement_opportunities?.length || 0,
-        features: data.feature_requests?.length || 0
+        pain_points: data.high_intensity_pain_points?.length || 0,
+        triggers: data.switch_triggers?.length || 0,
+        gaps: data.feature_gaps?.length || 0,
+        roadmap: data.ranked_build_priorities?.length || 0
     };
 
-    // 2. Locked Lists (Stubbed)
-    if (data.themes) {
-        redacted.themes = data.themes.map(() => ({
-            title: "Locked Theme",
-            description: "This theme analysis is available on the Pro plan.",
-            confidence: 90,
-            citations: [],
+    // 1. Redact High-Intensity Pain Points
+    if (data.high_intensity_pain_points) {
+        redacted.high_intensity_pain_points = data.high_intensity_pain_points.map((p: any) => ({
+            ...p,
+            title: "Locked Pain Point",
+            why_it_matters: "Unlock the Pro plan to see full details of this high-intensity pain point.",
+            representative_quotes: ["Locked quote..."],
             isLocked: true
         }));
     }
 
-    if (data.pain_points) {
-        redacted.pain_points = data.pain_points.map(() => ({
-            issue: "Hidden Pain Point",
-            severity: "Critical",
-            description: "This pain point analysis is exclusive to Pro users.",
+    // 2. Redact Switch Triggers
+    if (data.switch_triggers) {
+        redacted.switch_triggers = data.switch_triggers.map((s: any) => ({
+            ...s,
+            trigger: "Locked Trigger",
+            strategic_implication: "This switching trigger is available on the Pro plan.",
+            representative_quotes: ["Locked..."],
             isLocked: true
         }));
     }
 
-    // 2. Locked Lists (Stubbed)
-    if (data.potential_leads) {
-        redacted.potential_leads = data.potential_leads.map(() => ({
-            username: "Hidden Lead",
-            platform: "Social",
-            intent_context: "This high-value lead is available on the Pro plan.",
-            original_post_id: "locked",
+    // 3. Redact Feature Gaps
+    if (data.feature_gaps) {
+        redacted.feature_gaps = data.feature_gaps.map((f: any) => ({
+            ...f,
+            missing_or_weak_feature: "Locked Feature Deficiency",
+            context_summary: "Unlock to see specific feature gaps and demand signals.",
             isLocked: true
         }));
     }
 
-    if (data.buying_intent_signals) {
-        redacted.buying_intent_signals = data.buying_intent_signals.map(() => ({
-            signal: "Buying Signal",
-            context: "This purchasing intent signal is exclusive to Pro users.",
-            confidence: "High",
+    // 4. Redact Weakness Map
+    if (data.competitive_weakness_map) {
+        redacted.competitive_weakness_map = data.competitive_weakness_map.map((w: any) => ({
+            ...w,
+            competitor: "Locked Competitor",
+            perceived_weakness: "Hidden",
+            exploit_opportunity: "This strike plan is exclusive to Pro users.",
             isLocked: true
         }));
     }
 
-    if (data.engagement_opportunities) {
-        redacted.engagement_opportunities = data.engagement_opportunities.map(() => ({
-            thread_id: "locked",
-            reason: "Engagement Opportunity",
-            talking_points: ["Locked talking point 1", "Locked talking point 2"],
+    // 5. Redact Build Priorities
+    if (data.ranked_build_priorities) {
+        redacted.ranked_build_priorities = data.ranked_build_priorities.map((b: any) => ({
+            ...b,
+            initiative: "Locked Strategy Initiative",
+            justification: "Unlock to see the full reasoning for this roadmap priority.",
             isLocked: true
         }));
     }
 
-    // Feature requests can remain visible or partially locked? 
-    // User said "All the themes should be visible... just locked(main content)". 
-    // Let's lock features too for consistency if they are considered "High Value".
-    if (data.feature_requests) {
-        redacted.feature_requests = data.feature_requests.map(() => ({
-            feature: "Hidden Request",
-            frequency: "High",
-            context: "Unlock to see specific feature requests.",
+    // 6. Redact Messaging Angles
+    if (data.messaging_and_positioning_angles) {
+        redacted.messaging_and_positioning_angles = data.messaging_and_positioning_angles.map((m: any) => ({
+            ...m,
+            angle: "Locked Messaging Angle",
+            supporting_emotional_driver: "This emotional lever is available on the Pro plan.",
+            supporting_evidence_quotes: ["Locked..."],
             isLocked: true
         }));
     }
 
-    // 3. Curiosity Gaps
-    // delete redacted.quality_reasoning; // User requested unlock
+    // 7. Redact Risk Flags
+    if (data.risk_flags) {
+        redacted.risk_flags = data.risk_flags.map((r: any) => ({
+            ...r,
+            risk: "Locked Risk",
+            evidence_basis: "Unlock to see intelligence risks and validation signals.",
+            isLocked: true
+        }));
+    }
 
-    // 4. Signal Flag
     redacted.isLocked = true;
-
     return redacted;
 }
 
@@ -584,7 +614,6 @@ app.get("/api/folders/:id/analysis", async (req: express.Request, res: express.R
     }
     try {
         const analyses = await getFolderAnalyses(req.user.uid, req.params.id as string);
-
         const isFree = req.user.plan === 'free';
 
         // Flatten the structure for the frontend
@@ -602,8 +631,11 @@ app.get("/api/folders/:id/analysis", async (req: express.Request, res: express.R
                 createdAt: a.createdAt || new Date().toISOString()
             };
         });
+
+        console.log(`[GET /analysis] Returning ${flattened.length} reports for folder ${req.params.id}. Latest keys:`, flattened[0] ? Object.keys(flattened[0]) : "none");
         res.json(flattened);
     } catch (err: any) {
+        console.error("[GET /analysis] Error:", err);
         res.status(500).json({ error: err.message });
     }
 });

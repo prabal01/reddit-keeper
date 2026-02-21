@@ -1,4 +1,15 @@
 import { useState } from 'react';
+import {
+    Search,
+    AlertCircle,
+    ArrowBigUp,
+    MessageSquare,
+    Copy,
+    Code,
+    ChevronRight,
+    ExternalLink,
+    BrainCircuit
+} from 'lucide-react';
 
 // Simplified API fetch for the landing page
 async function fetchThreadPublic(url: string) {
@@ -48,6 +59,7 @@ export function FetchDemo() {
 
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text);
+        // Using a basic browser alert for simplicity in this demo component
         alert("Copied to clipboard!");
     };
 
@@ -66,16 +78,17 @@ export function FetchDemo() {
         <div className="fetch-demo">
             <form onSubmit={handleSubmit} className="demo-form">
                 <div className="input-group">
+                    <Search size={20} className="text-tertiary ml-2" />
                     <input
                         type="url"
-                        placeholder="Paste a Reddit URL to try it (e.g. reddit.com/r/technology/...)"
+                        placeholder="Search 'YNAB', 'Notion', 'Superhuman'..."
                         value={url}
                         onChange={(e) => setUrl(e.target.value)}
                         className="demo-input"
                         required
                     />
                     <button type="submit" disabled={loading} className="btn btn-primary demo-btn">
-                        {loading ? 'Fetching...' : 'Fetch Thread'}
+                        {loading ? 'Analyzing...' : 'Analyze for Free'}
                     </button>
                 </div>
                 <p className="demo-hint">Try it now — no sign-up required (Limited to 10 requests/min)</p>
@@ -83,27 +96,27 @@ export function FetchDemo() {
 
             {error && (
                 <div className="demo-error">
-                    <span className="error-icon">⚠️</span> {error}
+                    <AlertCircle size={18} className="text-negative inline-block mr-2" /> {error}
                 </div>
             )}
 
             {result && (
                 <div className="demo-result">
                     <div className="result-header">
-                        <span className="subreddit">{result.post.subreddit}</span>
-                        <h3 className="post-title">{result.post.title}</h3>
-                        <div className="meta">
-                            <span>⬆️ {result.post.score}</span>
-                            <span>💬 {result.metadata.commentsReturned} comments (Preview)</span>
+                        <span className="subreddit text-accent font-bold text-sm tracking-wider uppercase mb-2 block">{result.post.subreddit}</span>
+                        <h3 className="post-title text-xl font-bold mb-4">{result.post.title}</h3>
+                        <div className="meta flex gap-4 text-sm text-secondary">
+                            <span className="flex items-center gap-1"><ArrowBigUp size={16} className="text-accent" /> {result.post.score}</span>
+                            <span className="flex items-center gap-1"><MessageSquare size={16} className="text-accent" /> {result.metadata.commentsReturned} comments (Preview)</span>
                         </div>
                     </div>
 
                     <div className="result-actions">
-                        <button onClick={() => copyToClipboard(generateMarkdown())} className="btn btn-sm btn-secondary">
-                            📋 Copy Markdown
+                        <button onClick={() => copyToClipboard(generateMarkdown())} className="btn btn-sm btn-secondary flex items-center gap-2">
+                            <Copy size={14} /> Copy Markdown
                         </button>
-                        <button onClick={() => copyToClipboard(JSON.stringify(result, null, 2))} className="btn btn-sm btn-secondary">
-                            { } Copy JSON
+                        <button onClick={() => copyToClipboard(JSON.stringify(result, null, 2))} className="btn btn-sm btn-secondary flex items-center gap-2">
+                            <Code size={14} /> Copy JSON
                         </button>
                     </div>
 
@@ -116,12 +129,16 @@ export function FetchDemo() {
                         ))}
                     </div>
 
-                    <div className="cta-overlay">
+                    <div className="cta-overlay border-t border-border pt-6 mt-6">
                         <div className="cta-content">
-                            <p>Want to analyze more threads?</p>
+                            <p className="mb-4 font-semibold">Want to extract deep strategic insights from this thread?</p>
                             <div className="cta-buttons">
-                                <a href={import.meta.env.PUBLIC_DASHBOARD_URL || '/app'} className="btn btn-primary">Save Thread</a>
-                                <a href={import.meta.env.PUBLIC_DASHBOARD_URL || '/app'} className="btn btn-secondary">Analyze Thread (AI)</a>
+                                <a href={import.meta.env.PUBLIC_DASHBOARD_URL || '/app'} className="btn btn-primary flex items-center justify-center gap-2">
+                                    <ExternalLink size={18} /> Save Thread
+                                </a>
+                                <a href={import.meta.env.PUBLIC_DASHBOARD_URL || '/app'} className="btn btn-secondary flex items-center justify-center gap-2">
+                                    <BrainCircuit size={18} /> Analyze with OpinionDeck AI
+                                </a>
                             </div>
                         </div>
                     </div>

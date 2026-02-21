@@ -1,5 +1,15 @@
 console.log("[OpinionDeck] Content Script Loaded on Dashboard");
 
+// Listen for messages from background script
+chrome.runtime.onMessage.addListener((request) => {
+    if (request.type === "OPINION_DECK_DISCOVERY_PROGRESS") {
+        window.postMessage({
+            type: "OPINION_DECK_DISCOVERY_PROGRESS",
+            stepId: request.stepId
+        }, window.location.origin);
+    }
+});
+
 // Listen for messages from the Web App (App.tsx)
 window.addEventListener("message", (event) => {
     // We only accept messages from ourselves

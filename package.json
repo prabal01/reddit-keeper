@@ -29,6 +29,7 @@
   "license": "MIT",
   "description": "Download complete Reddit threads (post + all comments) in AI-friendly formats",
   "dependencies": {
+    "@google-cloud/vertexai": "^1.10.0",
     "@google/generative-ai": "^0.24.1",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",

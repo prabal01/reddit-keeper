@@ -1,0 +1,223 @@
+
+🚀 Starting R&D Iteration 5.4 for: splitwise
+-----------------------------------
+
+🔍 Searching: title:splitwise + frustrated...
+   ✨ Top 10 for this query:
+   1. [36000] r/SaaS | I benchmarked my app against Splitwise &amp; Venmo
+   2. [26500] r/androidapps | I benchmarked my app against Splitwise and Venmo. It’s used by 1.6k users and is 3x faster!
+   3. [26040] r/androiddev | I benchmarked my app against Splitwise and Venmo. It’s 3x faster and reached 1.6k users
+   4. [26020] r/SideProject | I benched marked my app against Splitwise and Venmo. It’s free and 3x faster.
+   5. [26000] r/iosapps | I benched marked my app against Splitwise and Venmo. It’s free and 3x faster!
+   6. [22540] r/fintech | Splitwise + Venmo just had a baby.
+
+🔍 Searching: title:splitwise + alternative...
+   ✨ Top 10 for this query:
+   1. [30520] r/SideProject | I made an insanely easy-to-use Splitwise alternative that works in your browser and scans receipts
+   2. [26500] r/SideProject | I built Splitwise alternative (Splitup) using free AI tools, Flutter and Supabase.
+   3. [22520] r/apps | Built SplitIQ — a smarter, cleaner Splitwise alternative with budgets (need Android beta testers)
+   4. [22500] r/ProductivityApps | Built SplitIQ — a smarter, cleaner Splitwise alternative with budgets (need Android beta testers)
+
+🔍 Searching: title:splitwise + vs...
+   ⚠️ No quality results found for this query.
+
+🔍 Searching: title:splitwise + review...
+   ⚠️ No quality results found for this query.
+
+🔍 Searching: title:splitwise + sucks...
+   ✨ Top 10 for this query:
+   1. [22540] r/fintech | Splitwise + Venmo just had a baby.
+
+🔍 Searching: "splitwise" + annoying...
+   ✨ Top 10 for this query:
+   1. [10020] r/Businessideas | Would you use a “shared kitty” app (one treasurer + pooled money) with AI fast logging?
+
+🔍 Searching: "splitwise" + problems...
+   ✨ Top 10 for this query:
+   1. [22020] r/growmybusiness | Looking for Splitwise + Venmo in one app?
+   2. [11250] r/IndieDev | I built (yet another) group expense splitter because I think a lot of pro features should be free
+   3. [10020] r/Businessideas | Would you use a “shared kitty” app (one treasurer + pooled money) with AI fast logging?
+   4. [7510] r/Solopreneur | i read 200+ complaint threads on reddit this week. here are 6 problems people posted about in the last 7 days that have zero good solutions
+   5. [6530] r/CreditCardsIndia | I built an iOS app to replace my Excel sheets. Tracks cashback, spend milestones, accelerated rewards and more
+   6. [6250] r/sideprojects | I built a receipt scanner to stop arguing with my girlfriend about money
+   7. [3610] r/InsideIndianMarriage | Looking for life hacks to help manage my(29F) relationship with an extreme workaholic (33M)
+   8. [1310] r/codingbootcamp | The Future of Jobs Report 2025  (January)
+
+🔍 Searching: "splitwise" + billing...
+   ✨ Top 10 for this query:
+   1. [26500] r/SideProject | I built a "super app" for expense tracking after Splitwise wasn't enough
+   2. [26500] r/SideProject | I built Splitwise alternative (Splitup) using free AI tools, Flutter and Supabase.
+   3. [24000] r/roommates | Built a smarter Splitwise because my group trip turned into a spreadsheet war (need a few beta testers 👀)
+   4. [22520] r/apps | Built SplitIQ — a smarter, cleaner Splitwise alternative with budgets (need Android beta testers)
+   5. [22500] r/ProductivityApps | Built SplitIQ — a smarter, cleaner Splitwise alternative with budgets (need Android beta testers)
+   6. [22460] r/developersIndia | Was fed up with Splitwise asking me to pay to add more than 4-5 expenses, so created my own bill split, roast it!
+   7. [22020] r/growmybusiness | Looking for Splitwise + Venmo in one app?
+   8. [11250] r/IndieDev | I built (yet another) group expense splitter because I think a lot of pro features should be free
+   9. [8410] r/reactnative | Guidance needed.
+   10. [6530] r/CreditCardsIndia | I built an iOS app to replace my Excel sheets. Tracks cashback, spend milestones, accelerated rewards and more
+
+🔍 Searching: "splitwise" + support...
+   ✨ Top 10 for this query:
+   1. [26500] r/SideProject | I built a "super app" for expense tracking after Splitwise wasn't enough
+   2. [11250] r/IndieDev | I built (yet another) group expense splitter because I think a lot of pro features should be free
+   3. [6000] r/MVPLaunch | Built a free tool for group trip planning (itinerary, expense splitting and more)
+   4. [4400] r/MonarchMoney | Using monarch + splitiwse for group expenses
+   5. [-2920] r/SpouseVisaUk | Timeline + documents: Inside UK, standard, unmarried (success!)
+
+🔍 Searching: "splitwise" alternative...
+   ✨ Top 10 for this query:
+   1. [30520] r/SideProject | I made an insanely easy-to-use Splitwise alternative that works in your browser and scans receipts
+   2. [28560] r/apps | Looking for feedback: Built a Splitwise alternative after hitting their daily limits
+   3. [27520] r/buildinpublic | How many of you use Splitwise — and what annoys you the most?
+   4. [27060] r/AskIndia | Is anyone tired of Splitwise and looking for better alternatives?
+   5. [26500] r/SideProject | I built Splitwise alternative (Splitup) using free AI tools, Flutter and Supabase.
+   6. [24880] r/roommates | Splitwise is driving me insane - anyone else?
+   7. [24680] r/indiasocial | How are you all splitting expenses with friends? Is Splitwise still something that people like? Are you looking for alternate apps?
+   8. [24500] r/SideProject | I built Splitiq — a smarter Splitwise alternative after too many roommate fights over 200 bills (looking for a few early testers)
+   9. [24160] r/iOSAppsMarketing | We built Splital, a Splitwise alternative with all core features free and no ads
+   10. [23940] r/apps | I can't find Splitwise alternative that suits my needs
+
+🔍 Searching: "splitwise" suck...
+   ✨ Top 10 for this query:
+   1. [22540] r/fintech | Splitwise + Venmo just had a baby.
+   2. [4590] r/BEFire | Just me or do budgeting apps suck for couples without joint accounts?
+   3. [4270] r/UCalgary | ADHD and Autism at UofC: A Masterdoc on How to Survive
+   4. [3670] r/EuropeFIRE | Just me or do budgeting apps suck for couples without joint accounts?
+   5. [3500] r/ProductivityApps | Trying to stop losing track of who owes what between friends? I made something that might help
+   6. [2870] r/irishpersonalfinance | Just me or do budgeting apps suck for couples without joint accounts?
+   7. [2500] r/AskTechnology | Just Dropped Some Tech Gems on Medium – Would Love Your Thoughts!
+   8. [2280] r/eupersonalfinance | What do you use for shared budgeting?
+   9. [1750] r/SideProject | Building a Group Expense App After Tricount Failed Us on a Trip
+   10. [1710] r/Netherlands | [Couples] Which app are you using for shared expenses?
+
+🔍 Searching: "splitwise" annoying...
+   ✨ Top 10 for this query:
+   1. [27520] r/buildinpublic | How many of you use Splitwise — and what annoys you the most?
+   2. [22500] r/StartUpIndia | halfsies - Free Splitwise Alternative
+   3. [11500] r/SideProject | GitHub - mrkaye97/medici: A minimalist Splitwise-like expense-sharing app
+   4. [10020] r/Businessideas | Would you use a “shared kitty” app (one treasurer + pooled money) with AI fast logging?
+   5. [7040] r/AppBusiness | Built a simple app for splitting group expenses and tracking personal spending
+   6. [7000] r/ShowMeYourApps | Built a simple app for splitting group expenses and tracking personal spending
+   7. [4140] r/roastmystartup | Roast TripSplitter: free expense splitting without forcing everyone to sign up
+   8. [3640] r/TravelHacks | US/UK money transfer app
+   9. [3560] r/ynab | Looking for suggestions on how to keep shared expenses claar
+   10. [3500] r/ProductivityApps | Trying to stop losing track of who owes what between friends? I made something that might help
+
+🔍 Searching: "splitwise" review...
+   ✨ Top 10 for this query:
+   1. [23000] r/startups_promotion | Chippy Split (A Splitwise Alternative)
+   2. [13080] r/appspromo | Chippy Split (Splitwise Alternative)
+   3. [13040] r/AppBusiness | Chippy Split (Kind of like Splitwise)
+   4. [12560] r/RhodeIsland | Info on Splitwise?
+   5. [10020] r/Businessideas | Would you use a “shared kitty” app (one treasurer + pooled money) with AI fast logging?
+   6. [8410] r/reactnative | Guidance needed.
+   7. [6570] r/phuket | Phuket Travel Guide: Phuket, Koh Yao Yai, &amp; Krabi – Thailand
+   8. [6250] r/OnlyGoodContent | On or Off Campus Coventry University Accommodation
+   9. [6250] r/studenten | Studenten Keuken Survival: Van Instant Noodles Naar Echt Koken
+   10. [5120] r/FinancialLiteracyPH | Sharing the web app that i built for splitting bills by just taking a photo of your receipt
+
+🔍 Searching: "splitwise"...
+   ✨ Top 10 for this query:
+   1. [30520] r/SideProject | I made an insanely easy-to-use Splitwise alternative that works in your browser and scans receipts
+   2. [29520] r/mcp | Built Splitwise MCP(implemented in ruby)
+   3. [28560] r/apps | Looking for feedback: Built a Splitwise alternative after hitting their daily limits
+   4. [27520] r/buildinpublic | How many of you use Splitwise — and what annoys you the most?
+   5. [27060] r/AskIndia | Is anyone tired of Splitwise and looking for better alternatives?
+   6. [26600] r/ynab | Splitwise to YNAB
+   7. [26500] r/SideProject | I built a "super app" for expense tracking after Splitwise wasn't enough
+   8. [26040] r/androiddev | I benchmarked my app against Splitwise and Venmo. It’s 3x faster and reached 1.6k users
+   9. [26020] r/SideProject | I benched marked my app against Splitwise and Venmo. It’s free and 3x faster.
+   10. [26000] r/uwaterloo | Drawbacks of Splitwise app or add ons
+
+🏆 TOP 30 RESULTS (ITERATION 5.4):
+===================================
+1. [ 36000] r/SaaS            | I benchmarked my app against Splitwise &amp; Venmo
+   💡 Quality Sub: +10000 | Intent (2/2): +4000 | Context (4/4): +2000 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +0
+---
+2. [ 30520] r/SideProject     | I made an insanely easy-to-use Splitwise alternative that works in your browser and scans receipts
+   💡 Intent (3/3): +6000 | Context (5/8): +2500 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +2020
+---
+3. [ 29520] r/mcp             | Built Splitwise MCP(implemented in ruby)
+   💡 Intent (1/1): +2000 | Context (5/5): +2500 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +20 | Fresh (30d): +5000
+---
+4. [ 28560] r/apps            | Looking for feedback: Built a Splitwise alternative after hitting their daily limits
+   💡 Intent (2/2): +4000 | Context (5/5): +2500 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +60 | Recent (90d): +2000
+---
+5. [ 27520] r/buildinpublic   | How many of you use Splitwise — and what annoys you the most?
+   💡 Intent (2/2): +4000 | Context (3/3): +1500 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +20 | Recent (90d): +2000
+---
+6. [ 27060] r/AskIndia        | Is anyone tired of Splitwise and looking for better alternatives?
+   💡 Intent (3/3): +6000 | Context (1/1): +500 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +560
+---
+7. [ 26600] r/ynab            | Splitwise to YNAB
+   💡 Intent (2/2): +4000 | Context (5/6): +2500 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +100
+---
+8. [ 26500] r/androidapps     | I benchmarked my app against Splitwise and Venmo. It’s used by 1.6k users and is 3x faster!
+   💡 Intent (2/2): +4000 | Context (5/5): +2500 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +0
+---
+9. [ 26500] r/SideProject     | I built Splitwise alternative (Splitup) using free AI tools, Flutter and Supabase.
+   💡 Intent (2/2): +4000 | Context (5/5): +2500 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +0
+---
+10. [ 26500] r/SideProject     | I built a "super app" for expense tracking after Splitwise wasn't enough
+   💡 Intent (1/1): +2000 | Context (5/6): +2500 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +0 | Recent (90d): +2000
+---
+11. [ 26040] r/androiddev      | I benchmarked my app against Splitwise and Venmo. It’s 3x faster and reached 1.6k users
+   💡 Intent (2/2): +4000 | Context (4/4): +2000 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +40
+---
+12. [ 26020] r/SideProject     | I benched marked my app against Splitwise and Venmo. It’s free and 3x faster.
+   💡 Intent (2/2): +4000 | Context (4/4): +2000 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +20
+---
+13. [ 26000] r/iosapps         | I benched marked my app against Splitwise and Venmo. It’s free and 3x faster!
+   💡 Intent (2/2): +4000 | Context (4/4): +2000 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +0
+---
+14. [ 26000] r/uwaterloo       | Drawbacks of Splitwise app or add ons
+   💡 Context (2/2): +1000 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +0 | Fresh (30d): +5000
+---
+15. [ 25500] r/ruby            | Built Splitwise MCP(implemented in ruby)
+   💡 Context (1/1): +500 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +0 | Fresh (30d): +5000
+---
+16. [ 24880] r/roommates       | Splitwise is driving me insane - anyone else?
+   💡 Intent (2/2): +4000 | Context (1/1): +500 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +380
+---
+17. [ 24680] r/indiasocial     | How are you all splitting expenses with friends? Is Splitwise still something that people like? Are you looking for alternate apps?
+   💡 Intent (2/2): +4000 | Context (1/1): +500 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +180
+---
+18. [ 24600] r/androidapps     | SplitWise feels dead to use as a free user. I can't be the only one?
+   💡 Intent (1/1): +2000 | Context (3/3): +1500 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +1100
+---
+19. [ 24500] r/SideProject     | I built Splitiq — a smarter Splitwise alternative after too many roommate fights over 200 bills (looking for a few early testers)
+   💡 Intent (1/1): +2000 | Context (5/5): +2500 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +0
+---
+20. [ 24160] r/iOSAppsMarketing | We built Splital, a Splitwise alternative with all core features free and no ads
+   💡 Intent (1/1): +2000 | Context (4/4): +2000 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +160
+---
+21. [ 24080] r/binichderalman  | BIDA wenn ich Splitwise benutzen möchte?
+   💡 Context (1/1): +500 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +1580 | Recent (90d): +2000
+---
+22. [ 24000] r/roommates       | Built a smarter Splitwise because my group trip turned into a spreadsheet war (need a few beta testers 👀)
+   💡 Intent (1/1): +2000 | Context (4/4): +2000 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +0
+---
+23. [ 24000] r/developersIndia | Was fed up with Daily expense limits of splitwise so I made this
+   💡 Context (4/4): +2000 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +2000
+---
+24. [ 23940] r/apps            | I can't find Splitwise alternative that suits my needs
+   💡 Intent (1/1): +2000 | Context (2/2): +1000 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +940
+---
+25. [ 23580] r/SideProject     | Splitwise and expense tracker combined
+   💡 Context (3/3): +1500 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +80 | Recent (90d): +2000
+---
+26. [ 23580] r/iosapps         | I hate Splitwise so I built an app that is going viral cause it solves at the moment of paying so you won't need IOU apps
+   💡 Intent (1/1): +2000 | Context (3/3): +1500 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +80
+---
+27. [ 23520] r/SideProject     | I hate Splitwise so I built an app that is processing millions of payments now
+   💡 Intent (1/1): +2000 | Context (3/3): +1500 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +20
+---
+28. [ 23500] r/DoesAnybodyElse | DAE get the vibe that Splitwise is pushing free users aside for Pro?
+   💡 Intent (1/1): +2000 | Context (3/3): +1500 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +0
+---
+29. [ 23340] r/developersIndia | Fed up with Splitwise limits &amp; popups… so I built a platform that lets you settle without any blockers
+   💡 Context (3/3): +1500 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +1840
+---
+30. [ 23000] r/startups_promotion | Chippy Split (A Splitwise Alternative)
+   💡 Intent (1/1): +2000 | Context (2/2): +1000 | Title: +10000 | SubjectMatch: +10000 | Engagement (Capped): +0
+---
