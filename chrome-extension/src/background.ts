@@ -7,8 +7,7 @@ chrome.runtime.onInstalled.addListener(() => {
         .catch((error) => console.error(error));
 });
 
-const BUCKET = import.meta.env.VITE_STORAGE_BUCKET || 'redditkeeperprod.firebasestorage.app';
-const API_URL = `${import.meta.env.VITE_API_URL}/api/extractions`;
+const BUCKET = (import.meta as any).env.VITE_STORAGE_BUCKET || 'redditkeeperprod.firebasestorage.app';
 
 // Global lock for parallel extractions
 const processingThreads = new Set<string>();
@@ -36,90 +35,6 @@ async function uploadToStorage(data: any, uid: string, token: string) {
 
     const result = await response.json();
     return `https://firebasestorage.googleapis.com/v0/b/${BUCKET}/o/${encodeURIComponent(filePath)}?alt=media&token=${result.downloadTokens || ''}`;
-}
-
-// Helper to recursively fetch more children from Reddit
-async function fetchMoreRedditComments(linkId: string, children: string[], progressCallback: (count: number) => void): Promise<any[]> {
-    if (!children || children.length === 0) return [];
-    if (!linkId || linkId === 't3_undefined' || linkId === 't3_') {
-        console.error("[OpinionDeck] Invalid link_id for deep fetch:", linkId);
-        return [];
-    }
-
-    let allFetchedComments: any[] = [];
-    let currentBatch = 0;
-    const batchSize = 20; // Reduced to 20 for maximum safety and unauthenticated reliability
-
-    for (let i = 0; i < children.length; i += batchSize) {
-        const batch = children.slice(i, i + batchSize).filter(id => !!id);
-        if (batch.length === 0) continue;
-
-        const childrenParam = batch.map(id => id.startsWith('t1_') ? id : `t1_${id}`).join(',');
-
-        console.log(`[OpinionDeck] Fetching morechildren batch ${++currentBatch} for ${linkId} (${batch.length} IDs)...`);
-
-        // Use GET with .json - much more reliable for unauthenticated requests than POST
-        const url = `https://www.reddit.com/api/morechildren.json?api_type=json&link_id=${linkId}&children=${childrenParam}&limit_children=false&raw_json=1`;
-
-        let retryCount = 0;
-        const maxRetries = 2;
-
-        while (retryCount <= maxRetries) {
-            try {
-                const response = await fetch(url);
-
-                // Only retry on Rate Limit (429) or Server Errors (5xx)
-                if (response.status === 429 || response.status >= 500) {
-                    if (retryCount < maxRetries) {
-                        const wait = (retryCount + 1) * 3000;
-                        console.warn(`[OpinionDeck] Reddit busy or throttled (${response.status}). Retrying in ${wait}ms...`);
-                        await new Promise(r => setTimeout(r, wait));
-                        retryCount++;
-                        continue;
-                    }
-                }
-
-                if (!response.ok) {
-                    const errorBody = await response.text();
-                    console.error(`[OpinionDeck] Reddit API Error ${response.status}:`, errorBody.substring(0, 300));
-                    throw new Error(`Reddit API Error: ${response.status}`);
-                }
-
-                const data = await response.json();
-                const things = data.json?.data?.things || [];
-                const newComments = things
-                    .filter((t: any) => t.kind === 't1')
-                    .map((t: any) => ({
-                        id: t.data.id,
-                        parentId: t.data.parent_id,
-                        author: t.data.author,
-                        body: t.data.body,
-                        score: t.data.score,
-                        depth: t.data.depth,
-                        createdUtc: t.data.created_utc,
-                        isSubmitter: t.data.is_submitter,
-                        distinguished: t.data.distinguished,
-                        stickied: t.data.stickied,
-                        replies: []
-                    }));
-
-                allFetchedComments = allFetchedComments.concat(newComments);
-                progressCallback(allFetchedComments.length);
-                break; // Success
-            } catch (err) {
-                console.error("[OpinionDeck] Batch expansion failed:", err);
-                if (retryCount === maxRetries) break; // Give up
-                retryCount++;
-                await new Promise(r => setTimeout(r, 2000));
-            }
-        }
-
-        // Rate Limit: 3.0s between requests (very safe)
-        if (i + batchSize < children.length) {
-            await new Promise(resolve => setTimeout(resolve, 3000));
-        }
-    }
-    return allFetchedComments;
 }
 
 // Helper to flatten an existing nested tree back into a list
@@ -183,21 +98,17 @@ function nestComments(fetchedComments: any[], existingComments: any[] = []): any
 }
 
 // Helper to save to backend
-async function saveToBackend(data: any) {
-    // Base API URL from environment
-    const BASE_API = import.meta.env.VITE_API_URL;
+async function saveToBackend(data: any, options: { depth?: 'shallow' | 'deep' } = {}) {
+    const BASE_API = (import.meta as any).env.VITE_API_URL;
 
     const authRecord = await chrome.storage.local.get(['opinion_deck_token', 'opinion_deck_api_url']);
     const token = authRecord.opinion_deck_token;
 
-    // Safety check: Ignore stale Railway.app URLs if they exist in storage
     let storedApiUrl = authRecord.opinion_deck_api_url;
     if (storedApiUrl && storedApiUrl.includes('railway.app')) {
-        console.log(`[OpinionDeck] Ignoring stale API URL override: ${storedApiUrl}`);
         storedApiUrl = null;
     }
 
-    // Construct final URL - ALWAYS ensure it ends with /api/extractions
     const baseUrl = (storedApiUrl || BASE_API).replace(/\/$/, '');
     const finalApiUrl = baseUrl.endsWith('/api')
         ? `${baseUrl}/extractions`
@@ -206,114 +117,28 @@ async function saveToBackend(data: any) {
     try {
         let payload = { ...data };
 
-        // DEEP FETCH: If Reddit and has pending comments
-        if (data.source === 'reddit' && data.content?.pendingMore?.length > 0) {
+        const isDeep = options.depth === 'deep';
+        if (data.source === 'reddit' && data.content?.pendingMore?.length > 0 && isDeep) {
             const threadId = data.id || `reddit_${data.content.linkName}`;
-            if (processingThreads.has(threadId)) {
-                console.warn(`[OpinionDeck] Thread ${threadId} is already being processed. Aborting parallel task.`);
-                return { status: 'error', error: 'Extraction already in progress for this thread.' };
-            }
+            if (processingThreads.has(threadId)) return { status: 'error', error: 'Extraction in progress' };
 
             processingThreads.add(threadId);
-            console.log(`[OpinionDeck] Starting Deep Fetch Delegation for ${data.content.pendingMore.length} comments...`);
-
             try {
-                // Determine the active tab to send the delegation message
                 const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
                 const activeTab = tabs[0];
-
-                if (!activeTab || !activeTab.id) {
-                    throw new Error("No active tab found to delegate fetching.");
+                if (activeTab?.id) {
+                    const expansionResponse = await chrome.tabs.sendMessage(activeTab.id, {
+                        action: 'EXPAND_COMMENTS',
+                        linkId: data.content.linkName?.startsWith('t3_') ? data.content.linkName : `t3_${data.content.linkName}`,
+                        children: data.content.pendingMore
+                    });
+                    if (expansionResponse?.comments) {
+                        payload.content.comments = nestComments(expansionResponse.comments, data.content.comments);
+                        delete payload.content.pendingMore;
+                    }
                 }
-
-                // Settle Delay: Wait 1s before hitting the tab
-                await new Promise(r => setTimeout(r, 1000));
-
-                const linkId = data.content.linkName?.startsWith('t3_')
-                    ? data.content.linkName
-                    : `t3_${data.content.linkName}`;
-
-                // Delegate to Content Script (rides on user session)
-                const expansionResponse = await chrome.tabs.sendMessage(activeTab.id, {
-                    action: 'EXPAND_COMMENTS',
-                    linkId,
-                    children: data.content.pendingMore
-                });
-
-                if (expansionResponse?.error) {
-                    throw new Error(expansionResponse.error);
-                }
-
-                const extraComments = expansionResponse?.comments || [];
-
-                // Integrate into nested structure
-                payload.content.comments = nestComments(extraComments, data.content.comments);
-                delete payload.content.pendingMore;
-                console.log(`[OpinionDeck] Deep Fetch Complete (via Delegation). Total items: ${extraComments.length}`);
-            } catch (err: any) {
-                console.error("[OpinionDeck] Deep Fetch Delegation Failed:", err);
-                // We proceed with what we have (partial thread)
             } finally {
                 processingThreads.delete(threadId);
-            }
-        }
-
-        // Calculate final counts and metadata before potential storage offload
-        const countNestedComments = (nodes: any[]): number => {
-            if (!nodes) return 0;
-            let count = 0;
-            for (const n of nodes) {
-                count += 1 + countNestedComments(n.replies || []);
-            }
-            return count;
-        };
-
-        const finalCommentCount = (payload.source === 'reddit' && payload.content?.comments)
-            ? countNestedComments(payload.content.comments)
-            : (payload.content?.flattenedComments?.length || payload.content?.comments?.length || 0);
-
-        const postMetadata = payload.content?.post || { title: payload.title };
-
-        const dataSize = JSON.stringify(payload).length;
-        console.log(`[OpinionDeck] Payload size: ${dataSize} bytes`);
-
-        // HYBRID STORAGE: Enforce for Reddit (fix nesting) OR if payload > 500KB
-        const shouldOffload = (payload.source === 'reddit') || (dataSize > 500 * 1024);
-
-        if (shouldOffload && token) {
-            try {
-                const tokenParts = token.split('.');
-                const payloadStr = atob(tokenParts[1]);
-                const tokenData = JSON.parse(payloadStr);
-                const uid = tokenData.user_id || tokenData.uid || 'anon';
-
-                const storageUrl = await uploadToStorage(payload.content, uid, token);
-                console.log(`[OpinionDeck] Hybrid Storage Success (Offloaded due to ${payload.source === 'reddit' ? 'Nesting' : 'Size'}): ${storageUrl}`);
-
-                // Replace content with storageUrl stub, but keep skeleton metadata
-                // CRITICAL: Preserve these for the backend "Folder Bridge" to work
-                const skeleton = {
-                    id: payload.id,
-                    source: payload.source,
-                    title: payload.title,
-                    url: payload.url,
-                    extractedAt: payload.extractedAt,
-                    folderId: payload.folderId,
-                    post: postMetadata,
-                    commentCount: finalCommentCount,
-                    storageUrl: storageUrl,
-                    content: null
-                };
-
-                payload = skeleton;
-                console.log(`[OpinionDeck] Offloaded payload prepared with metadata:`, {
-                    id: payload.id,
-                    source: payload.source,
-                    folderId: payload.folderId
-                });
-            } catch (storageErr: any) {
-                console.error("[OpinionDeck] Hybrid Storage Upload failed:", storageErr);
-                throw new Error(`Cloud storage upload failed: ${storageErr.message || 'Unknown error'}`);
             }
         }
 
@@ -326,369 +151,195 @@ async function saveToBackend(data: any) {
             body: JSON.stringify({ data: payload })
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `HTTP ${response.status}`);
-        }
-
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return await response.json();
     } catch (err) {
-        console.error('Failed to save to backend:', err);
+        console.error('Failed to save:', err);
         throw err;
     }
 }
 
-// Handle external messages from Web App (Auth Sync)
-chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => {
-    if (request.type === 'OPINION_DECK_AUTH_TOKEN') {
-        const { token, apiUrl, dashboardUrl } = request;
-
-        console.log('[OpinionDeck] Received Auth Token from Web App');
-
-        chrome.storage.local.set({
-            'opinion_deck_token': token,
-            'opinion_deck_api_url': apiUrl,
-            'opinion_deck_dashboard_url': dashboardUrl
-        }, () => {
-            console.log("[OpinionDeck] Extension Auth Sync: Success");
-            sendResponse({ status: 'success' });
-        });
-        return true; // async response
-    }
-});
-
-// Handle internal messages (Content Scripts -> Background)
+// Handle internal messages
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    // 0. Handle Auth Token Sync (from dashboard.ts bridge)
     if (request.type === 'OPINION_DECK_AUTH_TOKEN') {
-        const { token, apiUrl, dashboardUrl } = request; // Properties from event.data
-
-        console.log('[OpinionDeck] Received Auth Token from Dashboard Bridge');
-
         chrome.storage.local.set({
-            'opinion_deck_token': token,
-            // Fallback defaults from environment if not provided
-            'opinion_deck_api_url': apiUrl || `${import.meta.env.VITE_API_URL}/api`,
-            'opinion_deck_dashboard_url': dashboardUrl || import.meta.env.VITE_DASHBOARD_URL
+            'opinion_deck_token': request.token,
+            'opinion_deck_api_url': request.apiUrl || `${(import.meta as any).env.VITE_API_URL}/api`,
+            'opinion_deck_dashboard_url': request.dashboardUrl || (import.meta as any).env.VITE_DASHBOARD_URL
+        }, () => sendResponse({ status: 'success' }));
+        return true;
+    }
+
+    if (request.action === 'OPEN_DISCOVERY_PANEL') {
+        chrome.storage.local.set({
+            'current_discovery_competitor': request.competitor,
+            'discovery_status': 'setup'
         }, () => {
-            console.log("[OpinionDeck] Extension Auth Sync: Success");
-            sendResponse({ status: 'success' });
+            // @ts-ignore
+            chrome.sidePanel.open({ windowId: sender.tab?.windowId })
+                .then(() => sendResponse({ status: 'success' }))
+                .catch(err => sendResponse({ status: 'error', error: err.message }));
         });
         return true;
     }
 
     if (request.action === 'SAVE_EXTRACTION') {
-        saveToBackend(request.data)
+        saveToBackend(request.data, { depth: request.depth })
             .then(res => sendResponse({ status: 'success', res }))
             .catch(err => sendResponse({ status: 'error', error: err.message }));
         return true;
     }
 
-    // ANALYZE_DATA handler removed (dead code)
-
     if (request.action === 'FETCH_REDDIT_JSON') {
-        const { url } = request;
-
-        // 1. HackerNews Handling
-        if (url.includes('news.ycombinator.com')) {
-            const urlObj = new URL(url);
-            const hnId = urlObj.searchParams.get('id');
-            if (!hnId) {
-                sendResponse({ status: 'error', error: 'Invalid HackerNews URL (missing ID)' });
-                return true;
-            }
-
-            const algoliaUrl = `https://hn.algolia.com/api/v1/items/${hnId}`;
-            console.log('[OpinionDeck] HN Remote Fetch:', algoliaUrl);
-
-            fetch(algoliaUrl)
-                .then(async response => {
-                    if (!response.ok) throw new Error(`HN/Algolia error: ${response.status}`);
-                    const data = await response.json();
-
-                    // Basic normalization to match our schema expectations
-                    const normalized = {
-                        title: data.title,
-                        author: data.author,
-                        selftext: data.text || '',
-                        score: data.points || 0,
-                        num_comments: data.children ? data.children.length : 0,
-                        id: data.id.toString(),
-                        comments: data.children || []
-                    };
-
-                    sendResponse({ status: 'success', data: [{ data: { children: [{ data: normalized }] } }] });
-                })
-                .catch(err => {
-                    console.error('[OpinionDeck] HN Remote Fetch Failed:', err);
-                    sendResponse({ status: 'error', error: err.message });
-                });
-            return true;
-        }
-
-        // 2. Twitter/X Handling (Remote fetch not supported yet)
-        if (url.includes('twitter.com') || url.includes('x.com')) {
-            sendResponse({
-                status: 'error',
-                error: 'Twitter extraction requires the OpinionDeck extension to be active on that tab. Please open the X/Twitter thread directly and use the extension popup.'
-            });
-            return true;
-        }
-
-        // 3. Reddit Handling
-        // Construct .json URL
-        const jsonUrl = url.includes('.json') ? url : (url.endsWith('/') ? url.slice(0, -1) : url) + '.json';
-
-        console.log('[OpinionDeck] Remote Fetching:', jsonUrl);
-
+        const jsonUrl = request.url.includes('.json') ? request.url : (request.url.endsWith('/') ? request.url.slice(0, -1) : request.url) + '.json';
         fetch(jsonUrl)
-            .then(async response => {
-                const contentType = response.headers.get("content-type");
-                if (!response.ok) throw new Error(`Reddit error: ${response.status}`);
-                if (!contentType || !contentType.includes("application/json")) {
-                    throw new Error("Received non-JSON response. Reddit might be blocking this request.");
-                }
-                const data = await response.json();
-                sendResponse({ status: 'success', data });
+            .then(async res => {
+                if (!res.ok) throw new Error(`Reddit error: ${res.status}`);
+                sendResponse({ status: 'success', data: await res.json() });
             })
-            .catch(err => {
-                console.error('[OpinionDeck] Remote Fetch Failed:', err);
-                sendResponse({ status: 'error', error: err.message });
-            });
-        return true;
-    }
-
-    if (request.action === 'PING_BACKGROUND') {
-        sendResponse({ status: 'success', version: '1.0.0' });
-        return true;
-    }
-
-    if (request.action === 'DISCOVERY_SEARCH') {
-        const { competitor } = request;
-        const tabId = sender.tab?.id;
-
-        if (!competitor) {
-            sendResponse({ status: 'error', error: 'Competitor name is required.' });
-            return true;
-        }
-
-        const sendProgress = (stepId: string) => {
-            if (tabId) {
-                chrome.tabs.sendMessage(tabId, {
-                    type: 'OPINION_DECK_DISCOVERY_PROGRESS',
-                    stepId
-                });
-            }
-        };
-
-        const queryBuckets = {
-            PAIN_POINTS: [
-                `title:${competitor} + frustrated`,
-                `title:${competitor} + sucks`,
-                `"${competitor}" + annoying`,
-                `"${competitor}" + problems`,
-                `"${competitor}" suck`,
-                `"${competitor}" annoying`
-            ],
-            ALTERNATIVES: [
-                `title:${competitor} + alternative`,
-                `title:${competitor} + vs`,
-                `"${competitor}" alternative`,
-                `"${competitor}" review`,
-                `title:${competitor} + review`
-            ],
-            BROAD_SEARCH: [
-                `"${competitor}" + billing`,
-                `"${competitor}" + support`,
-                `"${competitor}"`
-            ]
-        };
-
-        console.log(`[OpinionDeck] Discovery Search for: ${competitor}`);
-        sendProgress('query');
-
-        const runDiscovery = async () => {
-            const allResultsMap = new Map<string, any>();
-            const now = Date.now() / 1000;
-
-            const executeBucket = async (bucketId: keyof typeof queryBuckets, progressStep: string) => {
-                sendProgress(progressStep);
-                for (const query of queryBuckets[bucketId]) {
-                    try {
-                        const searchUrl = `https://www.reddit.com/search.json?q=${encodeURIComponent(query)}&sort=relevance&t=year&limit=40`;
-                        const res = await fetch(searchUrl);
-                        if (!res.ok) continue;
-
-                        const data = await res.json();
-                        const children = data.data?.children || [];
-
-                        children.forEach((child: any) => {
-                            const post = child.data;
-                            const title = (post.title || '').toLowerCase();
-                            const text = (post.selftext || '').toLowerCase();
-                            const combined = title + " " + text;
-                            const compLower = competitor.toLowerCase();
-                            const subredditLower = (post.subreddit || '').toLowerCase();
-
-                            // 1. HARD FILTER: Competitor Presence (Strict + Fallback)
-                            const compRegex = new RegExp(`\\b${compLower}\\b`, 'i');
-                            let inTitle = compRegex.test(title);
-                            let inBody = compRegex.test(text);
-
-                            if (!inTitle && !inBody) {
-                                const contains = title.includes(compLower) || text.includes(compLower);
-                                if (contains) {
-                                    inTitle = title.includes(compLower);
-                                    inBody = text.includes(compLower);
-                                } else {
-                                    return;
-                                }
-                            }
-
-                            // 2. HARD FILTER: Idiom & Promo Killers
-                            const forbiddenPhrases = [
-                                'affiliate program', 'highest paying', 'join my', 'referral link',
-                                'sign up for', 'free money', 'make money', 'passive income',
-                                'giveaway', 'win a free'
-                            ];
-                            if (compLower === 'slack') {
-                                forbiddenPhrases.push('cut slack', 'slack on', 'slack off', 'slack in my');
-                            }
-                            if (forbiddenPhrases.some(p => combined.includes(p))) return;
-
-                            // 3. HARD FILTER: Subreddit Blacklist
-                            const qualitySubs = ['saas', 'productivity', 'startups', 'sysadmin', 'productmanagement', 'entrepreneur', 'webdev', 'experienceddevs', 'softwareengineering', 'devops', 'csccareerquestions', 'technology', 'salesforce', 'projectmanagement', 'video', 'videoproduction', 'filmmakers'];
-                            const noiseSubs = [
-                                'tifu', 'amitheasshole', 'kpop', 'wellthatsucks', 'bestofredditorupdates',
-                                'aitah', 'relationship_advice', 'interestingasfuck', 'mildlyinfuriating',
-                                'recruitinghell', 'superstonk', 'eagles', 'jewish', 'nvidia', 'askreddit',
-                                'pics', 'funny', 'gaming', 'movies', 'politics', 'news', 'worldnews',
-                                'todayilearned', 'showerthoughts', 'aww', 'dustythunder', 'twoxchromosomes',
-                                'personalfinance', 'legaladvice', 'workplace', 'jobsearchhacks', 'hvac', 'construction',
-                                'amioverreacting', 'motorbuzz', 'advice', 'trueoffmychest', 'rezero', 'anime', 'manga',
-                                'sidehustle', 'affiliatemarketing', 'beermoney', 'signupsforpay', 'pennystocks'
-                            ];
-                            if (noiseSubs.includes(subredditLower)) return;
-
-                            // --- SCORING ENGINE ---
-                            const productKeywords = [
-                                'app', 'software', 'tool', 'saas', 'dashboard', 'feature', 'interface',
-                                'integration', 'ui', 'ux', 'performance', 'slow', 'workflow',
-                                'subscription', 'pricing', 'desktop', 'mobile', 'api', 'billing', 'cost',
-                                'support', 'customer service', 'account', 'settings', 'sync',
-                                'platform', 'service', 'storage', 'data', 'user'
-                            ];
-                            const intentKeywords = [
-                                'annoying', 'frustrating', 'frustrated', 'sucks', 'hate', 'broken', 'break',
-                                'slow', 'expensive', 'switching', 'moved to', 'anyone else', 'problems',
-                                'bug', 'issue', 'error', 'glitch', 'failed', 'failing', 'trouble',
-                                'overrated', 'alternatives', 'comparison', 'vs', 'recommend'
-                            ];
-
-                            const contextMatches = productKeywords.filter(k => combined.includes(k));
-                            const intentMatches = intentKeywords.filter(k => combined.includes(k));
-
-                            // MANDATORY SIGNAL FOR NON-TARGET SUBS
-                            const isTargetSub = subredditLower === compLower || qualitySubs.includes(subredditLower);
-                            if (!isTargetSub) {
-                                if (inTitle) {
-                                    if (intentMatches.length === 0 && contextMatches.length === 0) return;
-                                } else {
-                                    if (intentMatches.length === 0 && contextMatches.length < 2) return;
-                                }
-                            }
-
-                            let score = 0;
-                            if (subredditLower === compLower) {
-                                score += 20000;
-                            } else if (qualitySubs.includes(subredditLower)) {
-                                score += 10000;
-                            }
-
-                            const cappedIntent = Math.min(intentMatches.length, 5);
-                            const cappedContext = Math.min(contextMatches.length, 5);
-                            let intentVal = cappedIntent * 2000;
-                            let contextVal = cappedContext * 500;
-
-                            if (!inTitle) {
-                                intentVal *= 0.5;
-                                contextVal *= 0.5;
-                            }
-                            score += (intentVal + contextVal);
-
-                            if (inTitle) {
-                                score += 10000;
-                                const startsWithBrand = title.startsWith(compLower) || title.startsWith(`"${compLower}"`);
-                                if (startsWithBrand || title.includes(` ${compLower} `)) {
-                                    score += 10000;
-                                }
-                            }
-
-                            // Negative Signals
-                            const listicleMarkers = ['list of', 'collection of', 'top 10', 'top 5', 'top 20', 'best way to', 'highest paying', 'make $', 'how to earn', 'deals', 'giveaway', '247'];
-                            if (listicleMarkers.some(m => title.includes(m))) score -= 15000;
-
-                            const compCount = combined.split(compLower).length - 1;
-                            if (combined.length > 3000 && compCount < 3 && !inTitle) score -= 5000;
-
-                            // Engagement Scaling (Capped)
-                            score += Math.min(post.num_comments, 200) * 20;
-
-                            // Recency
-                            const ageDays = (now - post.created_utc) / 86400;
-                            if (ageDays < 30) score += 5000;
-                            else if (ageDays < 90) score += 2000;
-
-                            // Update or Set in global map
-                            if (!allResultsMap.has(post.id) || allResultsMap.get(post.id).score < score) {
-                                allResultsMap.set(post.id, {
-                                    id: post.id,
-                                    title: post.title,
-                                    url: `https://www.reddit.com${post.permalink}`,
-                                    subreddit: post.subreddit,
-                                    ups: post.ups,
-                                    num_comments: post.num_comments,
-                                    created_utc: post.created_utc,
-                                    score: score,
-                                    rankScore: score
-                                });
-                            }
-                        });
-
-                        // Avoid aggressive rate limiting during multi-search
-                        await new Promise(r => setTimeout(r, 600));
-                    } catch (err) {
-                        console.error(`[OpinionDeck] Discovery query failed: ${query}`, err);
-                    }
-                }
-            };
-
-            await executeBucket('PAIN_POINTS', 'pains');
-            await executeBucket('ALTERNATIVES', 'alts');
-            await executeBucket('BROAD_SEARCH', 'niche');
-
-            sendProgress('rank');
-
-            sendProgress('filter');
-            const sortedResults = Array.from(allResultsMap.values())
-                .sort((a, b) => b.rankScore - a.rankScore)
-                .slice(0, 20);
-
-            sendProgress('weights');
-
-            // Artificial delay to show finalizing steps
-            await new Promise(r => setTimeout(r, 1000));
-            sendProgress('dashboard');
-            await new Promise(r => setTimeout(r, 500));
-
-            return sortedResults;
-        };
-
-        runDiscovery()
-            .then(results => sendResponse({ status: 'success', results }))
             .catch(err => sendResponse({ status: 'error', error: err.message }));
         return true;
     }
 
-    return true; // Keep channel open for any other potential listeners
+    if (request.action === 'DISCOVERY_SEARCH') {
+        const { competitor, phase } = request;
+        const compLower = competitor.toLowerCase();
+
+        const sendProgress = (stepId: string, results?: any[]) => {
+            chrome.runtime.sendMessage({ type: 'OPINION_DECK_DISCOVERY_PROGRESS', stepId, results }).catch(() => { });
+            chrome.tabs.query({ url: "*://*.opiniondeck.com/*" }, (tabs) => {
+                tabs.forEach(tab => {
+                    if (tab.id) chrome.tabs.sendMessage(tab.id, { type: 'OPINION_DECK_DISCOVERY_PROGRESS', stepId, results }).catch(() => { });
+                });
+            });
+        };
+
+        const executeDiscoveryPhase = async (phaseId: string) => {
+            const queryBuckets: Record<string, string[]> = {
+                PHASE_1: [`title:${competitor} + frustrated`, `title:${competitor} + sucks`, `"${competitor}" + annoying`, `"${competitor}" + problems`, `"${competitor}" + billing`, `"${competitor}" + support`],
+                PHASE_2: [`title:${competitor} + alternative`, `title:${competitor} + vs`, `"${competitor}" alternative`],
+                PHASE_3: [`title:${competitor} + review`, `"${competitor}" review`, `"${competitor}"`]
+            };
+
+            const queries = queryBuckets[phaseId];
+            if (!queries) return [];
+
+            const storage = await chrome.storage.local.get(['discovery_results', 'discovery_processed_ids']);
+            const allResultsMap = new Map<string, any>(Object.entries(storage.discovery_results || {}));
+            const processedIds = new Set<string>(storage.discovery_processed_ids || []);
+            const now = Date.now() / 1000;
+
+            const qualitySubs = ['saas', 'productivity', 'startups', 'sysadmin', 'productmanagement', 'entrepreneur', 'webdev', 'experienceddevs', 'softwareengineering', 'devops', 'csccareerquestions', 'technology', 'salesforce', 'projectmanagement', 'video', 'videoproduction', 'filmmakers'];
+            const noiseSubs = ['tifu', 'amitheasshole', 'kpop', 'wellthatsucks', 'bestofredditorupdates', 'aitah', 'relationship_advice', 'interestingasfuck', 'mildlyinfuriating', 'recruitinghell', 'superstonk', 'eagles', 'jewish', 'nvidia', 'askreddit', 'pics', 'funny', 'gaming', 'movies', 'politics', 'news', 'worldnews', 'todayilearned', 'showerthoughts', 'aww', 'dustythunder', 'twoxchromosomes', 'personalfinance', 'legaladvice', 'workplace', 'jobsearchhacks', 'hvac', 'construction', 'amioverreacting', 'motorbuzz', 'advice', 'trueoffmychest', 'rezero', 'anime', 'manga', 'sidehustle', 'affiliatemarketing', 'beermoney', 'signupsforpay', 'pennystocks'];
+            const productKeywords = ['app', 'software', 'tool', 'saas', 'dashboard', 'feature', 'interface', 'integration', 'ui', 'ux', 'performance', 'slow', 'workflow', 'subscription', 'pricing', 'desktop', 'mobile', 'api', 'billing', 'cost', 'support', 'customer service', 'account', 'settings', 'sync', 'platform', 'service', 'storage', 'data', 'user'];
+            const intentKeywords = ['annoying', 'frustrating', 'frustrated', 'sucks', 'hate', 'broken', 'break', 'slow', 'expensive', 'switching', 'moved to', 'anyone else', 'problems', 'bug', 'issue', 'error', 'glitch', 'failed', 'failing', 'trouble', 'overrated', 'alternatives', 'comparison', 'vs', 'recommend', 'request', 'need', 'wish', 'hope'];
+
+            for (const query of queries) {
+                const hb = await chrome.storage.local.get('discovery_sidepanel_open');
+                if (hb.discovery_sidepanel_open === false) break;
+
+                console.log(`[OpinionDeck] Discovery Phased Search: ${query}`);
+                sendProgress(phaseId === 'PHASE_1' ? 'pains' : phaseId === 'PHASE_2' ? 'alts' : 'niche');
+
+                try {
+                    const searchUrl = `https://www.reddit.com/search.json?q=${encodeURIComponent(query)}&sort=relevance&t=year&limit=40`;
+                    const res = await fetch(searchUrl);
+                    if (!res.ok) continue;
+
+                    const data = await res.json();
+                    (data.data?.children || []).forEach((child: any) => {
+                        const post = child.data;
+                        if (processedIds.has(post.id)) return;
+
+                        const title = (post.title || '').toLowerCase();
+                        const text = (post.selftext || '').toLowerCase();
+                        const combined = title + " " + text;
+                        const subredditLower = (post.subreddit || '').toLowerCase();
+
+                        const compRegex = new RegExp(`\\b${compLower}\\b`, 'i');
+                        let inTitle = compRegex.test(title);
+                        let inBody = compRegex.test(text);
+
+                        if (!inTitle && !inBody) {
+                            if (title.includes(compLower) || text.includes(compLower)) {
+                                inTitle = title.includes(compLower);
+                                inBody = text.includes(compLower);
+                            } else return;
+                        }
+
+                        if (noiseSubs.includes(subredditLower)) return;
+                        if (['affiliate program', 'highest paying', 'referral link', 'sign up for', 'free money'].some(p => combined.includes(p))) return;
+
+                        let score = 0;
+                        const contextMatches = productKeywords.filter(k => combined.includes(k));
+                        const intentMatches = intentKeywords.filter(k => combined.includes(k));
+
+                        const isTargetSub = subredditLower === compLower || qualitySubs.includes(subredditLower);
+                        if (!isTargetSub) {
+                            if (inTitle) { if (intentMatches.length === 0 && contextMatches.length === 0) return; }
+                            else { if (intentMatches.length === 0 && contextMatches.length < 2) return; }
+                        }
+
+                        if (subredditLower === compLower) score += 20000;
+                        else if (qualitySubs.includes(subredditLower)) score += 10000;
+
+                        let val = (Math.min(intentMatches.length, 5) * 2000) + (Math.min(contextMatches.length, 5) * 500);
+                        if (!inTitle) val *= 0.5;
+                        score += val;
+
+                        if (inTitle) {
+                            score += 10000;
+                            if (title.startsWith(compLower) || title.includes(` ${compLower} `)) score += 10000;
+                        }
+
+                        if (['list of', 'top 10', 'best way to'].some(m => title.includes(m))) score -= 15000;
+
+                        score += Math.min(post.num_comments, 200) * 20;
+                        const ageDays = (now - post.created_utc) / 86400;
+                        if (ageDays < 30) score += 5000;
+                        else if (ageDays < 90) score += 2000;
+
+                        if (score > 10000) {
+                            allResultsMap.set(post.id, {
+                                id: post.id,
+                                title: post.title,
+                                url: `https://www.reddit.com${post.permalink}`,
+                                subreddit: post.subreddit,
+                                ups: post.ups,
+                                num_comments: post.num_comments,
+                                score: score
+                            });
+                        }
+                        processedIds.add(post.id);
+                    });
+                } catch (err) { console.error(err); }
+                await new Promise(r => setTimeout(r, 600));
+            }
+
+            const results = Array.from(allResultsMap.values()).sort((a, b) => b.score - a.score);
+            await chrome.storage.local.set({
+                discovery_results: Object.fromEntries(allResultsMap),
+                discovery_processed_ids: Array.from(processedIds)
+            });
+            return results;
+        };
+
+        if (phase === 'START_PHASE') {
+            const phaseId = request.phaseId || 'PHASE_1';
+            executeDiscoveryPhase(phaseId).then(results => {
+                const nextPhase = phaseId === 'PHASE_1' ? 'PHASE_2' : (phaseId === 'PHASE_2' ? 'PHASE_3' : null);
+                chrome.runtime.sendMessage({ type: 'OPINION_DECK_DISCOVERY_PHASE_COMPLETE', phaseId, nextPhaseId: nextPhase, results: results.slice(0, 30) });
+                if (!nextPhase) sendProgress('results_ready', results.slice(0, 30));
+                sendResponse({ status: 'success', results: results.slice(0, 30), nextPhase });
+            });
+            return true;
+        }
+
+        if (phase === 'RESET') {
+            chrome.storage.local.remove(['discovery_results', 'discovery_processed_ids', 'current_discovery_competitor']).then(() => sendResponse({ status: 'success' }));
+            return true;
+        }
+    }
+
+    return true;
 });

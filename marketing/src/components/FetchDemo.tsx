@@ -78,7 +78,6 @@ export function FetchDemo() {
         <div className="fetch-demo">
             <form onSubmit={handleSubmit} className="demo-form">
                 <div className="input-group">
-                    <Search size={20} className="text-tertiary ml-2" />
                     <input
                         type="url"
                         placeholder="Search 'YNAB', 'Notion', 'Superhuman'..."
@@ -103,11 +102,11 @@ export function FetchDemo() {
             {result && (
                 <div className="demo-result">
                     <div className="result-header">
-                        <span className="subreddit text-accent font-bold text-sm tracking-wider uppercase mb-2 block">{result.post.subreddit}</span>
-                        <h3 className="post-title text-xl font-bold mb-4">{result.post.title}</h3>
-                        <div className="meta flex gap-4 text-sm text-secondary">
-                            <span className="flex items-center gap-1"><ArrowBigUp size={16} className="text-accent" /> {result.post.score}</span>
-                            <span className="flex items-center gap-1"><MessageSquare size={16} className="text-accent" /> {result.metadata.commentsReturned} comments (Preview)</span>
+                        <span className="subreddit">{result.post.subreddit}</span>
+                        <h3 className="post-title">{result.post.title}</h3>
+                        <div className="meta">
+                            <span className="flex items-center gap-1"><ArrowBigUp size={16} /> {result.post.score}</span>
+                            <span className="flex items-center gap-1"><MessageSquare size={16} /> {result.metadata.commentsReturned} comments (Preview)</span>
                         </div>
                     </div>
 

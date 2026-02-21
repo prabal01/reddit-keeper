@@ -1,20 +1,21 @@
 /// <reference types="chrome"/>
 import { ExtractedData } from '../types';
 
-const FALLBACK_API = `${import.meta.env.VITE_API_URL}/api`;
-const FALLBACK_DASHBOARD = import.meta.env.VITE_DASHBOARD_URL;
+const FALLBACK_API = `${(import.meta as any).env.VITE_API_URL}/api`;
+const FALLBACK_DASHBOARD = (import.meta as any).env.VITE_DASHBOARD_URL;
+
+// Global Error Catcher
+window.onerror = (message, source, lineno, colno, error) => {
+    console.error('[OpinionDeck] Global Crash:', { message, source, lineno, colno, error });
+};
 
 async function getApiBase() {
     const record = await chrome.storage.local.get('opinion_deck_api_url');
     let storedApiUrl = record.opinion_deck_api_url;
-
-    // Safety check: Ignore stale Railway.app URLs
     if (storedApiUrl && storedApiUrl.includes('railway.app')) {
-        console.log(`[OpinionDeck] Ignoring stale popup API URL: ${storedApiUrl}`);
         chrome.storage.local.remove('opinion_deck_api_url');
         storedApiUrl = null;
     }
-
     const base = (storedApiUrl || FALLBACK_API).replace(/\/$/, '');
     return base.endsWith('/api') ? base : `${base}/api`;
 }
@@ -22,26 +23,21 @@ async function getApiBase() {
 async function getDashboardBase() {
     const record = await chrome.storage.local.get('opinion_deck_dashboard_url');
     let storedDashboardUrl = record.opinion_deck_dashboard_url;
-
     if (storedDashboardUrl && storedDashboardUrl.includes('railway.app')) {
         chrome.storage.local.remove('opinion_deck_dashboard_url');
         storedDashboardUrl = null;
     }
-
     return storedDashboardUrl || FALLBACK_DASHBOARD;
 }
 
 async function checkBackgroundConnection() {
     const dot = document.getElementById('connection-dot');
     const text = document.getElementById('connection-text');
-
     try {
         const response = await chrome.runtime.sendMessage({ action: 'PING_BACKGROUND' });
         if (response && response.status === 'success') {
             if (dot) dot.className = 'dot active';
             if (text) text.innerText = 'Connected';
-        } else {
-            throw new Error('Invalid response');
         }
     } catch (err) {
         if (dot) dot.className = 'dot error';
@@ -52,8 +48,6 @@ async function checkBackgroundConnection() {
 async function checkAuth() {
     const authRecord = await chrome.storage.local.get('opinion_deck_token');
     const token = authRecord.opinion_deck_token;
-
-
     const loginSection = document.getElementById('login-required');
     const extractionSection = document.getElementById('extraction-card');
     const historySection = document.getElementById('history-section');
@@ -65,7 +59,7 @@ async function checkAuth() {
 
     if (!token) {
         if (loginSection) loginSection.style.display = 'block';
-        if (extractionSection) extractionSection.style.display = 'block'; // Keep visible for "Copy"
+        if (extractionSection) extractionSection.style.display = 'block';
         if (historySection) historySection.style.display = 'none';
         cloudBtns.forEach(btn => { if (btn) btn.disabled = true; });
         return null;
@@ -73,7 +67,6 @@ async function checkAuth() {
         if (loginSection) loginSection.style.display = 'none';
         if (extractionSection) extractionSection.style.display = 'block';
         if (historySection) historySection.style.display = 'block';
-        // Buttons will be enabled by detectPage if supported
         return token;
     }
 }
@@ -81,20 +74,17 @@ async function checkAuth() {
 async function updateHistory() {
     const historyList = document.getElementById('history-list');
     if (!historyList) return;
-
     const token = await checkAuth();
     if (!token) return;
 
-    // Fetch from Server instead of Local DB
     try {
         const apiBase = await getApiBase();
         const response = await fetch(`${apiBase}/extractions`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (!response.ok) throw new Error('Failed to fetch from dashboard');
-
+        if (!response.ok) throw new Error('Offline');
         const extractions: ExtractedData[] = await response.json();
-        const displayList = extractions.slice(0, 5); // Limit to top 5
+        const displayList = extractions.slice(0, 5);
 
         historyList.innerHTML = displayList.map(item => `
         <div class="insight-item-wrapper" style="margin-bottom: 8px; cursor: pointer;" data-id="${item.id}" data-folder-id="${(item as any).folderId || 'inbox'}">
@@ -110,26 +100,6 @@ async function updateHistory() {
           <a href="#" class="view-all-link" style="color: #6366f1; font-size: 0.75rem; text-decoration: none; font-weight: 500;">View All in Dashboard →</a>
         </div>
       ` : '') || '<p style="font-size: 0.7rem; color: #666;">No extractions yet.</p>';
-
-        // Add click listener for navigation
-        historyList.addEventListener('click', async (e) => {
-            const target = e.target as HTMLElement;
-            if (target.classList.contains('view-all-link')) {
-                e.preventDefault();
-                const base = await getDashboardBase();
-                chrome.tabs.create({ url: base });
-                return;
-            }
-
-            const item = target.closest('.insight-item-wrapper') as HTMLElement;
-            if (item) {
-                const folderId = item.dataset.folderId;
-                const threadId = item.dataset.id;
-                const base = await getDashboardBase();
-                const url = `${base}/folders/${folderId}/threads/${threadId}`;
-                chrome.tabs.create({ url });
-            }
-        });
     } catch (err) {
         historyList.innerHTML = '<p style="color: #6e6e88; font-size: 0.7rem; text-align: center; padding: 20px;">Dashboard offline.</p>';
     }
@@ -138,7 +108,6 @@ async function updateHistory() {
 async function fetchFolders() {
     const select = document.getElementById('folder-select') as HTMLSelectElement;
     if (!select) return;
-
     const token = await checkAuth();
     if (!token) return;
 
@@ -148,36 +117,25 @@ async function fetchFolders() {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!response.ok) return;
-
         const folders = await response.json();
         if (folders.length > 0) {
-            select.innerHTML = folders.map((f: any) => `
-                <option value="${f.id}">${f.name}</option>
-            `).join('');
-
-            // Restore last used folder
+            select.innerHTML = folders.map((f: any) => `<option value="${f.id}">${f.name}</option>`).join('');
             const storage = await chrome.storage.local.get('lastUsedFolderId');
-            if (storage.lastUsedFolderId) {
-                // Verify the folder still exists
-                const folderExists = folders.some((f: any) => f.id === storage.lastUsedFolderId);
-                if (folderExists) {
-                    select.value = storage.lastUsedFolderId;
-                }
+            if (storage.lastUsedFolderId && folders.some((f: any) => f.id === storage.lastUsedFolderId)) {
+                select.value = storage.lastUsedFolderId;
             }
-        } else {
-            select.innerHTML = '<option value="" disabled selected>Create a folder first...</option>';
         }
-    } catch (err) {
-        console.error('Failed to fetch folders');
-    }
+    } catch (err) { }
 }
+
+let currentPhase: 'PAIN_POINTS' | 'ALTERNATIVES' = 'PAIN_POINTS';
+let researchDepth: 'shallow' | 'deep' = 'shallow';
 
 function detectPage(url: string) {
     const statusEl = document.getElementById('page-status');
     const saveOnlyBtn = document.getElementById('extract-only-btn') as HTMLButtonElement | null;
     const saveAnalyseBtn = document.getElementById('extract-analyse-btn') as HTMLButtonElement | null;
     const copyGptBtn = document.getElementById('copy-gpt-btn') as HTMLButtonElement | null;
-    const previewArea = document.getElementById('snapshot-preview');
 
     const isSupported = (url.includes('reddit.com/r/') && url.includes('/comments/')) ||
         (url.includes('g2.com/products/') && url.includes('/reviews')) ||
@@ -189,35 +147,21 @@ function detectPage(url: string) {
         if (statusEl) {
             if (url.includes('reddit')) statusEl.innerText = 'Reddit Thread Detected';
             else if (url.includes('g2.com')) statusEl.innerText = 'G2 Product Detected';
-            else if (url.includes('news.ycombinator.com')) statusEl.innerText = 'HackerNews Thread Detected';
-            else if (url.includes('x.com') || url.includes('twitter.com')) statusEl.innerText = 'Twitter/X Thread Detected';
+            else statusEl.innerText = 'Supported Thread';
             statusEl.classList.add('status-active');
         }
-
-        // Always enable copy button for supported pages
         if (copyGptBtn) copyGptBtn.disabled = false;
-
         chrome.storage.local.get('opinion_deck_token').then(record => {
             if (record.opinion_deck_token) {
                 if (saveOnlyBtn) saveOnlyBtn.disabled = false;
                 if (saveAnalyseBtn) saveAnalyseBtn.disabled = false;
             }
         });
-
-        if (url.includes('reddit')) return 'reddit';
-        if (url.includes('g2.com')) return 'g2';
-        if (url.includes('news.ycombinator.com')) return 'hn';
-        if (url.includes('x.com') || url.includes('twitter.com')) return 'twitter';
         return 'supported';
     } else {
-        if (statusEl) {
-            statusEl.innerText = 'Unsupported Page';
-            statusEl.classList.remove('status-active');
-        }
         if (saveOnlyBtn) saveOnlyBtn.disabled = true;
         if (saveAnalyseBtn) saveAnalyseBtn.disabled = true;
         if (copyGptBtn) copyGptBtn.disabled = true;
-        if (previewArea) previewArea.style.display = 'none';
         return null;
     }
 }
@@ -226,7 +170,6 @@ async function prefetchMetadata(tabId: number) {
     const previewArea = document.getElementById('snapshot-preview');
     const titleEl = document.getElementById('preview-title');
     const snippetEl = document.getElementById('preview-snippet');
-
     try {
         const response = await chrome.tabs.sendMessage(tabId, { action: 'GET_METADATA' });
         if (response && response.title) {
@@ -234,92 +177,216 @@ async function prefetchMetadata(tabId: number) {
             if (titleEl) titleEl.innerText = response.title;
             if (snippetEl) snippetEl.innerText = response.snippet || 'Ready to capture insights...';
         }
-    } catch (err) {
-        console.warn('Could not prefetch metadata', err);
-    }
+    } catch (err) { }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    const saveOnlyBtn = document.getElementById('extract-only-btn') as HTMLButtonElement;
-    const saveAnalyseBtn = document.getElementById('extract-analyse-btn') as HTMLButtonElement;
-    const statusEl = document.getElementById('page-status');
-    const errorEl = document.getElementById('error-message');
+    console.log('[OpinionDeck] Side Panel Init Start');
 
-    // Folder Creation Logic
+    // folder creation logic
     const addFolderToggle = document.getElementById('add-folder-toggle');
     const newFolderGroup = document.getElementById('new-folder-input-group');
     const createFolderBtn = document.getElementById('create-folder-btn');
     const newFolderNameInput = document.getElementById('new-folder-name') as HTMLInputElement;
 
     addFolderToggle?.addEventListener('click', () => {
-        newFolderGroup!.style.display = newFolderGroup!.style.display === 'none' ? 'block' : 'none';
-        if (newFolderGroup!.style.display === 'block') newFolderNameInput.focus();
+        if (newFolderGroup) {
+            newFolderGroup.style.display = newFolderGroup.style.display === 'none' ? 'block' : 'none';
+            if (newFolderGroup.style.display === 'block') newFolderNameInput?.focus();
+        }
     });
 
     document.getElementById('cancel-folder-btn')?.addEventListener('click', () => {
-        newFolderGroup!.style.display = 'none';
-        newFolderNameInput.value = '';
+        if (newFolderGroup) newFolderGroup.style.display = 'none';
+        if (newFolderNameInput) newFolderNameInput.value = '';
     });
 
     createFolderBtn?.addEventListener('click', async () => {
-        const name = newFolderNameInput.value.trim();
+        const name = newFolderNameInput?.value.trim();
         if (!name) return;
-
         const token = await checkAuth();
         if (!token) return;
-
-        createFolderBtn.innerText = '...';
+        if (createFolderBtn) createFolderBtn.innerText = '...';
         try {
             const apiBase = await getApiBase();
             const response = await fetch(`${apiBase}/folders`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ name })
             });
             if (response.ok) {
                 const newFolder = await response.json();
                 await fetchFolders();
-                (document.getElementById('folder-select') as HTMLSelectElement).value = newFolder.id;
-                newFolderGroup!.style.display = 'none';
-                newFolderNameInput.value = '';
+                const sel = document.getElementById('folder-select') as HTMLSelectElement;
+                if (sel) sel.value = newFolder.id;
+                if (newFolderGroup) newFolderGroup.style.display = 'none';
+                if (newFolderNameInput) newFolderNameInput.value = '';
             }
-        } catch (err) {
-            console.error('Failed to create folder');
+        } catch (err) { } finally {
+            if (createFolderBtn) createFolderBtn.innerText = 'Create';
+        }
+    });
+
+    // Extraction Logic
+    const saveOnlyBtn = document.getElementById('extract-only-btn') as HTMLButtonElement;
+    const saveAnalyseBtn = document.getElementById('extract-analyse-btn') as HTMLButtonElement;
+
+    const performSave = async (shouldRedirect: boolean) => {
+        const activeBtn = shouldRedirect ? saveAnalyseBtn : saveOnlyBtn;
+        const originalText = activeBtn?.innerText || 'Save';
+        if (saveOnlyBtn) saveOnlyBtn.disabled = true;
+        if (saveAnalyseBtn) saveAnalyseBtn.disabled = true;
+        if (activeBtn) activeBtn.innerText = 'Saving...';
+
+        try {
+            const folderId = (document.getElementById('folder-select') as HTMLSelectElement)?.value;
+            if (!folderId) throw new Error('Select a folder first.');
+
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (!tab?.id) throw new Error('No active tab');
+
+            const response = await chrome.tabs.sendMessage(tab.id, { action: 'EXTRACT_DATA' });
+            if (!response?.data) throw new Error('Extraction failed');
+
+            chrome.storage.local.set({ lastUsedFolderId: folderId });
+            const extractionData = { ...response.data, folderId, shouldAnalyze: shouldRedirect };
+            // Pass the current researchDepth preference
+            const saveResponse = await chrome.runtime.sendMessage({
+                action: 'SAVE_EXTRACTION',
+                data: extractionData,
+                depth: researchDepth
+            });
+
+            if (saveResponse.status === 'success') {
+                if (activeBtn) activeBtn.innerText = '✓ Saved!';
+                await updateHistory();
+                await new Promise(r => setTimeout(r, 1500));
+                if (shouldRedirect) {
+                    const base = await getDashboardBase();
+                    const fid = folderId === 'default' ? 'inbox' : folderId;
+                    chrome.tabs.create({ url: `${base}/folders/${fid}/threads/${response.data.id}` });
+                }
+            } else {
+                throw new Error(saveResponse.error || 'Save failed');
+            }
+        } catch (err: any) {
+            if (errorEl) {
+                errorEl.innerText = err.message;
+                errorEl.style.display = 'block';
+            }
         } finally {
-            createFolderBtn.innerText = 'Create';
+            if (saveOnlyBtn) saveOnlyBtn.disabled = false;
+            if (saveAnalyseBtn) saveAnalyseBtn.disabled = false;
+            if (activeBtn) activeBtn.innerText = originalText;
+        }
+    };
+
+    saveOnlyBtn?.addEventListener('click', () => performSave(false));
+    saveAnalyseBtn?.addEventListener('click', () => performSave(true));
+
+    document.getElementById('copy-gpt-btn')?.addEventListener('click', async () => {
+        const copyBtn = document.getElementById('copy-gpt-btn') as HTMLButtonElement;
+        const originalText = copyBtn.innerText;
+        copyBtn.innerText = 'Extracting...';
+        try {
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (!tab?.id) throw new Error();
+            const response = await chrome.tabs.sendMessage(tab.id, { action: 'EXTRACT_DATA' });
+            if (response?.data) {
+                const data = response.data;
+                const comments = data.content?.comments || [];
+                const md = `# ${data.title}\nSource: ${data.url}\n\n## Insights\n${comments.map((c: any) => `### ${c.author}\n${c.body}`).join('\n\n')}`;
+                await navigator.clipboard.writeText(md);
+                copyBtn.innerText = '📋 Copied!';
+                setTimeout(() => { copyBtn.innerText = originalText; }, 2000);
+            }
+        } catch (e) {
+            if (errorEl) errorEl.innerText = 'Copy failed';
+        } finally {
+            if (copyBtn.innerText === 'Extracting...') copyBtn.innerText = originalText;
         }
     });
 
-    // Initial State - Detect page
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab?.url) {
-        const type = detectPage(tab.url);
-        if (type && tab.id) {
-            prefetchMetadata(tab.id);
-        }
-    }
+    // Discovery UI Handlers
+    const startDiscoveryBtn = document.getElementById('start-discovery-btn');
+    const abortDiscoveryBtn = document.getElementById('abort-discovery-btn');
+    const nextPhaseBtn = document.getElementById('next-phase-btn');
+    const finishDiscoveryBtn = document.getElementById('finish-discovery-btn');
+    const cancelDiscoveryBtn = document.getElementById('cancel-discovery-btn');
 
-    checkBackgroundConnection();
+    // Depth Toggles
+    const depthShallowBtn = document.getElementById('depth-shallow-btn');
+    const depthDeepBtn = document.getElementById('depth-deep-btn');
+    const depthDesc = document.getElementById('depth-desc');
 
-    await checkAuth(); // Ensure visibility is set immediately
-    await fetchFolders();
-    await fetchFolders();
-    await updateHistory();
+    depthShallowBtn?.addEventListener('click', () => {
+        researchDepth = 'shallow';
+        depthShallowBtn.classList.add('active');
+        depthDeepBtn?.classList.remove('active');
+        if (depthDesc) depthDesc.innerText = 'Analyzes titles and snippets only. (Fast)';
+    });
 
-    // Tab Switching Logic
-    const tabExtract = document.getElementById('tab-extract');
+    depthDeepBtn?.addEventListener('click', () => {
+        researchDepth = 'deep';
+        depthDeepBtn.classList.add('active');
+        depthShallowBtn?.classList.remove('active');
+        if (depthDesc) depthDesc.innerText = 'Deep fetch: Recursively collects all nested comments. (Slower)';
+    });
+
+    // UI Elements
     const extractView = document.getElementById('extract-view');
+    const discoveryView = document.getElementById('discovery-view');
+    const discoverySetup = document.getElementById('discovery-setup');
+    const discoveryProgress = document.getElementById('discovery-progress-card');
+    const discoveryResults = document.getElementById('discovery-phase-results');
+    const compNameHeader = document.getElementById('discovery-comp-name');
+    const errorEl = document.getElementById('error-message');
 
-    tabExtract?.addEventListener('click', () => {
-        tabExtract.classList.add('active');
-        extractView!.style.display = 'block';
-    });
+    // State management moved to global scope
 
-    await updateHistory();
+    const showDiscoveryStep = (step: 'setup' | 'progress' | 'results') => {
+        console.log(`[OpinionDeck] Discovery step: ${step}`);
+        if (!discoveryView || !extractView) return;
+        discoveryView.style.display = 'block';
+        extractView.style.display = 'none';
+        if (discoverySetup) discoverySetup.style.display = step === 'setup' ? 'block' : 'none';
+        if (discoveryProgress) discoveryProgress.style.display = step === 'progress' ? 'block' : 'none';
+        if (discoveryResults) discoveryResults.style.display = step === 'results' ? 'block' : 'none';
+    };
 
+    const initDiscovery = async () => {
+        const data = await chrome.storage.local.get('current_discovery_competitor');
+        if (data.current_discovery_competitor) {
+            const comp = data.current_discovery_competitor;
+            if (compNameHeader) compNameHeader.innerText = `Researching ${comp}`;
+            const label = document.getElementById('comp-label');
+            if (label) label.innerText = comp;
+            showDiscoveryStep('setup');
+            return true;
+        }
+        return false;
+    };
+
+    const start = async () => {
+        const inDiscovery = await initDiscovery();
+        if (!inDiscovery) {
+            if (extractView) extractView.style.display = 'block';
+            if (discoveryView) discoveryView.style.display = 'none';
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (tab?.url) {
+                detectPage(tab.url);
+                if (tab.id) prefetchMetadata(tab.id);
+            }
+        }
+        checkBackgroundConnection().catch(() => { });
+        checkAuth().catch(() => { });
+        fetchFolders().catch(() => { });
+        updateHistory().catch(() => { });
+    };
+
+    start().catch(e => console.error(e));
+
+    // Listeners
     document.getElementById('open-dashboard-btn')?.addEventListener('click', async () => {
         const base = await getDashboardBase();
         chrome.tabs.create({ url: base });
@@ -327,167 +394,160 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('refresh-auth-btn')?.addEventListener('click', async () => {
         const btn = document.getElementById('refresh-auth-btn') as HTMLButtonElement;
-        btn.style.animation = 'spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite';
-
-        // 1. Proactively ask any open dashboard tabs to re-sync their token
+        btn.style.animation = 'spin 1s linear infinite';
         const dashboardTabs = await chrome.tabs.query({ url: `${FALLBACK_DASHBOARD}/*` });
-        const syncPromises = dashboardTabs.map(t => {
-            if (t.id) return chrome.tabs.sendMessage(t.id, { action: 'REQUEST_AUTH_SYNC' }).catch(() => { });
-            return Promise.resolve();
-        });
-        await Promise.all(syncPromises);
-
-        // 2. Wait for the round-trip (Dashboard tab -> Window -> Content Script -> Storage)
-        await new Promise(resolve => setTimeout(resolve, 800));
-
-        // 3. Re-detect page and refresh UI
-        const [currTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (currTab?.url) detectPage(currTab.url);
-
+        await Promise.all(dashboardTabs.map(t => t.id ? chrome.tabs.sendMessage(t.id, { action: 'REQUEST_AUTH_SYNC' }).catch(() => { }) : Promise.resolve()));
+        await new Promise(r => setTimeout(r, 800));
         await checkAuth();
         await fetchFolders();
         await updateHistory();
-
-        const finalCheck = await chrome.storage.local.get('opinion_deck_token');
-
-
-
-        setTimeout(() => {
-            btn.style.animation = 'none';
-        }, 100);
+        btn.style.animation = 'none';
     });
 
-
-    document.getElementById('login-btn')?.addEventListener('click', async () => {
-        const base = await getDashboardBase();
-        chrome.tabs.create({ url: base });
+    document.getElementById('depth-shallow-btn')?.addEventListener('click', () => {
+        researchDepth = 'shallow';
+        document.getElementById('depth-shallow-btn')?.classList.add('active');
+        document.getElementById('depth-deep-btn')?.classList.remove('active');
+        const d = document.getElementById('depth-desc');
+        if (d) d.innerText = 'Analyzes ~100 comments across 15 threads.';
     });
 
-    const performSave = async (shouldRedirect: boolean) => {
-        const activeBtn = shouldRedirect ? saveAnalyseBtn : saveOnlyBtn;
-        const originalText = activeBtn.innerText;
+    document.getElementById('depth-deep-btn')?.addEventListener('click', () => {
+        researchDepth = 'deep';
+        document.getElementById('depth-deep-btn')?.classList.add('active');
+        document.getElementById('depth-shallow-btn')?.classList.remove('active');
+        const d = document.getElementById('depth-desc');
+        if (d) d.innerText = 'Deep dive into 50+ threads using recursive expansion.';
+    });
 
-        saveOnlyBtn.disabled = true;
-        saveAnalyseBtn.disabled = true;
-        activeBtn.innerText = 'Saving...';
-        if (errorEl) errorEl.style.display = 'none';
+    document.getElementById('cancel-discovery-btn')?.addEventListener('click', () => {
+        chrome.storage.local.remove(['current_discovery_competitor', 'discovery_status']);
+        window.location.reload();
+    });
 
-        try {
-            const folderSelect = document.getElementById('folder-select') as HTMLSelectElement;
-            const folderId = folderSelect?.value;
+    document.getElementById('start-discovery-btn')?.addEventListener('click', async () => {
+        const data = await chrome.storage.local.get('current_discovery_competitor');
+        if (!data.current_discovery_competitor) return;
+        currentPhase = 'PAIN_POINTS';
+        showDiscoveryStep('progress');
+        chrome.runtime.sendMessage({
+            action: 'DISCOVERY_SEARCH',
+            competitor: data.current_discovery_competitor,
+            phase: 'START_PHASE',
+            phaseId: 'PHASE_1',
+            depth: researchDepth
+        });
+    });
 
-            if (!folderId) {
-                throw new Error('Please select or create a folder first.');
-            }
+    document.getElementById('next-phase-btn')?.addEventListener('click', async () => {
+        const data = await chrome.storage.local.get('current_discovery_competitor');
+        const nextPhaseId = (document.getElementById('next-phase-btn') as any).dataset.nextPhaseId;
+        if (!nextPhaseId) return;
 
-            const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-            if (!activeTab.id) throw new Error('No active tab');
+        showDiscoveryStep('progress');
+        chrome.runtime.sendMessage({
+            action: 'DISCOVERY_SEARCH',
+            competitor: data.current_discovery_competitor,
+            phase: 'START_PHASE',
+            phaseId: nextPhaseId,
+            depth: researchDepth
+        });
+    });
 
-            const response = await chrome.tabs.sendMessage(activeTab.id, { action: 'EXTRACT_DATA' });
+    document.getElementById('abort-discovery-btn')?.addEventListener('click', () => {
+        showDiscoveryStep('setup');
+    });
 
-            if (response && response.data) {
-                // Remember this folder for next time
-                chrome.storage.local.set({ lastUsedFolderId: folderId });
+    document.getElementById('finish-discovery-btn')?.addEventListener('click', async () => {
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        const activeTab = tabs[0];
 
-                const extractionData = {
-                    ...response.data,
-                    folderId: folderId,
-                    shouldAnalyze: shouldRedirect // Auto-trigger analysis if redirecting
-                };
+        if (activeTab?.id) {
+            const resultsData = await chrome.storage.local.get('discovery_results');
+            const results = Object.values(resultsData.discovery_results || {}).sort((a: any, b: any) => (b.score || 0) - (a.score || 0));
 
-                const saveResponse = await chrome.runtime.sendMessage({
-                    action: 'SAVE_EXTRACTION',
-                    data: extractionData
-                });
-
-                if (saveResponse.status === 'success') {
-                    if (statusEl) statusEl.innerText = 'Saved to Cloud!';
-                    await updateHistory();
-
-                    // Success Animation
-                    activeBtn.classList.add('btn-success');
-                    activeBtn.innerText = '✓ Saved!';
-                    await new Promise(resolve => setTimeout(resolve, 1500));
-
-                    if (shouldRedirect) {
-                        // Redirect to the deep-linked thread view
-                        const fid = (extractionData.folderId && extractionData.folderId !== 'default') ? extractionData.folderId : 'inbox';
-                        const tid = response.data.id;
-
-                        console.log("[OpinionDeck] Redirecting to:", { fid, tid });
-
-                        const base = await getDashboardBase();
-                        const dashboardUrl = `${base}/folders/${fid}/threads/${tid}`;
-                        chrome.tabs.create({ url: dashboardUrl });
-                    }
-                } else {
-                    throw new Error(saveResponse.error || 'Server rejected extraction');
-                }
-            } else {
-                throw new Error('Extraction failed (Is the page loaded?)');
-            }
-        } catch (err: any) {
-            if (errorEl) {
-                let msg = err.message;
-                if (msg.includes("Could not establish connection") || msg.includes("Receiving end does not exist")) {
-                    msg = "Communication break: Please refresh the Reddit/G2 tab and try again.";
-                }
-                errorEl.innerText = msg;
-                errorEl.style.display = 'block';
-            }
-        } finally {
-            saveOnlyBtn.disabled = false;
-            saveAnalyseBtn.disabled = false;
-            activeBtn.innerText = originalText;
-            activeBtn.classList.remove('btn-success');
+            // Explicitly sync to the tab that (likely) started this
+            chrome.tabs.sendMessage(activeTab.id, {
+                type: 'OPINION_DECK_DISCOVERY_PROGRESS',
+                stepId: 'results_ready',
+                results: results.slice(0, 50)
+            }).catch(() => { });
         }
-    };
 
-    saveOnlyBtn?.addEventListener('click', () => performSave(false));
-    saveAnalyseBtn?.addEventListener('click', () => performSave(true));
+        chrome.storage.local.remove(['current_discovery_competitor', 'discovery_status']);
+        window.close();
+    });
 
-    // Handle progress updates from background
     chrome.runtime.onMessage.addListener((message) => {
+        console.log('[OpinionDeck] Side Panel Received Message:', message);
         if (message.type === 'DEEP_FETCH_PROGRESS') {
             const progressArea = document.getElementById('extraction-progress');
             const progressText = document.getElementById('progress-text');
             if (progressArea) progressArea.style.display = 'block';
             if (progressText) progressText.innerText = `${message.count} comments collected`;
         }
-    });
+        if (message.type === 'OPINION_DECK_DISCOVERY_PHASE_COMPLETE') {
+            console.log('[OpinionDeck] Phase complete, showing results...');
+            showDiscoveryStep('results');
 
-    document.getElementById('copy-gpt-btn')?.addEventListener('click', async () => {
-        const copyBtn = document.getElementById('copy-gpt-btn') as HTMLButtonElement;
-        const originalText = copyBtn.innerText;
-        copyBtn.innerText = 'Extracting...';
+            const titleEl = document.getElementById('phase-result-title');
+            const descEl = document.getElementById('phase-result-desc');
+            const resultList = document.getElementById('phase-results-list');
+            const nextBtn = document.getElementById('next-phase-btn') as HTMLButtonElement;
+            const finishBtn = document.getElementById('finish-discovery-btn') as HTMLButtonElement;
 
-        try {
-            const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-            if (!activeTab.id) throw new Error('No active tab');
-
-            const response = await chrome.tabs.sendMessage(activeTab.id, { action: 'EXTRACT_DATA' });
-            if (response && response.data) {
-                const data = response.data;
-                const comments = data.content?.comments || data.comments || [];
-                const md = `# ${data.title || 'Untitled'}\nSource: ${data.url}\n\n## Post\n${data.content?.post?.title || 'No Title'}\n\n## Insights\n${comments.map((c: any) => `### ${c.author || 'Anonymous'} (${c.score || 0})\n${c.body || ''}`).join('\n\n')}`;
-
-                await navigator.clipboard.writeText(md);
-                copyBtn.innerText = '📋 Copied to Clipboard!';
-                copyBtn.style.color = '#fff';
-                copyBtn.style.background = '#2ecc71';
-                setTimeout(() => {
-                    copyBtn.innerText = originalText;
-                    copyBtn.style.color = '#2ecc71';
-                    copyBtn.style.background = 'rgba(46, 204, 113, 0.1)';
-                }, 2000);
+            if (titleEl) {
+                if (message.phaseId === 'PHASE_1') titleEl.innerText = "Phase 1: Pain Points & Grievances";
+                else if (message.phaseId === 'PHASE_2') titleEl.innerText = "Phase 2: Alternatives & Comparisons";
+                else titleEl.innerText = "Phase 3: General Sentiment & Reviews";
             }
-        } catch (err: any) {
-            if (errorEl) {
-                errorEl.innerText = 'Copy failed: ' + err.message;
-                errorEl.style.display = 'block';
+
+            if (descEl) {
+                descEl.innerText = `Identified ${message.results?.length || 0} high-signal discussions. Review before proceeding.`;
             }
-        } finally {
-            if (copyBtn.innerText === 'Extracting...') copyBtn.innerText = originalText;
+
+            if (resultList) {
+                resultList.innerHTML = (message.results || []).slice(0, 5).map((r: any) => `
+                    <div class="insight-item" style="padding: 8px; margin-bottom: 5px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+                        <div style="font-size: 0.75rem; font-weight: 600; color: #fff;">${r.title.substring(0, 60)}${r.title.length > 60 ? '...' : ''}</div>
+                        <div style="font-size: 0.65rem; color: #aaa;">r/${r.subreddit} • Score: ${r.score}</div>
+                    </div>
+                `).join('');
+            }
+
+            if (nextBtn) {
+                if (message.nextPhaseId) {
+                    nextBtn.style.display = 'block';
+                    nextBtn.innerText = `Approve & Start ${message.nextPhaseId.replace('_', ' ')}`;
+                    (nextBtn as any).dataset.nextPhaseId = message.nextPhaseId;
+                    if (finishBtn) finishBtn.style.display = 'none';
+                } else {
+                    nextBtn.style.display = 'none';
+                    if (finishBtn) {
+                        finishBtn.style.display = 'block';
+                        finishBtn.innerText = "Complete Research & Sync Dashboard";
+                    }
+                }
+            }
+        }
+
+        if (message.type === 'OPINION_DECK_DISCOVERY_PROGRESS') {
+            const subStatus = document.getElementById('discovery-sub-status');
+            if (subStatus) {
+                if (message.stepId === 'pains') subStatus.innerText = 'Analyzing recurring complaints...';
+                else if (message.stepId === 'alts') subStatus.innerText = 'Identifying alternative tools...';
+                else if (message.stepId === 'niche') subStatus.innerText = 'Scoping general sentiment...';
+                else if (message.stepId === 'results_ready') subStatus.innerText = 'Finalizing report...';
+            }
         }
     });
+
+    chrome.storage.onChanged.addListener((changes) => {
+        if (changes.current_discovery_competitor?.newValue) {
+            console.log('[OpinionDeck] Competitor changed in storage:', changes.current_discovery_competitor.newValue);
+            initDiscovery();
+        }
+    });
+
+    chrome.storage.local.set({ 'discovery_sidepanel_open': true });
 });

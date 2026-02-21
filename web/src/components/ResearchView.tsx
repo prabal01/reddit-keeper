@@ -112,7 +112,17 @@ export const ResearchView: React.FC = () => {
 
         const handleProgress = (event: MessageEvent) => {
             if (event.data.type === "OPINION_DECK_DISCOVERY_PROGRESS") {
-                const { stepId } = event.data;
+                const { stepId, results: finalResults } = event.data;
+
+                if (stepId === 'results_ready' && finalResults) {
+                    setResults(finalResults);
+                    setLoadingSteps(prev => prev.map(s => ({ ...s, status: 'complete' as const })));
+                    if (finalResults.length === 0) setStatus("No relevant threads found. Try a different name.");
+                    setTimeout(() => setLoading(false), 800);
+                    // Don't remove listener yet, might get more updates? No, results_ready is final.
+                    return;
+                }
+
                 setLoadingSteps(prev => {
                     const stepIndex = prev.findIndex(s => s.id === stepId);
                     if (stepIndex === -1) return prev;

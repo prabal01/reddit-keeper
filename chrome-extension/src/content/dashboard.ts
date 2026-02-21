@@ -5,7 +5,9 @@ chrome.runtime.onMessage.addListener((request) => {
     if (request.type === "OPINION_DECK_DISCOVERY_PROGRESS") {
         window.postMessage({
             type: "OPINION_DECK_DISCOVERY_PROGRESS",
-            stepId: request.stepId
+            stepId: request.stepId,
+            results: request.results,
+            phase: request.phase
         }, window.location.origin);
     }
 });
@@ -65,20 +67,25 @@ window.addEventListener("message", (event) => {
         });
     }
 
-    // Handle Discovery Search
+    // Handle Discovery Search Trigger (Request Side Panel)
     if (event.data.type === "OPINION_DECK_DISCOVERY_REQUEST") {
         console.log("[OpinionDeck] Bridge received discovery request:", event.data.competitor);
 
         chrome.runtime.sendMessage({
-            action: "DISCOVERY_SEARCH",
+            action: "OPEN_DISCOVERY_PANEL",
             competitor: event.data.competitor
         }, (response) => {
+            // Dashboard now expects side panel to take over
+            console.log("[OpinionDeck] Side panel request response:", response);
+
+            // Critical: Send response back to Web App to clear "Checking extension" loader
             window.postMessage({
                 type: "OPINION_DECK_DISCOVERY_RESPONSE",
                 id: event.data.id,
                 success: response && response.status === 'success',
-                results: response ? response.results : [],
-                error: response ? response.error : "Unknown error"
+                error: (response && response.status === 'success') ? null : (response ? response.error : "Unknown error"),
+                results: [], // Crucial: Always provide array to satisfy Web App's discovery mode
+                sidepanel: true
             }, window.location.origin);
         });
     }

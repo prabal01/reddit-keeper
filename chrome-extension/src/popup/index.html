@@ -33,79 +33,151 @@
         </div>
     </header>
 
-    <div id="extract-view">
-        <div class="glass-card" id="login-required" style="display: none; text-align: center;">
-            <div class="section-title">Auth Required</div>
-            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 15px;">
-                Please <strong>Sign Up</strong> or <strong>Login</strong> to our web dashboard to sync your extractions.
-            </p>
-            <button id="login-btn" class="primary-btn">Go to Dashboard</button>
-        </div>
+    <div id="main-content">
+        <div id="extract-view">
+            <div class="glass-card" id="login-required" style="display: none; text-align: center;">
+                <div class="section-title">Auth Required</div>
+                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 15px;">
+                    Please <strong>Sign Up</strong> or <strong>Login</strong> to our web dashboard to sync your
+                    extractions.
+                </p>
+                <button id="login-btn" class="primary-btn">Go to Dashboard</button>
+            </div>
 
-        <div class="glass-card" id="extraction-card">
-            <div class="form-group">
-                <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
-                    Save to Folder
-                    <button id="add-folder-toggle" class="icon-btn" title="New Folder">+</button>
+            <div class="glass-card" id="extraction-card" style="display: block;">
+                <div class="form-group">
+                    <div class="section-title"
+                        style="display: flex; justify-content: space-between; align-items: center;">
+                        Save to Folder
+                        <button id="add-folder-toggle" class="icon-btn" title="New Folder">+</button>
+                    </div>
+                    <div id="new-folder-input-group" style="display: none; margin-bottom: 10px;">
+                        <input type="text" id="new-folder-name" placeholder="Folder name..." class="glass-input">
+                        <div style="display: flex; gap: 8px;">
+                            <button id="create-folder-btn" class="secondary-btn"
+                                style="flex: 1; padding: 8px;">Create</button>
+                            <button id="cancel-folder-btn" class="secondary-btn" style="width: auto; padding: 8px 12px;"
+                                title="Cancel">✕</button>
+                        </div>
+                    </div>
+                    <select id="folder-select">
+                        <option value="default">Default Inbox</option>
+                    </select>
                 </div>
-                <div id="new-folder-input-group" style="display: none; margin-bottom: 10px;">
-                    <input type="text" id="new-folder-name" placeholder="Folder name..." class="glass-input">
-                    <div style="display: flex; gap: 8px;">
-                        <button id="create-folder-btn" class="secondary-btn"
-                            style="flex: 1; padding: 8px;">Create</button>
-                        <button id="cancel-folder-btn" class="secondary-btn" style="width: auto; padding: 8px 12px;"
-                            title="Cancel">✕</button>
+
+                <div id="snapshot-preview" class="snapshot-preview" style="display: none;">
+                    <span class="snapshot-title" id="preview-title">Loading...</span>
+                    <p class="snapshot-snip" id="preview-snippet"></p>
+                </div>
+
+                <div id="extraction-progress"
+                    style="display: none; margin-top: 15px; padding: 12px; background: rgba(99, 102, 241, 0.1); border: 1px dashed var(--primary-color); border-radius: 8px; text-align: center;">
+                    <div style="font-size: 0.75rem; font-weight: 600; color: var(--primary-color); margin-bottom: 4px;">
+                        Capturing Full
+                        Thread...</div>
+                    <div id="progress-text" style="font-size: 0.85rem; font-weight: 700;">0 comments collected</div>
+                    <div style="font-size: 0.65rem; opacity: 0.6; margin-top: 4px;">Respecting Reddit rate limits...
                     </div>
                 </div>
-                <select id="folder-select">
-                    <option value="default">Default Inbox</option>
-                </select>
+
+                <div class="btn-group"
+                    style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <button id="extract-only-btn" class="secondary-btn" title="Sync to Cloud" disabled>Save & Keep
+                        Browsing</button>
+                    <button id="extract-analyse-btn" class="primary-btn" title="Deep AI Analysis" disabled>Save &
+                        Analyse
+                        →</button>
+                </div>
+
+                <div style="margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px;">
+                    <button id="copy-gpt-btn" class="secondary-btn"
+                        style="background: rgba(46, 204, 113, 0.1); border-color: rgba(46, 204, 113, 0.2); color: #2ecc71;"
+                        disabled>
+                        📋 Copy for AI (Free)
+                    </button>
+                </div>
+                <p id="error-message"></p>
             </div>
 
-            <div id="snapshot-preview" class="snapshot-preview" style="display: none;">
-                <span class="snapshot-title" id="preview-title">Loading...</span>
-                <p class="snapshot-snip" id="preview-snippet"></p>
+            <div class="glass-card" id="history-section" style="display: none;">
+                <div class="section-title">Cloud Extractions</div>
+                <div class="history-list" id="history-list">
+                    <p style="font-size: 0.7rem; color: var(--text-secondary); text-align: center; padding: 10px;">
+                        Checking cloud sync...
+                    </p>
+                </div>
             </div>
-
-            <div id="extraction-progress"
-                style="display: none; margin-top: 15px; padding: 12px; background: rgba(99, 102, 241, 0.1); border: 1px dashed var(--primary-color); border-radius: 8px; text-align: center;">
-                <div style="font-size: 0.75rem; font-weight: 600; color: var(--primary-color); margin-bottom: 4px;">
-                    Capturing Full
-                    Thread...</div>
-                <div id="progress-text" style="font-size: 0.85rem; font-weight: 700;">0 comments collected</div>
-                <div style="font-size: 0.65rem; opacity: 0.6; margin-top: 4px;">Respecting Reddit rate limits...</div>
-            </div>
-
-            <div class="btn-group" style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <button id="extract-only-btn" class="secondary-btn" title="Sync to Cloud" disabled>Save & Keep
-                    Browsing</button>
-                <button id="extract-analyse-btn" class="primary-btn" title="Deep AI Analysis" disabled>Save & Analyse
-                    →</button>
-            </div>
-
-            <div style="margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px;">
-                <button id="copy-gpt-btn" class="secondary-btn"
-                    style="background: rgba(46, 204, 113, 0.1); border-color: rgba(46, 204, 113, 0.2); color: #2ecc71;"
-                    disabled>
-                    📋 Copy for AI (Free)
-                </button>
-            </div>
-            <p id="error-message"></p>
         </div>
 
-        <div class="glass-card" id="history-section" style="display: none;">
-            <div class="section-title">Cloud Extractions</div>
-            <div class="history-list" id="history-list">
-                <p style="font-size: 0.7rem; color: var(--text-secondary); text-align: center; padding: 10px;">
-                    Checking cloud sync...
-                </p>
+        <div id="discovery-view" style="display: none;">
+            <!-- Setup/Initial Approval Screen -->
+            <div class="glass-card" id="discovery-setup">
+                <div class="section-title" style="color: var(--primary-color);">🔍 Guided Research Request</div>
+                <h2 id="discovery-comp-name" style="margin: 5px 0 15px 0; font-size: 1.4rem;">Competitor Research</h2>
+
+                <div id="approval-text-container"
+                    style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 20px;">
+                    <p>The OpinionDeck Web App has requested a specialized Reddit intelligence scrape for <strong
+                            id="comp-label">...</strong>.</p>
+                    <p>This process will utilize our proven <strong>Iteration 5.4</strong> algorithm to identify:</p>
+                    <ul style="padding-left: 20px; margin-top: 10px;">
+                        <li>Recurring customer pain points</li>
+                        <li>Common frustrations & technical issues</li>
+                        <li>Implicit feature demands & switching intent</li>
+                        <li>High-signal brand comparisons</li>
+                    </ul>
+                </div>
+
+                <div
+                    style="background: rgba(255,135,23,0.1); border-left: 3px solid #FF8717; padding: 12px; margin-bottom: 20px; font-size: 0.75rem;">
+                    <strong>Verification Required:</strong> To ensure research is human-derived, we will seek your
+                    approval before each phase of the scan.
+                </div>
+
+                <div class="btn-group" style="margin-top: 20px; display: flex; gap: 10px;">
+                    <button id="start-discovery-btn" class="primary-btn" style="flex: 2;">Approve Research</button>
+                    <button id="cancel-discovery-btn" class="secondary-btn" style="flex: 1;">Cancel</button>
+                </div>
+            </div>
+
+            <!-- Progress Screen -->
+            <div class="glass-card" id="discovery-progress-card"
+                style="display: none; text-align: center; padding: 30px 20px;">
+                <div class="loader-spinner" style="margin: 0 auto 20px auto;"></div>
+                <div id="discovery-phase-status" style="font-weight: 600; margin-bottom: 5px;">Phase 1: Pain Points
+                </div>
+                <div id="discovery-sub-status" style="font-size: 0.8rem; opacity: 0.7; margin-bottom: 20px;">Executing
+                    surgical queries...</div>
+                <button id="abort-discovery-btn" class="secondary-btn" style="width: auto; padding: 8px 20px;">Abort
+                    Research</button>
+            </div>
+
+            <!-- Phase Transition Approval -->
+            <div class="glass-card" id="discovery-phase-results" style="display: none;">
+                <div id="phase-result-icon" style="font-size: 2rem; margin-bottom: 10px;">📊</div>
+                <h3 id="phase-result-title" style="margin-bottom: 5px;">Phase Complete</h3>
+                <p id="phase-result-desc"
+                    style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 20px;"></p>
+
+                <div id="phase-highlights"
+                    style="text-align: left; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-bottom: 20px; display: none;">
+                    <div
+                        style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; opacity: 0.6;">
+                        Current Findings</div>
+                    <div id="phase-stats" style="font-size: 0.8rem;">0 high-signal threads found.</div>
+                </div>
+
+                <div class="btn-group">
+                    <button id="next-phase-btn" class="primary-btn">Approve & Continue</button>
+                    <button id="finish-discovery-btn" class="primary-btn" style="display: none;">Finalize & Sync
+                        Results</button>
+                </div>
             </div>
         </div>
+    </div>
     </div>
 
     <script type="module" src="index.ts"></script>
 </body>
-
-</html>
 
 </html>

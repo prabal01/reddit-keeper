@@ -98,7 +98,8 @@ interface AnalysisData {
 }
 
 export const AnalysisResults: React.FC<{ data: AnalysisData, onCitationClick?: (id: string) => void }> = ({ data, onCitationClick }) => {
-    console.log("[AnalysisResults] Received data:", data);
+    console.log("[AnalysisResults] Received data keys:", Object.keys(data));
+    console.log("[AnalysisResults] market_attack_summary present:", !!data.market_attack_summary);
     const handleExportJSON = () => {
         const blob = new Blob([JSON.stringify(data, null, 4)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -213,9 +214,9 @@ ${(data.high_intensity_pain_points || []).map(p => `- **Why it matters:** ${p.wh
                         </div>
                     </div>
                     <div className="dataset-meta">
-                        <span>{data.analysis_metadata?.total_threads || 0} Threads</span>
-                        <span>{data.analysis_metadata?.total_comments_analyzed || 0} Comments</span>
-                        <span>{data.analysis_metadata?.analysis_depth} Depth</span>
+                        <p style={{ fontWeight: 'bold' }}>{data.analysis_metadata?.total_threads || 0} Threads </p>
+                        <p style={{ fontWeight: 'bold' }}>{data.analysis_metadata?.total_comments_analyzed || 0} Comments </p>
+                        <p style={{ fontWeight: 'bold' }}>{data.analysis_metadata?.analysis_depth} Depth</p>
                     </div>
                 </div>
             </div>

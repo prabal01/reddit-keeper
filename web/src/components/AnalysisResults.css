@@ -99,7 +99,7 @@
 /* CARDS DEFAULT */
 .card-header-accent {
     position: absolute;
-    top: -10px;
+    top: -20px;
     right: 20px;
     padding: 4px 12px;
     border-radius: 20px;
@@ -785,7 +785,7 @@
 
 /* Risk Flags */
 .risk-item {
-    background: #fffafa;
+    background: va(--bg-card);
     border: 1px solid #fee2e2;
     padding: 1rem;
     border-radius: 8px;

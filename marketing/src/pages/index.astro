@@ -26,65 +26,83 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
 	<section class="hero-section">
 		<div class="container">
 			<div class="hero-content">
-                <div class="hero-bullets">
-                    <span><CheckCircle2 size={18} class="inline mr-2 text-accent" /> Reddit Insights</span>
-                    <span><CheckCircle2 size={18} class="inline mr-2 text-accent" /> Competitor Intelligence</span>
-                    <span><CheckCircle2 size={18} class="inline mr-2 text-accent" /> Pain Point Detection</span>
-                </div>
-				<h1 class="hero-title">Extract Signal from the <br class="md:hidden" />Reddit Noise.</h1>
+				<h1 class="hero-title">Stop Guessing What to Build. <br />See Why Your Competitor’s Users Are Frustrated — Before You Ship.</h1>
 				<p class="hero-subtitle">
-					Analyze thousands of discussions in seconds. Spot pain points, identify competitor gaps, and validate your next feature with AI-powered market intelligence.
+					OpinionDeck turns real public customer conversations into a clear product & positioning blueprint.
 				</p>
+                <div class="hero-bullets">
+                    <span><CheckCircle2 size={18} class="text-accent" /> No surveys.</span>
+                    <span><CheckCircle2 size={18} class="text-accent" /> No assumptions.</span>
+                    <span><CheckCircle2 size={18} class="text-accent" /> No tab chaos.</span>
+                </div>
 				
                 <div class="interactive-demo">
                     <div class="demo-label">
-                        <span class="badge">Live Demo</span>
+                        <Search size={20} />
+                        <strong>Search a competitor to start (free)</strong>
                     </div>
                     <FetchDemo client:load />
-                    <p class="demo-subtext">Try it for yourself. Paste a Reddit URL above to see the magic.</p>
+                    <p class="demo-subtext">Search is free. Unlock full blueprint when you save threads.</p>
                 </div>
 			</div>
 		</div>
 	</section>
 
-    <!-- Signal Gap Section -->
-    <section class="problem-solution-section" id="why">
+    <section class="problem-solution-section">
         <div class="container">
             <div class="section-header">
-                <h2 class="section-title">The <span class="text-gradient">Signal Gap</span></h2>
-                <p class="section-subtitle">Why most product research fails to find the truth.</p>
+                <h2 class="section-title">The Signal Gap</h2>
+                <p class="section-subtitle">Most founders scroll Reddit for hours and get generic AI summaries. They still end up guessing what to build.</p>
             </div>
-
+            
             <div class="signal-gap-container">
                 <div class="gap-card chaos">
-                    <div class="icon-wrap negative"><XCircle size={32} /></div>
-                    <h3>Manual Chaos</h3>
-                    <div class="gap-item">
-                        <span class="step-label">The Process</span>
-                        <p>Endless scrolling through threads, copy-pasting into Notion.</p>
+                    <div class="card-header">
+                        <XCircle size={32} class="text-negative mb-4" />
+                        <h3>The Manual Chaos</h3>
                     </div>
-                    <div class="gap-item">
-                        <span class="step-label"> The Result</span>
-                        <p>Cherry-picked data, survivorship bias, and missed patterns.</p>
+                    <div class="card-body">
+                        <div class="gap-item">
+                            <span class="step-label">Input</span>
+                            <p>Hours of manual scrolling & 20+ open tabs.</p>
+                        </div>
+                        <div class="gap-item">
+                            <span class="step-label">Process</span>
+                            <p>Copy-pasting into generic LLMs.</p>
+                        </div>
+                        <div class="gap-item">
+                            <span class="step-label">Outcome</span>
+                            <p>Vague summaries that don't drive decisions.</p>
+                        </div>
                     </div>
                 </div>
 
                 <div class="gap-divider">
+                    <div class="divider-line"></div>
                     <div class="divider-icon">
-                        <Zap size={24} />
+                        <ArrowRight size={24} />
                     </div>
+                    <div class="divider-line"></div>
                 </div>
 
                 <div class="gap-card leverage">
-                    <div class="icon-wrap accent"><Search size={32} /></div>
-                    <h3>Automated Leverage</h3>
-                    <div class="gap-item">
-                        <span class="step-label">The Process</span>
-                        <p>OpinionDeck scans 10,000+ words of conversation in seconds.</p>
+                    <div class="card-header">
+                        <Zap size={32} class="text-accent mb-4" />
+                        <h3>The OpinionDeck Leverage</h3>
                     </div>
-                    <div class="gap-item">
-                        <span class="step-label">The Result</span>
-                        <p>Quantified pain points, ranked build priorities, and raw truth.</p>
+                    <div class="card-body">
+                        <div class="gap-item">
+                            <span class="step-label">Input</span>
+                            <p>Automated signal capture via browser extension.</p>
+                        </div>
+                        <div class="gap-item">
+                            <span class="step-label">Process</span>
+                            <p>Cross-thread pattern & switching trigger detection.</p>
+                        </div>
+                        <div class="gap-item">
+                            <span class="step-label">Outcome</span>
+                            <p>Ranked product blueprint & positioning leverage.</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -95,213 +113,221 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
     <section class="workflow-section" id="how-it-works">
         <div class="container">
             <div class="section-header">
-                <h2 class="section-title">From Reddit to <span class="text-gradient">Strategic Roadmap</span></h2>
-                <p class="section-subtitle">Our 3-step intelligence pipeline.</p>
+                <h2 class="section-title">From scrolling to strategic clarity — <span class="text-gradient">in minutes</span></h2>
+                <p class="section-subtitle">A clear path from public signal to product leverage.</p>
             </div>
-            
             <div class="workflow-steps">
                 <div class="step-item">
-                    <div class="step-num">01</div>
+                    <div class="step-num"><Download size={24} /></div>
                     <div class="step-content">
-                        <h3>Connect the Signal</h3>
-                        <p>Paste any Reddit thread or subreddit. Our browser-bridge bypasses bots to capture the raw, unfiltered conversation safely.</p>
+                        <h3>Install the Extension</h3>
+                        <p>OpinionDeck runs in your browser. When you’re researching competitors, it’s already there — ready to capture signal. No scripts, no scraping tools.</p>
                     </div>
                 </div>
-
                 <div class="step-item">
-                    <div class="step-num">02</div>
+                    <div class="step-num"><Search size={24} /></div>
                     <div class="step-content">
-                        <h3>Distill Intelligence</h3>
-                        <p>OpinionDeck's proprietary models categorize intent, calculate sentiment intensity, and identify specific competitor switching triggers.</p>
+                        <h3>Search & Research (Free)</h3>
+                        <p>Search a competitor from the homepage — or browse public discussions naturally. OpinionDeck surfaces high-signal threads so you don’t waste time on noise.</p>
                     </div>
                 </div>
-
                 <div class="step-item">
-                    <div class="step-num">03</div>
+                    <div class="step-num"><Layers size={24} /></div>
                     <div class="step-content">
-                        <h3>Map the Opportunity</h3>
-                        <p>Generate a <strong>Competitive Blueprint</strong>. Get a ranked list of exactly what to build, how to position it, and who to target.</p>
+                        <h3>Save High-Signal Threads</h3>
+                        <p>Found something valuable? Click <strong>“Save to Deck.”</strong> Build your own competitive war room for deeper signal extraction.</p>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-num"><FileText size={24} /></div>
+                    <div class="step-content">
+                        <h3>Generate Your Competitive Blueprint</h3>
+                        <p>Extract intense pain points, switching triggers, feature gaps, and ranked build priorities. You don’t get fluff. You get direction.</p>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-num"><TrendingUp size={24} /></div>
+                    <div class="step-content">
+                        <h3>Ship With Leverage</h3>
+                        <p>Avoid building low-impact features. Sharpen your landing page copy. Improve pricing strategy. One avoided mistake pays for the tool.</p>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Outcomes Section -->
     <section class="outcomes-section">
         <div class="container">
-            <h2 class="section-title text-center">Outcome-Driven Research</h2>
+            <div class="section-header">
+                <h2 class="section-title">What You Actually Walk Away With</h2>
+                <p class="section-subtitle">This is competitive leverage.</p>
+            </div>
             <div class="outcomes-grid">
                 <div class="outcome-card">
-                    <div class="outcome-header">
-                        <TrendingUp size={24} class="text-accent" />
-                        <h3>Market Sizing</h3>
-                    </div>
-                    <div class="outcome-comparison">
-                        <div class="outcome-old">"Vague hunch"</div>
-                        <div class="outcome-arrow"><ArrowRight size={16} /></div>
-                        <div class="outcome-new">"85% of users mention X"</div>
-                    </div>
+                    <div class="outcome-header">Instead of:</div>
+                    <p class="outcome-old">“I think users care about this…”</p>
+                    <div class="outcome-arrow"><ArrowRight /></div>
+                    <div class="outcome-label">You get:</div>
+                    <p class="outcome-new">“Users repeatedly complain about this. Mentioned in 5 threads. Causing churn.”</p>
                 </div>
-
                 <div class="outcome-card">
-                    <div class="outcome-header">
-                        <MessageSquare size={24} class="text-accent" />
-                        <h3>Messaging</h3>
-                    </div>
-                    <div class="outcome-comparison">
-                        <div class="outcome-old">Stock copy</div>
-                        <div class="outcome-arrow"><ArrowRight size={16} /></div>
-                        <div class="outcome-new">Use their exact words</div>
-                    </div>
-                </div>
-
-                <div class="outcome-card">
-                    <div class="outcome-header">
-                        <Layers size={24} class="text-accent" />
-                        <h3>Prioritization</h3>
-                    </div>
-                    <div class="outcome-comparison">
-                        <div class="outcome-old">Loudest user wins</div>
-                        <div class="outcome-arrow"><ArrowRight size={16} /></div>
-                        <div class="outcome-new">Data-backed urgency</div>
-                    </div>
+                    <div class="outcome-header">Instead of:</div>
+                    <p class="outcome-old">“Let’s try this positioning…”</p>
+                    <div class="outcome-arrow"><ArrowRight /></div>
+                    <div class="outcome-label">You get:</div>
+                    <p class="outcome-new">“Users explicitly say they switched because of this.”</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Audience Section -->
     <section class="audience-section">
         <div class="container">
-            <div class="audience-grid">
-                <div class="audience-item">
-                    <Users size={32} />
-                    <h3>Founders</h3>
-                    <p>Validate your MVP before spending a single dollar on dev.</p>
+            <div class="audience-content">
+                <h2>Who this is for</h2>
+                <div class="audience-grid">
+                    <div class="audience-item"><Users size={20} class="inline mr-2 text-accent" /> Founders validating an idea</div>
+                    <div class="audience-item"><Briefcase size={20} class="inline mr-2 text-accent" /> SaaS teams preparing to launch</div>
+                    <div class="audience-item"><TrendingUp size={20} class="inline mr-2 text-accent" /> Builders entering competitive markets</div>
+                    <div class="audience-item"><Zap size={20} class="inline mr-2 text-accent" /> Indie hackers who don’t want to guess</div>
                 </div>
-                <div class="audience-item">
-                    <Briefcase size={32} />
-                    <h3>Product Managers</h3>
-                    <p>Build roadmaps backed by objective community sentiment.</p>
-                </div>
-                <div class="audience-item">
-                    <BarChart3 size={32} />
-                    <h3>Marketers</h3>
-                    <p>Find the high-intent keywords and "switching triggers" your competitors missed.</p>
-                </div>
+                <p class="audience-note">If you’re building something completely novel with no competition — this isn’t for you. If you're entering an existing market — it is.</p>
             </div>
         </div>
     </section>
 
     <section class="pricing-section" id="pricing">
         <div class="container">
-            <h2 class="section-title">Simple during beta. Built for early founders.</h2>
+            <h2 class="section-title">Simple, transparent pricing</h2>
+            <p class="section-subtitle">One avoided mistake pays for the tool.</p>
             
             <div class="pricing-grid">
-                <!-- Free Exploration -->
+                <!-- Free Plan -->
                 <div class="pricing-card">
                     <div class="pricing-header">
                         <div class="plan-icon"><MousePointer2 size={32} /></div>
-                        <h3>🟢 Free Exploration</h3>
+                        <h3>Free Exploration</h3>
                         <div class="price">$0</div>
                         <p class="billing-msg">Validate before you commit.</p>
                     </div>
                     <ul class="features-list">
                         <li>Unlimited competitor search</li>
-                        <li>Save up to 5 threads total</li>
-                        <li>Create up to 2 decks</li>
-                        <li>Up to 100 comments per thread</li>
-                        <li class="blueprint-feature">
-                            <strong>1 Limited-Depth Blueprint</strong>
-                            <div class="blueprint-details">
-                                <span>Limited-depth reports include:</span>
-                                <ul>
-                                    <li>Top pain points</li>
-                                    <li>High-level signal summary</li>
-                                    <li>Basic opportunity highlights</li>
-                                </ul>
-                            </div>
-                        </li>
+                        <li>Save up to <strong>5 threads total</strong></li>
+                        <li>Create up to <strong>2 decks</strong></li>
+                        <li>Up to <strong>50 comments per thread</strong></li>
+                        <li>1 <strong>Limited-Depth Blueprint</strong></li>
                     </ul>
-                    <div class="cta-wrap">
+                    <div class="sub-features">
+                        <p>Limited-depth reports include:</p>
+                        <ul>
+                            <li>Top pain points</li>
+                            <li>High-level signal summary</li>
+                            <li>Basic opportunity highlights</li>
+                        </ul>
+                    </div>
+                    <div class="cta-group">
                         <a href={dashboardUrl} class="btn btn-secondary btn-block">Start Free</a>
-                        <p class="cta-note">Designed to test value before upgrading.</p>
-                        <p class="cta-subnote">Upgrade for full-depth analysis and advanced signal extraction.</p>
+                        <p class="cta-note">Upgrade for full-depth analysis and advanced signal extraction.</p>
                     </div>
                 </div>
 
-                <!-- Founding Access -->
+                <!-- Beta Plan -->
                 <div class="pricing-card active">
-                    <div class="badge">Early access pricing</div>
+                    <div class="badge">Founding Access (Beta)</div>
                     <div class="pricing-header">
                         <div class="plan-icon text-accent"><Zap size={32} /></div>
-                        <h3>🚀 Founding Access (Beta)</h3>
+                        <h3>Founding Access</h3>
                         <div class="price">$19 <span class="period">one-time</span></div>
-                        <p class="billing-msg">Built for founders preparing to ship.</p>
+                        <p class="billing-msg">Early access pricing. Built for founders preparing to ship.</p>
                     </div>
                     <ul class="features-list">
                         <li>Save unlimited threads</li>
                         <li>Unlimited decks</li>
-                        <li>Up to 5,000 comments per thread</li>
-                        <li class="blueprint-feature">
-                            <strong>10 Full Competitive Blueprints</strong>
-                            <ul class="sub-features">
-                                <li>High-intensity pain scoring</li>
-                                <li>Switching Trigger Detection</li>
-                                <li>Ranked Build Priorities</li>
-                                <li>Feature Gap Analysis</li>
-                                <li>Positioning & Messaging Angles</li>
-                                <li>Exportable Report</li>
-                                <li>Direct feedback channel</li>
-                            </ul>
-                        </li>
+                        <li>Up to <strong>5,000 comments per thread</strong></li>
+                        <li><span>10</span> Full Competitive Blueprints</li>
+                        <li>High-intensity pain scoring</li>
+                        <li>Switching Trigger Detection</li>
+                        <li>Ranked Build Priorities</li>
+                        <li>Feature Gap Analysis</li>
+                        <li>Positioning & Messaging Angles</li>
+                        <li>Exportable Report</li>
+                        <li>Direct feedback channel</li>
                     </ul>
-                    <div class="cta-wrap">
-                        <a href={`${dashboardUrl}?plan=founding`} class="btn btn-primary btn-block">Unlock Founding Access</a>
-                        <p class="cta-note">This is discounted beta pricing. Future plans will expand in scope and price.</p>
-                        <p class="cta-subnote">One-time payment. No subscription. Limited early pricing.</p>
+                    <div class="cta-group">
+                        <a href={`${dashboardUrl}?plan=beta`} class="btn btn-primary btn-block">Unlock Founding Access</a>
+                        <p class="cta-note">One-time payment. No subscription. Limited early pricing.</p>
                     </div>
+                    <p class="card-footer-note">This is discounted beta pricing. Future plans will expand in scope and price.</p>
                 </div>
 
                 <!-- Standard Plan -->
-                <div class="pricing-card coming-soon">
+                <div class="pricing-card disabled">
                     <div class="pricing-header">
-                        <div class="plan-icon"><ShieldCheck size={32} /></div>
-                        <h3>🔒 Standard Plan (Coming Soon)</h3>
-                        <div class="price">$39+</div>
-                        <p class="billing-msg">Full access tier launching after beta.</p>
+                        <div class="plan-icon"><BarChart3 size={32} /></div>
+                        <h3>Standard Plan</h3>
+                        <div class="price">$39+ <span class="period">/ month</span></div>
+                        <p class="billing-msg">Coming Soon — Launching after beta.</p>
                     </div>
-                    <div class="coming-soon-content">
-                        <p>Will include:</p>
-                        <ul class="features-list">
-                            <li>Expanded blueprint limits</li>
-                            <li>Multi-platform support</li>
-                            <li>Advanced opportunity scoring</li>
-                            <li>Ongoing competitive tracking</li>
-                        </ul>
-                    </div>
-                    <div class="cta-wrap mt-auto">
-                        <button class="btn btn-secondary btn-block" disabled>Available after beta</button>
+                    <ul class="features-list">
+                        <li>Expanded blueprint limits</li>
+                        <li><strong>Team Collaboration</strong> support</li>
+                        <li><strong>Shareable Folder</strong> links</li>
+                        <li>Multi-platform support</li>
+                        <li>Advanced opportunity scoring</li>
+                        <li>Ongoing competitive tracking</li>
+                    </ul>
+                    <div class="cta-group">
+                        <a href="#" class="btn btn-secondary btn-block disabled">Available after beta</a>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- FAQ Section Removed for brevity, or kept if needed -->
+    <section class="public-reports-section">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Public Reports</h2>
+                <p class="section-subtitle">See real examples of live competitive breakdowns.</p>
+            </div>
+            <div class="reports-grid">
+                <a href="#" class="report-card">
+                    <div class="report-icon"><MessageSquare /></div>
+                    <h4>Why users are leaving YNAB</h4>
+                    <span>View Report <ArrowRight size={16} class="inline ml-1" /></span>
+                </a>
+                <a href="#" class="report-card">
+                    <div class="report-icon"><MessageSquare /></div>
+                    <h4>What habit tracker users actually hate</h4>
+                    <span>View Report <ArrowRight size={16} class="inline ml-1" /></span>
+                </a>
+                <a href="#" class="report-card">
+                    <div class="report-icon"><MessageSquare /></div>
+                    <h4>Where note-taking apps are failing</h4>
+                    <span>View Report <ArrowRight size={16} class="inline ml-1" /></span>
+                </a>
+            </div>
+            <div class="text-center mt-8">
+                <a href={dashboardUrl} class="btn btn-secondary">View All Public Reports</a>
+            </div>
+        </div>
+    </section>
 
-    <!-- Call to Action Premium -->
+    <section class="responsible-section">
+        <div class="container">
+            <h3 class="flex items-center justify-center gap-2"><ShieldCheck class="text-accent" /> Responsible Research</h3>
+            <p>OpinionDeck analyzes publicly available discussions and transforms them into structured insights. We focus on signal extraction — not content replication.</p>
+        </div>
+    </section>
+
+    <!-- Call to Action -->
     <section class="cta-section">
         <div class="container">
-            <div class="cta-card">
-                <div class="cta-content">
-                    <h2 class="hero-title text-white">Stop Guessing. <br />Start Extracting.</h2>
-                    <p class="hero-subtitle text-white/80">Join the founders building products that communities actually want.</p>
-                    <div class="cta-wrap">
-                        <a href={dashboardUrl} class="btn btn-primary btn-xl">Get Started for Free</a>
-                        <p class="cta-note text-white/60">No credit card required. Beta access limited.</p>
-                    </div>
+            <div class="cta-content">
+                <h2 class="section-title">Before you write another line of code…</h2>
+                <p class="section-subtitle">See what users already hate about your competitors. You don’t need more ideas. You need sharper insight.</p>
+                <div class="mt-8 cta-button-container-bottom">
+                    <a href={dashboardUrl} class="btn btn-primary btn-xl">Analyze a Competitor for Free</a>
                 </div>
             </div>
         </div>
@@ -309,65 +335,17 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
 </Layout>
 
 <script>
-    // Simple toggle logic for the static landing page
     document.addEventListener('DOMContentLoaded', () => {
-        // We will target multiple toggles if present (mobile/desktop or just redundancy)
-        const toggleBtns = document.querySelectorAll('.pricing-toggle');
-        
-        // Target Pro Card elements specifically
-        const priceDisplay = document.querySelector('.pricing-card.pro .price-amount');
-        const periodDisplay = document.querySelector('.pricing-card.pro .period');
-        const billingMsg = document.querySelector('.billing-msg');
-        const upgradeLink = document.querySelector('.pricing-card.pro .btn'); 
-
-        let isYearly = true; // Default to Yearly
-
-        toggleBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                isYearly = !isYearly;
-                
-                // UI Updates
-                toggleBtns.forEach(b => {
-                    b.classList.toggle('year', isYearly);
-                    // Find labels relative to the button if possible, or just toggle all
-                    // For now, let's just toggle the classes on the specific labels if we can find them
-                    const row = b.closest('.card-toggle-row');
-                    if (row) {
-                        row.querySelector('.toggle-label:first-child')?.classList.toggle('active', !isYearly);
-                        row.querySelector('.toggle-label:last-child')?.classList.toggle('active', isYearly);
-                    }
-                });
-
-                // Price Updates
-                if (priceDisplay) {
-                    priceDisplay.textContent = isYearly ? '$7.50' : '$9';
-                }
-                
-                if (periodDisplay) {
-                    periodDisplay.textContent = '/ month';
-                }
-
-                if (billingMsg) {
-                     billingMsg.textContent = isYearly ? 'Billed $90 yearly' : 'Billed monthly';
-                }
-
-                // Update Link URL
-                if (upgradeLink instanceof HTMLAnchorElement) {
-                    const url = new URL(upgradeLink.href, window.location.origin);
-                    url.searchParams.set('billing', isYearly ? 'year' : 'month');
-                    upgradeLink.href = url.toString();
-                }
-            });
-        });
+        console.log('Landing page loaded with Lucide icons');
     });
 </script>
 
 <style>
     /* Hero Section */
 	.hero-section {
-		padding: 140px 0 100px;
+		padding: 120px 0 100px;
         text-align: center;
-        background: radial-gradient(circle at 50% 20%, rgba(255, 69, 0, 0.12) 0%, transparent 60%);
+        background: radial-gradient(circle at 50% 20%, rgba(255, 69, 0, 0.1) 0%, transparent 60%);
 	}
 
     .hero-bullets {
@@ -379,8 +357,14 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
         color: var(--text-secondary);
     }
 
+    .hero-bullets span {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
     .hero-title {
-        font-size: 4.5rem;
+        font-size: 4rem;
         line-height: 1.05;
         font-weight: 800;
         margin-bottom: 24px;
@@ -390,11 +374,11 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
         max-width: 1000px;
         margin-left: auto;
         margin-right: auto;
-        letter-spacing: -0.03em;
+        letter-spacing: -0.02em;
     }
 
     .hero-subtitle {
-        font-size: 1.65rem;
+        font-size: 1.5rem;
         color: var(--text-secondary);
         max-width: 800px;
         margin: 0 auto 40px;
@@ -402,657 +386,696 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
     }
 
     .interactive-demo {
-        max-width: 800px;
-        margin: 60px auto 0;
-    }
-
-    .demo-label {
-        margin-bottom: 24px;
-    }
-
-    .demo-subtext {
-        margin-top: 24px;
-        font-size: 1rem;
-        color: var(--text-tertiary);
-    }
-
-    /* Signal Gap Section (Redesigned for PREMIUM feel) */
-    .problem-solution-section {
-        padding: 140px 0;
-        background: var(--bg-secondary);
-        position: relative;
-    }
-
-    .signal-gap-container {
-        display: flex;
-        align-items: stretch;
-        gap: 0;
-        margin-top: 80px;
-        max-width: 1100px;
-        margin-left: auto;
-        margin-right: auto;
-    }
-
-    .gap-card {
-        flex: 1;
-        padding: 60px;
-        border-radius: var(--radius-2xl);
-        background: var(--bg-primary);
-        border: 1px solid var(--border);
-        position: relative;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .gap-card.chaos {
-        border-right: none;
-        border-top-right-radius: 0;
-        border-bottom-right-radius: 0;
-    }
-
-    .gap-card.leverage {
-        border-left: none;
-        border-top-left-radius: 0;
-        border-bottom-left-radius: 0;
-        border-color: var(--bg-accent);
-        background: linear-gradient(180deg, var(--bg-primary) 0%, rgba(255, 69, 0, 0.05) 100%);
-    }
-
-    .icon-wrap {
-        width: 64px;
-        height: 64px;
-        border-radius: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 32px;
-    }
-
-    .icon-wrap.negative {
-        background: rgba(239, 68, 68, 0.1);
-        color: var(--score-negative);
-    }
-
-    .icon-wrap.accent {
-        background: rgba(255, 69, 0, 0.1);
-        color: var(--bg-accent);
-    }
-
-    .gap-card h3 {
-        font-size: 2rem;
-        margin-bottom: 40px;
-        font-weight: 800;
-        letter-spacing: -0.02em;
-    }
-
-    .gap-item {
-        margin-bottom: 32px;
-    }
-
-    .gap-item:last-child {
-        margin-bottom: 0;
-    }
-
-    .step-label {
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        font-weight: 800;
-        letter-spacing: 0.15em;
-        color: var(--text-tertiary);
-        margin-bottom: 8px;
-        display: block;
-    }
-
-    .gap-item p {
-        font-size: 1.25rem;
-        color: var(--text-secondary);
-        font-weight: 500;
-        line-height: 1.4;
-    }
-
-    .leverage .gap-item p {
-        color: var(--text-primary);
-        font-weight: 600;
-    }
-
-    .gap-divider {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        width: 4px;
-        background: var(--border);
-        position: relative;
-        z-index: 10;
-    }
-
-    .divider-icon {
-        width: 56px;
-        height: 56px;
-        background: var(--bg-accent);
-        color: white;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 0 30px rgba(255, 69, 0, 0.4);
-        position: absolute;
-    }
-
-    /* Workflow Section */
-    .workflow-section {
-        padding: 140px 0;
-        background: var(--bg-primary);
-    }
-
-    .workflow-steps {
-        max-width: 900px;
-        margin: 100px auto 0;
-        display: flex;
-        flex-direction: column;
-        position: relative;
-    }
-
-    .step-item {
-        display: flex;
-        gap: 40px;
-        padding: 40px 0;
-        border-bottom: 1px solid var(--border);
-        position: relative;
-    }
-
-    .step-num {
-        font-size: 1.5rem;
-        font-weight: 800;
-        color: var(--bg-accent);
-        opacity: 0.5;
-        font-family: monospace;
-    }
-
-    .step-content h3 {
-        font-size: 1.5rem;
-        margin-bottom: 12px;
-        font-weight: 700;
-    }
-
-    .step-content p {
-        font-size: 1.15rem;
-        color: var(--text-secondary);
-        line-height: 1.6;
-    }
-
-    /* Outcomes Section */
-    .outcomes-section {
-        padding: 140px 0;
-        background: var(--bg-secondary);
-    }
-
-    .outcomes-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 32px;
-        margin-top: 80px;
-    }
-
-    .outcome-card {
-        background: var(--bg-primary);
-        padding: 40px;
-        border-radius: var(--radius-2xl);
-        border: 1px solid var(--border);
-    }
-
-    .outcome-header {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        margin-bottom: 32px;
-    }
-
-    .outcome-header h3 {
-        font-size: 1.25rem;
-        font-weight: 700;
-    }
-
-    .outcome-comparison {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-    }
-
-    .outcome-old {
-        font-size: 0.9rem;
-        color: var(--text-tertiary);
-        text-decoration: line-through;
-    }
-
-    .outcome-new {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: var(--text-primary);
-    }
-
-    /* Audience Section */
-    .audience-section {
-        padding: 140px 0;
-        background: var(--bg-primary);
-    }
-
-    .audience-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 60px;
-    }
-
-    .audience-item {
-        text-align: center;
-    }
-
-    .audience-item h3 {
-        font-size: 1.5rem;
-        margin: 24px 0 16px;
-    }
-
-    .audience-item p {
-        color: var(--text-secondary);
-        line-height: 1.6;
-    }
-
-    /* Pricing Section */
-    .pricing-section {
-        padding: 140px 0;
-    }
-
-    .pricing-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 32px;
-        margin-top: 80px;
-        align-items: stretch;
-    }
-
-    .pricing-card {
-        padding: 40px;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        background: var(--bg-secondary);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-2xl);
-        position: relative;
-    }
-
-    .pricing-card.active {
-        transform: scale(1.05);
-        border-color: var(--bg-accent);
-        box-shadow: var(--shadow-lg);
-        z-index: 2;
-    }
-
-    .price {
-        font-size: 3.5rem;
-        font-weight: 800;
-        letter-spacing: -0.05em;
-        margin: 10px 0;
-        color: var(--text-primary);
-    }
-
-    .pricing-header {
-        margin-bottom: 32px;
-    }
-
-    .plan-icon {
-        margin-bottom: 16px;
-    }
-
-    .badge {
-        position: absolute;
-        top: -12px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: var(--bg-accent);
-        color: white;
-        padding: 4px 16px;
-        border-radius: var(--radius-full);
-        font-size: 0.8rem;
-        font-weight: 700;
-        box-shadow: 0 4px 12px rgba(255, 69, 0, 0.3);
-        white-space: nowrap;
-    }
-
-    .billing-msg {
-        color: var(--text-secondary);
-        font-size: 1rem;
-        font-weight: 500;
-    }
-
-    .period {
-        font-size: 1rem;
-        color: var(--text-tertiary);
-        font-weight: normal;
-    }
-
-    .features-list {
-        list-style: none;
-        padding: 0;
-        margin: 0 0 40px 0;
-    }
-
-    .features-list li {
-        margin-bottom: 12px;
-        display: flex;
-        align-items: flex-start;
-        gap: 8px;
-    }
-
-    .blueprint-feature {
-        flex-direction: column !important;
-        background: rgba(255, 69, 0, 0.03);
-        padding: 16px;
-        border-radius: 12px;
-        border: 1px dashed rgba(255, 69, 0, 0.2);
-        margin-top: 12px;
-    }
-
-    .blueprint-details {
-        margin-top: 8px;
-        font-size: 0.9rem;
-        color: var(--text-tertiary);
-    }
-
-    .blueprint-details ul, .sub-features {
-        margin-top: 8px;
-        list-style: disc;
-        padding-left: 20px;
-    }
-
-    .blueprint-details li, .sub-features li {
-        margin-bottom: 4px;
-        font-weight: normal;
-    }
-
-    .sub-features {
-        color: var(--text-secondary);
-        font-size: 0.95rem;
-    }
-
-    .cta-wrap {
-        margin-top: auto;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-    }
-
-    .cta-note {
-        font-size: 0.9rem;
-        font-weight: 600;
-        color: var(--text-secondary);
-        text-align: center;
-    }
-
-    .cta-subnote {
-        font-size: 0.8rem;
-        color: var(--text-tertiary);
-        text-align: center;
-    }
-
-    .pricing-card.coming-soon {
-        opacity: 0.8;
-        border-style: dashed;
-    }
-
-    .coming-soon-content {
-        margin: 20px 0;
-        color: var(--text-tertiary);
-    }
-
-    .btn-block {
-        display: flex;
-        width: 100%;
-    }
-
-    /* FAQ Section */
-    .faq-section {
-        padding: 100px 0;
-        background: var(--bg-tertiary);
-    }
-
-    .faq-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-        gap: 40px;
-        max-width: 900px;
+        max-width: 700px;
         margin: 40px auto 0;
     }
 
-    .faq-item h3 {
-        font-size: 1.25rem;
-        margin-bottom: 12px;
+    .demo-label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin-bottom: 20px;
+        font-size: 1.1rem;
+        color: var(--text-primary);
     }
 
-    .faq-item p {
-        color: var(--text-secondary);
-        line-height: 1.6;
-    }
-
-    /* CTA Section Premium */
-    .cta-section {
-        padding: 140px 0;
-        background: var(--bg-primary);
-    }
-
-    .cta-card {
-        background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
-        padding: 100px 60px;
-        border-radius: var(--radius-2xl);
-        border: 1px solid var(--border);
-        text-align: center;
-        box-shadow: var(--shadow-xl);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .cta-card::before {
-        content: "";
-        position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: radial-gradient(circle at center, rgba(255, 69, 0, 0.05) 0%, transparent 50%);
-        z-index: 0;
-    }
-
-    .cta-content {
-        position: relative;
-        z-index: 1;
+    .demo-subtext {
+        margin-top: 20px;
+        font-size: 0.9rem;
+        color: var(--text-tertiary);
     }
 
     /* Demo Component Styles */
-    :global(.demo-form) {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        margin-bottom: 24px;
-        text-align: center;
-    }
-
     :global(.input-group) {
         display: flex;
+        align-items: center;
         gap: 8px;
-        background: var(--bg-secondary);
-        padding: 8px;
-        border-radius: var(--radius-lg);
-        box-shadow: var(--shadow-md);
+        background: var(--bg-primary);
+        padding: 6px;
+        border-radius: var(--radius-xl);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         border: 1px solid var(--border);
+        max-width: 600px;
+        margin: 0 auto;
     }
 
     :global(.demo-input) {
         flex: 1;
         border: none;
         background: transparent;
-        padding: 0 16px;
-        font-size: 1rem;
+        padding: 12px 16px;
+        font-size: 1.1rem;
         color: var(--text-primary);
         outline: none;
+        width: 100%;
     }
     
     :global(.demo-input:focus) {
         outline: none;
     }
 
-    :global(.demo-btn) {
+    :global(.btn.demo-btn) {
+        padding: 12px 24px;
+        font-weight: 700;
+        border-radius: var(--radius-lg);
         white-space: nowrap;
+        flex-shrink: 0;
     }
 
     :global(.demo-hint) {
+        margin-top: 12px;
         font-size: 0.85rem;
         color: var(--text-tertiary);
     }
 
-    :global(.demo-result) {
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-lg);
-        padding: 24px;
-        text-align: left;
-        animation: slideIn 0.3s ease;
-    }
-
-    :global(.result-header) {
-        margin-bottom: 16px;
-    }
-
-    :global(.subreddit) {
-        font-size: 0.8rem;
-        font-weight: 700;
-        color: var(--text-secondary);
-        text-transform: uppercase;
-    }
-
-    :global(.post-title) {
-        font-size: 1.25rem;
-        margin: 8px 0;
-    }
-
-    :global(.meta) {
-        font-size: 0.9rem;
-        color: var(--text-secondary);
-        display: flex;
-        gap: 16px;
-    }
-
-    :global(.result-preview) {
+    /* Signal Gap Section (Redesigned) */
+    .problem-solution-section {
+        padding: 120px 0;
+        background: var(--bg-secondary);
         position: relative;
-        background: var(--bg-input);
-        padding: 16px;
-        border-radius: var(--radius-md);
         overflow: hidden;
     }
 
-    :global(.code-block) {
-        font-family: 'Consolas', monospace;
-        font-size: 0.85rem;
-        color: var(--text-secondary);
-        opacity: 0.7;
+    .signal-gap-container {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        margin-top: 60px;
     }
 
-    :global(.preview-overlay) {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 120px;
-        background: linear-gradient(to bottom, transparent 0%, var(--bg-card) 90%);
+    .gap-card {
+        flex: 1;
+        padding: 48px;
+        border-radius: var(--radius-2xl);
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-xl);
+        transition: transform 0.3s ease;
+    }
+
+    .gap-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .gap-card.leverage {
+        border-color: var(--bg-accent);
+        background: linear-gradient(180deg, var(--bg-primary) 0%, rgba(255, 69, 0, 0.03) 100%);
+        box-shadow: 0 20px 40px rgba(255, 69, 0, 0.05);
+    }
+
+    .card-header h3 {
+        font-size: 1.75rem;
+        margin-bottom: 32px;
+        font-weight: 800;
+    }
+
+    .card-body {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    .gap-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .step-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        color: var(--text-tertiary);
+    }
+
+    .gap-item p {
+        font-size: 1.1rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+
+    .leverage .gap-item p {
+        color: var(--text-primary);
+    }
+
+    .gap-divider {
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: flex-end;
-        padding-bottom: 24px;
+        gap: 12px;
+        z-index: 2;
     }
 
-    :global(.preview-overlay p) {
+    .divider-line {
+        width: 1px;
+        height: 60px;
+        background: var(--border);
+    }
+
+    .divider-icon {
+        width: 48px;
+        height: 48px;
+        background: var(--bg-accent);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0 20px rgba(255, 69, 0, 0.3);
+    }
+
+    /* Workflow Section */
+    .workflow-section {
+        padding: 120px 0;
+        background: var(--bg-primary);
+    }
+
+    .workflow-steps {
+        max-width: 900px;
+        margin: 80px auto 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        position: relative;
+    }
+
+    .workflow-steps::before {
+        content: "";
+        position: absolute;
+        left: 24px;
+        top: 24px;
+        bottom: 24px;
+        width: 2px;
+        background: linear-gradient(180deg, var(--bg-accent) 0%, var(--border) 100%);
+        opacity: 0.2;
+    }
+
+    .step-item {
+        display: flex;
+        gap: 40px;
+        padding-bottom: 60px;
+        position: relative;
+    }
+
+    .step-item:last-child {
+        padding-bottom: 0;
+    }
+
+    .step-num {
+        width: 48px;
+        height: 48px;
+        background: var(--bg-primary);
+        color: var(--bg-accent);
+        border: 2px solid var(--bg-accent);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        z-index: 1;
+        transition: all 0.3s ease;
+    }
+
+    .step-item:hover .step-num {
+        background: var(--bg-accent);
+        color: white;
+        transform: scale(1.1);
+    }
+
+    .step-content h3 {
+        font-size: 1.5rem;
+        margin-bottom: 8px;
+        font-weight: 700;
+    }
+
+    .step-content p {
+        color: var(--text-secondary);
+        font-size: 1.15rem;
+        line-height: 1.6;
+    }
+
+    /* Outcomes Section */
+    .outcomes-section {
+        padding: 120px 0;
+        background: var(--bg-secondary);
+    }
+
+    .outcomes-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+        margin-top: 60px;
+    }
+
+    .outcome-card {
+        padding: 48px;
+        background: var(--bg-primary);
+        border-radius: var(--radius-2xl);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .outcome-header, .outcome-label {
+        font-size: 0.85rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--text-tertiary);
         margin-bottom: 12px;
+    }
+
+    .outcome-old {
+        font-style: italic;
+        color: var(--text-secondary);
+        font-size: 1.1rem;
+        margin-bottom: 24px;
+    }
+
+    .outcome-arrow {
+        text-align: center;
+        color: var(--bg-accent);
+        margin: 16px 0;
+        transform: rotate(90deg);
+    }
+
+    .outcome-new {
+        font-weight: 700;
+        color: var(--text-primary);
+        font-size: 1.25rem;
+        line-height: 1.4;
+    }
+
+    /* Audience Section */
+    .audience-section {
+        padding: 100px 0;
+        background: var(--bg-tertiary);
+        text-align: center;
+    }
+
+    .audience-content h2 {
+        font-size: 3rem;
+        margin-bottom: 48px;
+        font-weight: 800;
+    }
+
+    .audience-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 32px;
+        text-align: left;
+        margin-bottom: 48px;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .audience-item {
+        font-weight: 600;
+        font-size: 1.25rem;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+    }
+
+    .audience-note {
+        font-style: italic;
+        color: var(--text-secondary);
+        font-size: 1.1rem;
+    }
+
+    /* Pricing Section */
+    .pricing-section {
+        padding: 120px 0;
+        text-align: center;
+    }
+
+    .pricing-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 32px;
+        margin-top: 80px;
+        align-items: stretch;
+    }
+
+    .pricing-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-2xl);
+        padding: 48px;
+        text-align: left;
+        display: flex;
+        flex-direction: column;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .pricing-card.active {
+        border-color: var(--bg-accent);
+        box-shadow: 0 30px 60px rgba(255, 69, 0, 0.1);
+        transform: scale(1.05);
+        z-index: 10;
+        background: linear-gradient(180deg, var(--bg-card) 0%, rgba(255, 69, 0, 0.02) 100%);
+    }
+
+    .plan-icon {
+        width: 64px;
+        height: 64px;
+        background: var(--bg-secondary);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 24px;
+        color: var(--text-secondary);
+    }
+
+    .active .plan-icon {
+        background: rgba(255, 69, 0, 0.1);
+    }
+
+    .pricing-header h3 {
+        font-size: 1.75rem;
+        margin-bottom: 8px;
+        font-weight: 800;
+    }
+
+    .price {
+        font-size: 3.5rem;
+        font-weight: 800;
+        margin-bottom: 4px;
+        letter-spacing: -0.04em;
+    }
+
+    .period {
+        font-size: 1.1rem;
+        color: var(--text-tertiary);
         font-weight: 600;
     }
 
-    :global(.result-actions) {
+    .features-list {
+        list-style: none;
+        padding: 0;
+        margin: 40px 0;
+        flex-grow: 1;
+    }
+
+    .features-list li {
+        padding: 14px 0;
+        border-bottom: 1px solid var(--border-light);
         display: flex;
+        align-items: center;
         gap: 12px;
-        margin-bottom: 24px;
+        font-size: 1.05rem;
     }
 
-    :global(.btn-sm) {
-        padding: 8px 16px;
-        font-size: 0.85rem;
+    .features-list li::before {
+        content: "";
+        width: 18px;
+        height: 18px;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23FF4500' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
+        background-size: contain;
+        background-repeat: no-repeat;
     }
 
-    :global(.comments-preview) {
-        max-height: 400px;
-        overflow-y: auto;
-        padding-right: 8px;
-        margin-bottom: 24px;
-        /* Scrollbar styling */
-        scrollbar-width: thin;
-        scrollbar-color: var(--border) transparent;
-    }
-
-    :global(.comment-item) {
-        background: var(--bg-secondary);
-        padding: 16px;
-        border-radius: var(--radius-md);
-        margin-bottom: 12px;
-        border: 1px solid var(--border-light);
-    }
-
-    :global(.comment-author) {
-        display: block;
-        font-size: 0.8rem;
-        font-weight: 700;
-        color: var(--text-secondary);
-        margin-bottom: 4px;
-    }
-
-    :global(.comment-body) {
+    .badge {
+        position: absolute;
+        top: -14px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--bg-accent);
+        color: white;
+        padding: 6px 20px;
+        border-radius: 20px;
+        font-weight: 800;
         font-size: 0.9rem;
-        line-height: 1.5;
-        color: var(--text-primary);
-        white-space: pre-wrap;
+        letter-spacing: 0.05em;
+        box-shadow: 0 4px 12px rgba(255, 69, 0, 0.3);
     }
 
-    @keyframes slideIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
+    .billing-msg {
+        font-size: 0.95rem;
+        color: var(--text-secondary);
+        margin-top: 8px;
+        font-weight: 500;
+    }
+
+    .sub-features {
+        margin: -20px 0 30px;
+        text-align: left;
+        padding-left: 30px;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+    }
+
+    .sub-features p {
+        font-weight: 700;
+        margin-bottom: 8px;
+        color: var(--text-primary);
+    }
+
+    .sub-features ul {
+        list-style: none;
+        padding: 0;
+    }
+
+    .sub-features li {
+        padding: 4px 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .sub-features li::before {
+        content: "•";
+        color: var(--bg-accent);
+        font-weight: bold;
+    }
+
+    .cta-group {
+        margin-top: auto;
+    }
+
+    .cta-button-container-bottom{
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .cta-note {
+        font-size: 0.8rem;
+        color: var(--text-tertiary);
+        margin-top: 12px;
+        font-style: italic;
+    }
+
+    .card-footer-note {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        margin-top: 24px;
+        padding-top: 16px;
+        border-top: 1px dashed var(--border);
+    }
+
+    .pricing-card.disabled {
+        opacity: 0.8;
+        background: var(--bg-tertiary);
+        border-style: dashed;
+    }
+
+    .pricing-card.disabled .features-list li {
+        color: var(--text-tertiary);
+    }
+
+    .btn.disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    /* Public Reports */
+    .public-reports-section {
+        padding: 120px 0;
+        background: var(--bg-secondary);
+    }
+
+    .reports-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 32px;
+        margin-top: 60px;
+    }
+
+    .report-card {
+        padding: 40px;
+        border-radius: var(--radius-2xl);
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        text-decoration: none;
+        color: inherit;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .report-card:hover {
+        transform: translateY(-8px);
+        border-color: var(--bg-accent);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+    }
+
+    .report-icon {
+        width: 48px;
+        height: 48px;
+        background: rgba(255, 69, 0, 0.1);
+        color: var(--bg-accent);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 24px;
+    }
+
+    .report-card h4 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-bottom: 16px;
+        line-height: 1.4;
+    }
+
+    .report-card span {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--text-tertiary);
+        margin-top: auto;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        transition: color 0.2s ease;
+    }
+
+    .report-card:hover span {
+        color: var(--bg-accent);
+    }
+
+    /* Responsible Research */
+    .responsible-section {
+        padding: 80px 0;
+        background: var(--bg-secondary);
+        border-top: 1px solid var(--border);
+        text-align: center;
+    }
+
+    .responsible-section h3 {
+        margin-bottom: 20px;
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+
+    /* Section Utilities */
+    .section-header {
+        text-align: center;
+        max-width: 800px;
+        margin: 0 auto 60px;
+    }
+
+    .section-title {
+        font-size: 3rem;
+        font-weight: 800;
+        margin-bottom: 20px;
+        letter-spacing: -0.02em;
+    }
+
+    .section-subtitle {
+        font-size: 1.35rem;
+        color: var(--text-secondary);
+        line-height: 1.6;
+    }
+
+    .text-gradient {
+        background: linear-gradient(135deg, var(--bg-accent) 0%, #FF8717 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .text-accent { color: var(--bg-accent); }
+    .text-negative { color: var(--score-negative); }
+
+    .btn-xl {
+        padding: 20px 48px;
+        font-size: 1.25rem;
+        border-radius: 16px;
+    }
+
+    /* CTA Section (Bottom) */
+    .cta-section {
+        padding: 120px 0;
+        background: radial-gradient(circle at 50% 50%, rgba(255, 69, 0, 0.05) 0%, transparent 70%);
+        border-top: 1px solid var(--border);
+    }
+
+    .cta-content {
+        max-width: 800px;
+        margin: 0 auto;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .cta-content .section-title {
+        margin-bottom: 24px;
     }
 
     @media (max-width: 992px) {
-        .pricing-grid, .outcomes-grid, .audience-grid {
-            grid-template-columns: 1fr;
-        }
-        
         .signal-gap-container {
             flex-direction: column;
+            gap: 40px;
         }
-
-        .gap-card.chaos, .gap-card.leverage {
-            border: 1px solid var(--border);
-            border-radius: var(--radius-2xl);
-        }
-
+        
         .gap-divider {
-            height: 40px;
+            flex-direction: row;
             width: 100%;
-            background: transparent;
+            justify-content: center;
+        }
+        
+        .divider-line {
+            width: 60px;
+            height: 1px;
         }
 
-        .divider-icon {
-            transform: rotate(90deg);
+        .gap-card {
+            width: 100%;
         }
     }
 
     @media (max-width: 768px) {
         .hero-title {
-            font-size: 3rem;
+            font-size: 2.75rem;
+        }
+        
+        .hero-bullets {
+            flex-direction: column;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .audience-grid, .outcomes-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .pricing-card.active {
+            transform: none;
+        }
+        
+        .workflow-steps::before {
+            left: 20px;
+        }
+        
+        .step-num {
+            width: 40px;
+            height: 40px;
         }
     }
 </style>

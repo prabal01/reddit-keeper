@@ -37,6 +37,12 @@ export const Sidebar: React.FC = () => {
             </nav>
 
             <div className="sidebar-footer">
+                <div className="extension-connection-info-sidebar">
+                    <div className="label">Extension Status</div>
+                    <div className="value">
+                        <span>{typeof window !== 'undefined' && (window as any).chrome?.runtime ? 'Connected' : 'Not Connected'}</span>
+                    </div>
+                </div>
                 <div className="credit-badge-sidebar">
                     <div className="label">Opinion Credits</div>
                     <div className="value">
