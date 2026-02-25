@@ -1,9 +1,11 @@
 import { initializeApp, type FirebaseApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, type Auth } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
 
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let googleProvider: GoogleAuthProvider | null = null;
+let db: Firestore | null = null;
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -19,6 +21,7 @@ if (firebaseConfig.apiKey && firebaseConfig.authDomain && firebaseConfig.project
         app = initializeApp(firebaseConfig);
         auth = getAuth(app);
         googleProvider = new GoogleAuthProvider();
+        db = getFirestore(app);
     } catch (err) {
         console.error("Firebase initialization failed:", err);
     }
@@ -28,4 +31,4 @@ if (firebaseConfig.apiKey && firebaseConfig.authDomain && firebaseConfig.project
     );
 }
 
-export { auth, googleProvider };
+export { auth, googleProvider, db };

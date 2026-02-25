@@ -39,7 +39,7 @@ export const ResearchView: React.FC = () => {
     const [isCreatingFolder, setIsCreatingFolder] = useState(false);
     const [newFolderName, setNewFolderName] = useState('');
     const [isSearchingStarted, setIsSearchingStarted] = useState(false);
-    const [deepDiscovery, setDeepDiscovery] = useState(false);
+    const [deepDiscovery, setDeepDiscovery] = useState(true);
     const [discoveryPlan, setDiscoveryPlan] = useState<DiscoveryPlan | null>(null);
 
     // Debug mode check from URL params
@@ -124,7 +124,7 @@ export const ResearchView: React.FC = () => {
         ] : [
             { id: 'connect', label: 'Connecting to discovery engine', status: 'loading' as const },
             { id: 'api_check', label: deepDiscovery ? 'Initializing Deep Search Queue' : 'Verifying Google indices', status: 'pending' as const },
-            { id: 'fetch', label: deepDiscovery ? 'Scraping Reddit communities' : 'Scanning competitor mentions', status: 'pending' as const },
+            { id: 'fetch', label: deepDiscovery ? 'Searching Reddit communities' : 'Scanning competitor mentions', status: 'pending' as const },
             { id: 'enrich', label: 'Enriching with engagement metadata', status: 'pending' as const },
             { id: 'rank', label: 'Ranking by intent and relevance', status: 'pending' as const },
             { id: 'final', label: 'Preparing intelligence dashboard', status: 'pending' as const }

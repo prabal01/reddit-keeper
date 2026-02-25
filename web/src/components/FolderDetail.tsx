@@ -9,9 +9,11 @@ import { Skeleton } from './Skeleton';
 import './Folders.css';
 import './AnalysisResults.css';
 import { fetchFolderAnalysis } from '../lib/api';
-import { AlertTriangle, Sparkles, Trash2, BarChart2, ArrowDownCircle, Calendar, MessageSquare as MessageSquareIcon, Users, ExternalLink, FileDown, Zap, Loader2 } from 'lucide-react';
+import { AlertTriangle, Sparkles, Trash2, BarChart2, ArrowDownCircle, Calendar, MessageSquare as MessageSquareIcon, Users, ExternalLink, FileDown, Zap, Loader2, Target, Lightbulb, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { exportReportToPDF } from '../lib/pdfExport';
 import { IntelligenceScanner } from './IntelligenceScanner';
+import { doc, onSnapshot, collection } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 interface SavedThread {
     id: string;
@@ -24,6 +26,14 @@ interface SavedThread {
     data: any;
     storageUrl?: string;
     tokenCount?: number;
+    analysisStatus?: 'pending' | 'processing' | 'success' | 'failed';
+}
+
+interface ThreadInsight {
+    id: string;
+    status: 'processing' | 'success' | 'failed';
+    insights?: any;
+    error?: string;
 }
 
 export const FolderDetail: React.FC = () => {
@@ -46,9 +56,64 @@ export const FolderDetail: React.FC = () => {
     const [analyses, setAnalyses] = useState<any[]>([]);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [analysisError, setAnalysisError] = useState<string | null>(null);
+    const [realtimeFolder, setRealtimeFolder] = useState<any>(null);
+    const [threadInsights, setThreadInsights] = useState<Record<string, ThreadInsight>>({});
+
+    // Real-time Folder & Insights Listener
+    useEffect(() => {
+        if (!folderId || folderId === 'inbox' || !db) return;
+
+        // 1. Listen to Folder for Metrics
+        const folderDocRef = doc(db, 'folders', folderId);
+        const unsubFolder = onSnapshot(folderDocRef, (doc) => {
+            if (doc.exists()) {
+                const data = doc.data();
+                setRealtimeFolder(data);
+                if (data.analysisStatus === 'processing') {
+                    setIsAnalyzing(true);
+                } else if (data.analysisStatus === 'complete' || data.analysisStatus === 'idle') {
+                    setIsAnalyzing(false);
+                }
+            }
+        });
+
+        // 2. Listen to Thread Insights for Status
+        const insightsRef = collection(db, 'folders', folderId, 'thread_insights');
+        const unsubInsights = onSnapshot(insightsRef, (snapshot) => {
+            const insights: Record<string, ThreadInsight> = {};
+            snapshot.forEach((doc) => {
+                insights[doc.id] = doc.data() as ThreadInsight;
+            });
+            setThreadInsights(insights);
+        });
+
+        // 3. Initial fetch for threads
+        getFolderThreads(folderId).then((data: any) => {
+            setThreads(data);
+            setLoading(false);
+        });
+
+        fetchFolderAnalysis(folderId)
+            .then(data => {
+                if (Array.isArray(data)) {
+                    setAnalyses(data);
+                } else if (data) {
+                    setAnalyses([data]);
+                }
+            })
+            .catch(err => console.error("Failed to load analysis:", err));
+
+        return () => {
+            unsubFolder();
+            unsubInsights();
+        };
+    }, [folderId, getFolderThreads]);
 
     // Helper to select thread with lazy loading
-    const handleSelectThread = async (thread: SavedThread) => {
+    const handleSelectThread = async (item: any) => {
+        // If it's an insight and not a thread, show insight view (TBD)
+        // For now, if we have thread data, show it.
+        const thread = item as SavedThread;
         if (thread.data) {
             setSelectedThread(thread.data);
             return;
@@ -61,11 +126,10 @@ export const FolderDetail: React.FC = () => {
                 if (!response.ok) throw new Error("Failed to fetch thread from storage");
                 const fullData = await response.json();
 
-                // Reconstruct the expected object structure for ThreadView
                 const threadObj = {
                     id: thread.id,
                     title: thread.title,
-                    post: { title: thread.title, subreddit: thread.subreddit, author: thread.author }, // Minimal fallback
+                    post: { title: thread.title, subreddit: thread.subreddit, author: thread.author },
                     content: fullData,
                     metadata: {
                         fetchedAt: thread.savedAt,
@@ -84,40 +148,6 @@ export const FolderDetail: React.FC = () => {
         }
     };
 
-    useEffect(() => {
-        if (!folderId) return;
-
-        let mounted = true;
-        setLoading(true);
-        getFolderThreads(folderId).then((data: any) => {
-            if (mounted) {
-                setThreads(data);
-                setLoading(false);
-
-                // Deep link selection
-                if (threadId) {
-                    const target = data.find((t: any) => t.id === threadId || t.data?.id === threadId);
-                    if (target) handleSelectThread(target);
-                }
-            }
-        });
-        return () => { mounted = false; };
-    }, [folderId, getFolderThreads, threadId]);
-
-    // Fetch existing analysis on load
-    useEffect(() => {
-        if (!folderId || folderId === 'inbox') return;
-        fetchFolderAnalysis(folderId)
-            .then(data => {
-                if (Array.isArray(data)) {
-                    setAnalyses(data);
-                } else if (data) {
-                    setAnalyses([data]);
-                }
-            })
-            .catch(err => console.error("Failed to load analysis:", err));
-    }, [folderId]);
-
     const handleDelete = async () => {
         if (!folder) return;
         if (confirm('Are you sure you want to delete this folder? All saved threads will be lost.')) {
@@ -126,12 +156,9 @@ export const FolderDetail: React.FC = () => {
         }
     };
 
-    // Messaging logic moved to IntelligenceScanner component
-
     const calculateTotalTokens = () => {
         return threads.reduce((acc, thread) => {
             if (thread.tokenCount) return acc + thread.tokenCount;
-            // Fallback for legacy threads: 1100 chars per comment
             const estimatedChars = (thread.title.length + (thread.commentCount * 1100));
             return acc + Math.ceil(estimatedChars / 4);
         }, 0);
@@ -146,17 +173,14 @@ export const FolderDetail: React.FC = () => {
     const totalTokens = calculateTotalTokens();
 
     const handleAnalyze = async () => {
-        if (!folderId || threads.length === 0) return;
+        if (!folderId || (threads.length === 0 && Object.keys(threadInsights).length === 0)) return;
         setIsAnalyzing(true);
         setAnalysisError(null);
         try {
-            const result = await analyzeFolder(folderId);
-            // Prepend the new analysis so it's first
-            setAnalyses(prev => [result, ...prev]);
-            await refreshStats(); // Update credits in sidebar
+            await analyzeFolder(folderId);
+            await refreshStats();
         } catch (err: any) {
             setAnalysisError(err.message || "Failed to analyze folder");
-        } finally {
             setIsAnalyzing(false);
         }
     };
@@ -176,6 +200,50 @@ export const FolderDetail: React.FC = () => {
                 }
             }, 500);
         }
+    };
+
+    const MetricsBar = ({ folder }: { folder: any }) => {
+        if (!folder) return null;
+
+        const metrics = [
+            { label: 'Pain Points', count: folder.painPointCount || 0, icon: <ShieldAlert size={18} />, color: '#ef4444' },
+            { label: 'Switch Triggers', count: folder.triggerCount || 0, icon: <Target size={18} />, color: '#3b82f6' },
+            { label: 'Desired Outcomes', count: folder.outcomeCount || 0, icon: <Lightbulb size={18} />, color: '#10b981' }
+        ];
+
+        return (
+            <div className="analysis-metrics-bar" style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr 1fr',
+                gap: '20px',
+                marginBottom: '2.5rem',
+                background: 'rgba(255,255,255,0.02)',
+                padding: '24px',
+                borderRadius: '24px',
+                border: '1px solid rgba(255,255,255,0.05)',
+                position: 'sticky',
+                top: '20px',
+                zIndex: 10,
+                backdropFilter: 'blur(16px)',
+                boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
+            }}>
+                {metrics.map((m, i) => (
+                    <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>
+                            <div style={{ color: m.color }}>{m.icon}</div>
+                            <span style={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{m.label}</span>
+                        </div>
+                        <div style={{ fontSize: '2rem', fontWeight: '900', color: (folder.analysisStatus === 'processing' && m.count === 0) ? 'rgba(255,255,255,0.3)' : 'white' }}>
+                            {folder.analysisStatus === 'processing' && m.count === 0 ? (
+                                <span style={{ fontSize: '1.1rem', fontStyle: 'italic', fontWeight: 500, opacity: 0.7 }}>Calculating...</span>
+                            ) : (
+                                m.count
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
     };
 
     if (fetchingThread) {
@@ -204,53 +272,11 @@ export const FolderDetail: React.FC = () => {
                 <div className="folder-header-actions" style={{ marginBottom: '2.5rem' }}>
                     <Skeleton width="180px" height="40px" style={{ borderRadius: '12px' }} />
                 </div>
-
                 <div className="folder-header" style={{ border: 'none', padding: 0, marginBottom: '3rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
-                        <Skeleton width="48px" height="48px" style={{ borderRadius: '14px' }} />
-                        <Skeleton width="300px" height="48px" />
-                    </div>
+                    <Skeleton width="300px" height="48px" style={{ marginBottom: '12px' }} />
                     <Skeleton width="100%" height="24px" style={{ marginBottom: '8px' }} />
-                    <Skeleton width="80%" height="24px" style={{ marginBottom: '24px' }} />
-
-                    <div className="folder-stats" style={{ background: 'rgba(255,255,255,0.03)', padding: '16px 24px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', display: 'inline-flex', gap: '24px' }}>
-                        <Skeleton width="120px" height="20px" />
-                        <Skeleton width="120px" height="20px" />
-                        <Skeleton width="150px" height="20px" />
-                    </div>
+                    <Skeleton width="80%" height="24px" />
                 </div>
-
-                <div className="threads-list" style={{ marginTop: '2rem' }}>
-                    {[1, 2, 3].map(id => (
-                        <div key={id} className="thread-card" style={{ padding: '20px', pointerEvents: 'none' }}>
-                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                                <Skeleton width="20px" height="20px" circle style={{ marginTop: '4px' }} />
-                                <div style={{ flex: 1 }}>
-                                    <Skeleton width="70%" height="24px" style={{ marginBottom: '12px' }} />
-                                    <div style={{ display: 'flex', gap: '16px' }}>
-                                        <Skeleton width="100px" height="16px" />
-                                        <Skeleton width="100px" height="16px" />
-                                        <Skeleton width="120px" height="16px" />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        );
-    }
-
-    if (!folder) {
-        return (
-            <div className="folder-detail-view">
-                <div className="error-banner">
-                    <span className="error-icon"><AlertTriangle size={20} /></span>
-                    <p>Folder not found</p>
-                </div>
-                <button className="btn-secondary" onClick={() => navigate('/')}>
-                    Go Home
-                </button>
             </div>
         );
     }
@@ -261,8 +287,8 @@ export const FolderDetail: React.FC = () => {
                 <button className="btn-secondary" onClick={() => navigate('/')}>
                     ← Back to Dashboard
                 </button>
-                <div className="action-group">
-                    {threads.length > 0 && (
+                <div className="action-group" style={{ display: 'flex', gap: '12px' }}>
+                    {(threads.length > 0 || Object.keys(threadInsights).length > 0) && (
                         <button
                             className="btn-primary analyze-btn"
                             onClick={handleAnalyze}
@@ -337,18 +363,8 @@ export const FolderDetail: React.FC = () => {
                 <div className="folder-stats" style={{ background: 'rgba(255,255,255,0.03)', padding: '16px 24px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', display: 'inline-flex', gap: '24px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Sparkles size={14} color="var(--primary-color)" />
-                        <span style={{ fontWeight: '700', color: 'white' }}>{threads.length}</span>
+                        <span style={{ fontWeight: '700', color: 'white' }}>{threads.length + Object.keys(threadInsights).length}</span>
                         <span style={{ color: 'var(--text-muted)' }}>Platforms Scanned</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <BarChart2 size={14} color="#00D1FF" />
-                        <span style={{ fontWeight: '700', color: 'white' }}>{threads.reduce((acc, t) => acc + (t.commentCount || 0), 0).toLocaleString()}</span>
-                        <span style={{ color: 'var(--text-muted)' }}>Raw Insights</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Zap size={14} color="#F59E0B" />
-                        <span style={{ color: 'white', fontWeight: 600 }}>{formatNumber(totalTokens)}</span>
-                        <span style={{ color: 'var(--text-muted)' }}>Tokens</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Calendar size={14} color="#A855F7" />
@@ -362,6 +378,10 @@ export const FolderDetail: React.FC = () => {
                     <span className="error-icon"><AlertTriangle size={20} /></span>
                     <p>{analysisError}</p>
                 </div>
+            )}
+
+            {(realtimeFolder?.analysisStatus === 'processing' || (realtimeFolder?.painPointCount || 0) > 0) && (
+                <MetricsBar folder={realtimeFolder} />
             )}
 
             <IntelligenceScanner isAnalyzing={isAnalyzing} />
@@ -382,85 +402,73 @@ export const FolderDetail: React.FC = () => {
                                         {index === 0 && <span className="badge-new" style={{ fontSize: '0.7rem', background: 'var(--bg-accent)', color: 'white', padding: '2px 8px', borderRadius: '10px' }}>LATEST</span>}
                                     </span>
                                     <span className="report-hint" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                        <button
-                                            className="btn-icon"
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                exportReportToPDF(analysis);
-                                            }}
-                                            title="Download PDF"
-                                            style={{
-                                                padding: '4px',
-                                                borderRadius: '6px',
-                                                background: 'rgba(255, 69, 0, 0.1)',
-                                                border: '1px solid rgba(255, 69, 0, 0.2)',
-                                                color: 'var(--primary-color)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center'
-                                            }}
-                                        >
+                                        <button className="btn-icon" onClick={(e) => { e.preventDefault(); e.stopPropagation(); exportReportToPDF(analysis); }} title="Download PDF" style={{ padding: '4px', borderRadius: '6px', background: 'rgba(255, 69, 0, 0.1)', border: '1px solid rgba(255, 69, 0, 0.2)', color: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                             <FileDown size={16} />
                                         </button>
                                         {index === 0 ? "(Expanded)" : "(Click to view history)"}
                                     </span>
                                 </summary>
                                 <div className="report-content">
-                                    <AnalysisResults
-                                        data={analysis}
-                                        onCitationClick={(id) => handleCitationClick(id)}
-                                    />
+                                    <AnalysisResults data={analysis} onCitationClick={handleCitationClick} />
                                 </div>
                             </details>
-                            {index === 0 && (
-                                <div className="analysis-divider">
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', opacity: 0.7 }}>
-                                        <ArrowDownCircle size={16} /> Source Threads <ArrowDownCircle size={16} />
-                                    </span>
-                                </div>
-                            )}
                         </div>
                     ))}
                 </div>
             )}
 
-            {loading ? (
-                <PremiumLoader text="Retrieving Saved Threads..." />
-            ) : threads.length === 0 ? (
-                <div className="empty-state">
-                    <p>No threads saved yet.</p>
-                </div>
-            ) : (
-                <div className="threads-list" style={{ marginTop: '2rem' }}>
-                    {threads.map(thread => (
-                        <div key={thread.id} className="thread-card" onClick={() => handleSelectThread(thread)} style={{ padding: '20px' }}>
-                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                                <div style={{ color: 'var(--primary-color)', marginTop: '4px' }}>
-                                    <MessageSquareIcon size={20} />
-                                </div>
-                                <div style={{ flex: 1 }}>
-                                    <h3 className="thread-title" style={{ margin: '0 0 12px 0', fontSize: '1.1rem' }}>{thread.title}</h3>
-                                    <div className="thread-meta" style={{ display: 'flex', gap: '16px', opacity: 0.8, fontSize: '0.85rem' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <ExternalLink size={14} color="var(--bg-accent)" />
-                                            <span>r/{thread.subreddit}</span>
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <Users size={14} />
-                                            <span>u/{thread.author}</span>
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <Calendar size={14} />
-                                            <span>{new Date(thread.savedAt).toLocaleDateString()}</span>
+            <div className="threads-list" style={{ marginTop: '2rem' }}>
+                {[
+                    ...threads,
+                    ...Object.values(threadInsights).filter(ins => !threads.find(t => t.id === ins.id))
+                ]
+                    .sort((a, b) => {
+                        const dateA = new Date((a as any).savedAt || (a as any).analyzedAt || 0).getTime();
+                        const dateB = new Date((b as any).savedAt || (b as any).analyzedAt || 0).getTime();
+                        return dateB - dateA;
+                    })
+                    .map(item => {
+                        const insight = threadInsights[item.id];
+                        const status = insight?.status || (isAnalyzing ? 'processing' : (item as any).analysisStatus);
+
+                        return (
+                            <div key={item.id} className={`thread-card ${status}`} onClick={() => handleSelectThread(item)} style={{ padding: '20px', position: 'relative' }}>
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                                    <div style={{ color: status === 'success' ? '#10b981' : 'var(--primary-color)', marginTop: '4px' }}>
+                                        {status === 'success' ? <CheckCircle2 size={20} /> : <MessageSquareIcon size={20} />}
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <h3 className="thread-title" style={{ margin: '0 0 4px 0', fontSize: '1.1rem', opacity: status === 'success' ? 0.7 : 1 }}>
+                                            {(item as any).title || insight?.insights?.thread_id || 'Extracted Insight'}
+                                        </h3>
+                                        <div className="thread-meta" style={{ display: 'flex', gap: '16px', opacity: 0.8, fontSize: '0.85rem' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <ExternalLink size={14} color="var(--bg-accent)" />
+                                                <span>{(item as any).subreddit || 'r/extracted'}</span>
+                                            </div>
+                                            {status && (
+                                                <div style={{
+                                                    marginLeft: 'auto',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '6px',
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: 800,
+                                                    textTransform: 'uppercase',
+                                                    color: status === 'processing' ? '#3b82f6' :
+                                                        status === 'success' ? '#10b981' : '#ef4444'
+                                                }}>
+                                                    {status === 'processing' && <Loader2 size={12} className="animate-spin" />}
+                                                    {status}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
-                </div>
-            )}
+                        );
+                    })}
+            </div>
         </div>
     );
 };
