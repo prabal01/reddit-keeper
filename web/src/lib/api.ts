@@ -156,3 +156,18 @@ export async function fetchUserStats(): Promise<any> {
 
     return response.json();
 }
+
+export async function aggregateInsights(folderId: string): Promise<any> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE}/folders/${folderId}/analyze`, {
+        method: "POST",
+        headers,
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || `Failed to aggregate insights: ${response.status}`);
+    }
+
+    return response.json();
+}

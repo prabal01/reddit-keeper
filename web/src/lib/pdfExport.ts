@@ -21,44 +21,53 @@ export const exportReportToPDF = (data: any) => {
     doc.setTextColor(0, 0, 0);
     doc.text("Strategic Directive", 14, 45);
 
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.text("Core Frustration:", 14, 52);
-    doc.setFont("helvetica", "normal");
-    const frustration = doc.splitTextToSize(data.market_attack_summary?.core_frustration || "N/A", pageWidth - 28);
-    doc.text(frustration, 14, 58);
+    if (typeof data.market_attack_summary === 'string') {
+        doc.setFont("helvetica", "bold");
+        doc.text("Attack Plan:", 14, 52);
+        doc.setFont("helvetica", "normal");
+        const plan = doc.splitTextToSize(data.market_attack_summary, pageWidth - 28);
+        doc.text(plan, 14, 58);
+        currentY = 58 + (plan.length * 6);
+    } else {
+        doc.setFont("helvetica", "bold");
+        doc.text("Core Frustration:", 14, 52);
+        doc.setFont("helvetica", "normal");
+        const frustration = doc.splitTextToSize(data.market_attack_summary?.core_frustration || "N/A", pageWidth - 28);
+        doc.text(frustration, 14, 58);
 
-    let currentY = 58 + (frustration.length * 6);
+        currentY = 58 + (frustration.length * 6);
 
-    doc.setFont("helvetica", "bold");
-    doc.text("Primary Competitor Failure:", 14, currentY + 5);
-    doc.setFont("helvetica", "normal");
-    const failure = doc.splitTextToSize(data.market_attack_summary?.primary_competitor_failure || "N/A", pageWidth - 28);
-    doc.text(failure, 14, currentY + 11);
+        doc.setFont("helvetica", "bold");
+        doc.text("Primary Competitor Failure:", 14, currentY + 5);
+        doc.setFont("helvetica", "normal");
+        const failure = doc.splitTextToSize(data.market_attack_summary?.primary_competitor_failure || "N/A", pageWidth - 28);
+        doc.text(failure, 14, currentY + 11);
 
-    currentY = currentY + 11 + (failure.length * 6);
+        currentY = currentY + 11 + (failure.length * 6);
 
-    doc.setFont("helvetica", "bold");
-    doc.text("Immediate Strike Opportunity:", 14, currentY + 5);
-    doc.setFont("helvetica", "normal");
-    const opportunity = doc.splitTextToSize(data.market_attack_summary?.immediate_opportunity || "N/A", pageWidth - 28);
-    doc.text(opportunity, 14, currentY + 11);
+        doc.setFont("helvetica", "bold");
+        doc.text("Immediate Strike Opportunity:", 14, currentY + 5);
+        doc.setFont("helvetica", "normal");
+        const opportunity = doc.splitTextToSize(data.market_attack_summary?.immediate_opportunity || "N/A", pageWidth - 28);
+        doc.text(opportunity, 14, currentY + 11);
 
-    currentY = currentY + 11 + (opportunity.length * 6);
+        currentY = currentY + 11 + (opportunity.length * 6);
+    }
 
     // 2. High-Intensity Pain Points
     if (data.high_intensity_pain_points?.length > 0) {
         doc.setFontSize(16);
         doc.text("High-Intensity Pain Points", 14, currentY + 15);
+        const isLegacy = typeof data.high_intensity_pain_points[0] === 'object';
         autoTable(doc, {
             startY: currentY + 20,
-            head: [['Pain Point', 'Intensity', 'Mentions', 'Strategic Impact']],
-            body: data.high_intensity_pain_points.map((p: any) => [
+            head: isLegacy ? [['Pain Point', 'Intensity', 'Mentions', 'Strategic Impact']] : [['Pain Point']],
+            body: data.high_intensity_pain_points.map((p: any) => isLegacy ? [
                 p.title,
                 p.intensity,
                 `${p.mention_count} (${p.threads_covered} Threads)`,
                 p.why_it_matters
-            ]),
+            ] : [p]),
             theme: 'striped',
             headStyles: { fillColor: [239, 68, 68] } // Red
         });
@@ -79,6 +88,30 @@ export const exportReportToPDF = (data: any) => {
             ]),
             theme: 'grid',
             headStyles: { fillColor: [79, 70, 229] } // Indigo
+        });
+        currentY = (doc as any).lastAutoTable.finalY;
+    } else if (data.top_switch_triggers?.length > 0) {
+        doc.setFontSize(16);
+        doc.text("Top Switching Triggers", 14, currentY + 15);
+        autoTable(doc, {
+            startY: currentY + 20,
+            head: [['Trigger']],
+            body: data.top_switch_triggers.map((s: any) => [s]),
+            theme: 'grid',
+            headStyles: { fillColor: [79, 70, 229] }
+        });
+        currentY = (doc as any).lastAutoTable.finalY;
+    }
+
+    if (data.top_desired_outcomes?.length > 0) {
+        doc.setFontSize(16);
+        doc.text("Top Desired Outcomes", 14, currentY + 15);
+        autoTable(doc, {
+            startY: currentY + 20,
+            head: [['Outcome']],
+            body: data.top_desired_outcomes.map((s: any) => [s]),
+            theme: 'striped',
+            headStyles: { fillColor: [16, 185, 129] } // Green
         });
         currentY = (doc as any).lastAutoTable.finalY;
     }
@@ -123,13 +156,19 @@ export const exportReportToPDF = (data: any) => {
     if (data.ranked_build_priorities?.length > 0) {
         doc.setFontSize(16);
         doc.text("Strategic Build Roadmap", 14, currentY + 15);
+        const isLegacyBP = typeof data.ranked_build_priorities[0]?.priority_rank !== 'undefined';
         autoTable(doc, {
             startY: currentY + 20,
-            head: [['Rank', 'Initiative', 'Impact', 'Justification']],
-            body: data.ranked_build_priorities.map((b: any) => [
+            head: isLegacyBP ? [['Rank', 'Initiative', 'Impact', 'Justification']] : [['Rank', 'Initiative', 'Signals', 'Justification']],
+            body: data.ranked_build_priorities.map((b: any) => isLegacyBP ? [
                 `#${b.priority_rank}`,
                 b.initiative,
                 b.expected_impact,
+                b.justification
+            ] : [
+                `#${b.rank}`,
+                b.initiative,
+                `${b.evidence_mentions} mentions`,
                 b.justification
             ]),
             theme: 'striped',

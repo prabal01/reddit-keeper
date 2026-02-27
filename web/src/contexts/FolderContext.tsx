@@ -121,17 +121,20 @@ export const FolderProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
 
     const getFolderThreads = async (folderId: string) => {
-        if (!user) return [];
+        if (!user) return { threads: [], meta: null };
         try {
             const token = await getIdToken();
             const res = await fetch(`${API_BASE}/folders/${folderId}/threads`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!res.ok) throw new Error('Failed to fetch threads');
-            return await res.json();
+            const data = await res.json();
+            // Handle virtual inbox folder backward compatibility
+            if (Array.isArray(data)) return { threads: data, meta: null };
+            return data;
         } catch (err: any) {
             console.error(err);
-            return [];
+            return { threads: [], meta: null };
         }
     };
 

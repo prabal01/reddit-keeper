@@ -4,15 +4,15 @@ import { useFolders } from '../contexts/FolderContext';
 import { useAuth } from '../contexts/AuthContext';
 import { ThreadView } from './ThreadView';
 import { AnalysisResults } from './AnalysisResults';
-import { PremiumLoader, ButtonLoader } from './PremiumLoader';
+import { PremiumLoader } from './PremiumLoader';
 import { Skeleton } from './Skeleton';
 import './Folders.css';
 import './AnalysisResults.css';
-import { fetchFolderAnalysis } from '../lib/api';
-import { AlertTriangle, Sparkles, Trash2, BarChart2, ArrowDownCircle, Calendar, MessageSquare as MessageSquareIcon, Users, ExternalLink, FileDown, Zap, Loader2, Target, Lightbulb, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { fetchFolderAnalysis, aggregateInsights } from '../lib/api';
+import { AlertTriangle, Sparkles, Trash2, BarChart2, Calendar, MessageSquare as MessageSquareIcon, ExternalLink, FileDown, Loader2, Target, Lightbulb, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { exportReportToPDF } from '../lib/pdfExport';
 import { IntelligenceScanner } from './IntelligenceScanner';
-import { doc, onSnapshot, collection } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 interface SavedThread {
@@ -37,7 +37,7 @@ interface ThreadInsight {
 }
 
 export const FolderDetail: React.FC = () => {
-    const { folderId, threadId } = useParams<{ folderId: string; threadId?: string }>();
+    const { folderId } = useParams<{ folderId: string }>();
     const navigate = useNavigate();
     const { folders, getFolderThreads, deleteFolder, analyzeFolder } = useFolders();
     const { refreshStats } = useAuth();
@@ -57,7 +57,8 @@ export const FolderDetail: React.FC = () => {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [analysisError, setAnalysisError] = useState<string | null>(null);
     const [realtimeFolder, setRealtimeFolder] = useState<any>(null);
-    const [threadInsights, setThreadInsights] = useState<Record<string, ThreadInsight>>({});
+    const [threadInsights] = useState<Record<string, ThreadInsight>>({});
+    const [isAggregating, setIsAggregating] = useState(false);
 
     // Real-time Folder & Insights Listener
     useEffect(() => {
@@ -77,19 +78,17 @@ export const FolderDetail: React.FC = () => {
             }
         });
 
-        // 2. Listen to Thread Insights for Status
-        const insightsRef = collection(db, 'folders', folderId, 'thread_insights');
-        const unsubInsights = onSnapshot(insightsRef, (snapshot) => {
-            const insights: Record<string, ThreadInsight> = {};
-            snapshot.forEach((doc) => {
-                insights[doc.id] = doc.data() as ThreadInsight;
-            });
-            setThreadInsights(insights);
-        });
-
-        // 3. Initial fetch for threads
+        // 2. Initial fetch for threads and meta
         getFolderThreads(folderId).then((data: any) => {
-            setThreads(data);
+            if (data.threads) {
+                setThreads(data.threads);
+            } else if (Array.isArray(data)) {
+                setThreads(data);
+            }
+
+            if (data.meta) {
+                setRealtimeFolder((prev: any) => ({ ...prev, ...data.meta }));
+            }
             setLoading(false);
         });
 
@@ -105,7 +104,6 @@ export const FolderDetail: React.FC = () => {
 
         return () => {
             unsubFolder();
-            unsubInsights();
         };
     }, [folderId, getFolderThreads]);
 
@@ -171,9 +169,11 @@ export const FolderDetail: React.FC = () => {
     };
 
     const totalTokens = calculateTotalTokens();
+    const formattedTokens = formatNumber(totalTokens);
 
     const handleAnalyze = async () => {
         if (!folderId || (threads.length === 0 && Object.keys(threadInsights).length === 0)) return;
+        console.log(`Starting analysis for ${totalTokens} estimated tokens (${formattedTokens})`);
         setIsAnalyzing(true);
         setAnalysisError(null);
         try {
@@ -182,6 +182,24 @@ export const FolderDetail: React.FC = () => {
         } catch (err: any) {
             setAnalysisError(err.message || "Failed to analyze folder");
             setIsAnalyzing(false);
+        }
+    };
+
+    const handleTestAggregation = async () => {
+        if (!folderId) return;
+        setIsAggregating(true);
+        try {
+            const result = await aggregateInsights(folderId);
+            console.log("Aggregation Result:", result);
+            alert(`Aggregation complete! Created ${result.aggregates.painPoints.length + result.aggregates.triggers.length + result.aggregates.outcomes.length} clusters.`);
+            // Optionally refresh analysis history
+            const data = await fetchFolderAnalysis(folderId);
+            if (Array.isArray(data)) setAnalyses(data);
+            else if (data) setAnalyses([data]);
+        } catch (err: any) {
+            alert("Aggregation failed: " + err.message);
+        } finally {
+            setIsAggregating(false);
         }
     };
 
@@ -211,10 +229,22 @@ export const FolderDetail: React.FC = () => {
             { label: 'Desired Outcomes', count: folder.outcomeCount || 0, icon: <Lightbulb size={18} />, color: '#10b981' }
         ];
 
+        const total = folder.totalAnalysisCount || 0;
+        const completed = folder.completedAnalysisCount || 0;
+
+        if (total > 0) {
+            metrics.push({
+                label: 'Analysed',
+                count: `${completed}/${total}`,
+                icon: <CheckCircle2 size={18} />,
+                color: completed === total ? '#10b981' : '#f59e0b'
+            });
+        }
+
         return (
             <div className="analysis-metrics-bar" style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr 1fr',
+                gridTemplateColumns: `repeat(${metrics.length}, 1fr)`,
                 gap: '20px',
                 marginBottom: '2.5rem',
                 background: 'rgba(255,255,255,0.02)',
@@ -233,12 +263,14 @@ export const FolderDetail: React.FC = () => {
                             <div style={{ color: m.color }}>{m.icon}</div>
                             <span style={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{m.label}</span>
                         </div>
-                        <div style={{ fontSize: '2rem', fontWeight: '900', color: (folder.analysisStatus === 'processing' && m.count === 0) ? 'rgba(255,255,255,0.3)' : 'white' }}>
-                            {folder.analysisStatus === 'processing' && m.count === 0 ? (
-                                <span style={{ fontSize: '1.1rem', fontStyle: 'italic', fontWeight: 500, opacity: 0.7 }}>Calculating...</span>
-                            ) : (
-                                m.count
-                            )}
+                        <div style={{
+                            fontSize: '2rem',
+                            fontWeight: '900',
+                            color: (folder.analysisStatus === 'processing' && (m.count === 0 || (typeof m.count === 'string' && m.count.startsWith('0/'))))
+                                ? 'rgba(255,255,255,0.3)'
+                                : 'white'
+                        }}>
+                            {m.count}
                         </div>
                     </div>
                 ))}
@@ -266,7 +298,7 @@ export const FolderDetail: React.FC = () => {
         );
     }
 
-    if (loading || !folder) {
+    if (loading) {
         return (
             <div className="folder-detail-view">
                 <div className="folder-header-actions" style={{ marginBottom: '2.5rem' }}>
@@ -281,46 +313,119 @@ export const FolderDetail: React.FC = () => {
         );
     }
 
+    if (!folder) {
+        return (
+            <div className="folder-detail-view" style={{ textAlign: 'center', padding: '100px 40px' }}>
+                <div style={{ background: 'rgba(239, 68, 68, 0.1)', width: '80px', height: '80px', borderRadius: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', color: '#ef4444' }}>
+                    <AlertTriangle size={40} />
+                </div>
+                <h2 style={{ fontSize: '2rem', fontWeight: 900, color: 'white', marginBottom: '12px' }}>Folder Not Found</h2>
+                <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', maxWidth: '400px', margin: '0 auto 32px' }}>
+                    The folder you're looking for doesn't exist or has been deleted.
+                </p>
+                <button className="btn-primary" onClick={() => navigate('/')}>
+                    Go to Dashboard
+                </button>
+            </div>
+        );
+    }
+
     return (
         <div className="folder-detail-view">
             <div className="folder-header-actions" style={{ marginBottom: '2.5rem' }}>
                 <button className="btn-secondary" onClick={() => navigate('/')}>
                     ← Back to Dashboard
                 </button>
-                <div className="action-group" style={{ display: 'flex', gap: '12px' }}>
-                    {(threads.length > 0 || Object.keys(threadInsights).length > 0) && (
+                <div className="action-group" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    {isAnalyzing ? (
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            background: 'rgba(59, 130, 246, 0.1)',
+                            padding: '10px 24px',
+                            borderRadius: '14px',
+                            border: '1px solid rgba(59, 130, 246, 0.2)',
+                            color: '#3b82f6',
+                            fontWeight: 600
+                        }}>
+                            <Loader2 className="animate-spin" size={18} />
+                            Analyzing Intelligence...
+                        </div>
+                    ) : (
+                        (threads.length > 0 || Object.keys(threadInsights).length > 0) && (
+                            <button
+                                className="btn-primary analyze-btn"
+                                onClick={handleAnalyze}
+                                disabled={isAnalyzing || folder.syncStatus === 'syncing'}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '10px',
+                                    padding: '10px 24px',
+                                    borderRadius: '14px',
+                                    background: 'linear-gradient(135deg, var(--primary-color) 0%, #FF8717 100%)',
+                                    border: 'none',
+                                    boxShadow: '0 4px 15px rgba(255, 135, 23, 0.3)',
+                                    color: 'white',
+                                    fontWeight: '700'
+                                }}
+                            >
+                                <Sparkles size={18} />
+                                {analyses.length > 0 ? 'Re-Analyze Intelligence' : 'Generate AI Intelligence'}
+                            </button>
+                        )
+                    )}
+
+                    {/* Temporary Test Aggregation Button */}
+                    <button
+                        className="btn-secondary"
+                        onClick={handleTestAggregation}
+                        disabled={isAggregating || isAnalyzing}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            background: 'rgba(16, 185, 129, 0.1)',
+                            border: '1px solid rgba(16, 185, 129, 0.2)',
+                            color: '#10b981',
+                            fontWeight: 600,
+                            padding: '10px 16px',
+                            borderRadius: '12px'
+                        }}
+                    >
+                        {isAggregating ? <Loader2 className="animate-spin" size={16} /> : <BarChart2 size={16} />}
+                        Test Aggregation
+                    </button>
+
+                    {isAnalyzing && (
                         <button
-                            className="btn-primary analyze-btn"
-                            onClick={handleAnalyze}
-                            disabled={isAnalyzing || folder.syncStatus === 'syncing'}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '10px',
-                                padding: '10px 24px',
-                                borderRadius: '14px',
-                                background: 'linear-gradient(135deg, var(--primary-color) 0%, #FF8717 100%)',
-                                border: 'none',
-                                color: 'white',
-                                fontWeight: '700',
-                                boxShadow: '0 8px 20px rgba(255, 69, 0, 0.2)'
+                            className="btn-secondary"
+                            onClick={async () => {
+                                if (confirm('Is the analysis stuck? This will force the status back to IDLE.')) {
+                                    // Use direct import for getAuth to ensure current user token
+                                    const { getAuth } = await import('firebase/auth');
+                                    const token = await getAuth().currentUser?.getIdToken();
+                                    const API_BASE = window.location.origin.includes('localhost') ? 'http://localhost:3001/api' : '/api';
+
+                                    await fetch(`${API_BASE}/folders/${folderId}/status`, {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'Authorization': `Bearer ${token}`
+                                        },
+                                        body: JSON.stringify({ status: 'idle' })
+                                    });
+                                    window.location.reload();
+                                }
                             }}
+                            style={{ padding: '10px', minWidth: '40px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)' }}
+                            title="Clear Stuck Analysis"
                         >
-                            {isAnalyzing ? (
-                                <>
-                                    <ButtonLoader />
-                                    Analyzing...
-                                </>
-                            ) : folder.syncStatus === 'syncing' ? (
-                                <>
-                                    <Loader2 size={18} className="animate-spin" />
-                                    Syncing Threads...
-                                </>
-                            ) : (
-                                <>{analyses.length > 0 ? <><Sparkles size={18} /> Re-Analyze Intelligence</> : <><Sparkles size={18} /> Generate AI Intelligence</>}</>
-                            )}
+                            <AlertTriangle size={18} color="#f59e0b" />
                         </button>
                     )}
+
                     <button className="btn-icon delete-btn" onClick={handleDelete} title="Delete Folder" style={{
                         width: '44px',
                         height: '44px',
@@ -363,7 +468,9 @@ export const FolderDetail: React.FC = () => {
                 <div className="folder-stats" style={{ background: 'rgba(255,255,255,0.03)', padding: '16px 24px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', display: 'inline-flex', gap: '24px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Sparkles size={14} color="var(--primary-color)" />
-                        <span style={{ fontWeight: '700', color: 'white' }}>{threads.length + Object.keys(threadInsights).length}</span>
+                        <span style={{ fontWeight: '700', color: 'white' }}>
+                            {Math.max(threads.length + Object.keys(threadInsights).length, (folder as any).totalAnalysisCount || 0)}
+                        </span>
                         <span style={{ color: 'var(--text-muted)' }}>Platforms Scanned</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -380,7 +487,8 @@ export const FolderDetail: React.FC = () => {
                 </div>
             )}
 
-            {(realtimeFolder?.analysisStatus === 'processing' || (realtimeFolder?.painPointCount || 0) > 0) && (
+            {/* Consolidated Metrics Bar */}
+            {realtimeFolder && (realtimeFolder.analysisStatus === 'processing' || (realtimeFolder.painPointCount || 0) > 0) && (
                 <MetricsBar folder={realtimeFolder} />
             )}
 
@@ -418,18 +526,14 @@ export const FolderDetail: React.FC = () => {
             )}
 
             <div className="threads-list" style={{ marginTop: '2rem' }}>
-                {[
-                    ...threads,
-                    ...Object.values(threadInsights).filter(ins => !threads.find(t => t.id === ins.id))
-                ]
+                {threads
                     .sort((a, b) => {
-                        const dateA = new Date((a as any).savedAt || (a as any).analyzedAt || 0).getTime();
-                        const dateB = new Date((b as any).savedAt || (b as any).analyzedAt || 0).getTime();
+                        const dateA = new Date((a as any).savedAt || 0).getTime();
+                        const dateB = new Date((b as any).savedAt || 0).getTime();
                         return dateB - dateA;
                     })
                     .map(item => {
-                        const insight = threadInsights[item.id];
-                        const status = insight?.status || (isAnalyzing ? 'processing' : (item as any).analysisStatus);
+                        const status = (item as any).analysisStatus || (isAnalyzing ? 'processing' : 'pending');
 
                         return (
                             <div key={item.id} className={`thread-card ${status}`} onClick={() => handleSelectThread(item)} style={{ padding: '20px', position: 'relative' }}>
@@ -439,7 +543,7 @@ export const FolderDetail: React.FC = () => {
                                     </div>
                                     <div style={{ flex: 1 }}>
                                         <h3 className="thread-title" style={{ margin: '0 0 4px 0', fontSize: '1.1rem', opacity: status === 'success' ? 0.7 : 1 }}>
-                                            {(item as any).title || insight?.insights?.thread_id || 'Extracted Insight'}
+                                            {(item as any).title || 'Extracted Insight'}
                                         </h3>
                                         <div className="thread-meta" style={{ display: 'flex', gap: '16px', opacity: 0.8, fontSize: '0.85rem' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
