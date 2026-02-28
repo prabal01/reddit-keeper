@@ -101,10 +101,15 @@ export const FolderDetail: React.FC = () => {
             where('folderId', '==', folderId)
         );
         const unsubAnalysis = onSnapshot(analysisQuery, (snapshot) => {
-            const analysisData = snapshot.docs.map(doc => ({
-                ...doc.data(),
-                id: doc.id
-            })).sort((a: any, b: any) => {
+            const analysisData = snapshot.docs.map(doc => {
+                const raw = doc.data();
+                return {
+                    ...(raw.data || raw),
+                    id: doc.id,
+                    createdAt: raw.createdAt || (raw.data && raw.data.createdAt),
+                    model: raw.model
+                };
+            }).sort((a: any, b: any) => {
                 const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
                 const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
                 return dateB - dateA;
@@ -205,9 +210,10 @@ export const FolderDetail: React.FC = () => {
             console.log("Aggregation Result:", result);
             alert(`Aggregation complete! Created ${result.aggregates.painPoints.length + result.aggregates.triggers.length + result.aggregates.outcomes.length} clusters.`);
             // Optionally refresh analysis history
-            const data = await fetchFolderAnalysis(folderId);
-            if (Array.isArray(data)) setAnalyses(data);
-            else if (data) setAnalyses([data]);
+            const rawData = await fetchFolderAnalysis(folderId);
+            const processData = (d: any) => ({ ...(d.data || d), id: d.id, createdAt: d.createdAt || (d.data && d.data.createdAt), model: d.model });
+            if (Array.isArray(rawData)) setAnalyses(rawData.map(processData));
+            else if (rawData) setAnalyses([processData(rawData)]);
         } catch (err: any) {
             alert("Aggregation failed: " + err.message);
         } finally {
