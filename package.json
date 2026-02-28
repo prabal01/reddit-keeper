@@ -29,6 +29,7 @@
   "license": "MIT",
   "description": "Download complete Reddit threads (post + all comments) in AI-friendly formats",
   "dependencies": {
+    "@axiomhq/pino": "^1.4.0",
     "@google-cloud/vertexai": "^1.10.0",
     "@google/generative-ai": "^0.24.1",
     "@types/cors": "^2.8.19",
@@ -45,7 +46,13 @@
     "ioredis": "^5.9.3",
     "ora": "^9.3.0",
     "p-queue": "^9.1.0",
+    "pino": "^10.3.1",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@types/node-fetch": "^2.6.11",
+    "@types/pino": "^7.0.4",
+    "pino-pretty": "^13.1.3"
   }
 }

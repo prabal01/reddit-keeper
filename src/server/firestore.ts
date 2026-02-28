@@ -4,6 +4,7 @@ import { getAuth, type Auth } from "firebase-admin/auth";
 import { getStorage, type Storage } from "firebase-admin/storage";
 import * as fs from "fs";
 import * as path from "path";
+import { logger } from "./utils/logger.js";
 
 let db: Firestore;
 let auth: Auth;
@@ -243,6 +244,44 @@ export async function getPlanConfig(plan: string): Promise<PlanConfig> {
     return fallback;
 }
 
+// ── Global Config (discovery config, etc) ──────────────────────────
+
+export interface GlobalConfig {
+    discovery_cache_ttl: number; // in seconds
+}
+
+const DEFAULT_GLOBAL_CONFIG: GlobalConfig = {
+    discovery_cache_ttl: 7 * 24 * 3600 // 7 days in seconds
+};
+
+const GLOBAL_CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
+let globalConfigCache: { config: GlobalConfig; cachedAt: number } | null = null;
+
+export async function getGlobalConfig(): Promise<GlobalConfig> {
+    if (globalConfigCache && Date.now() - globalConfigCache.cachedAt < GLOBAL_CONFIG_CACHE_TTL) {
+        return globalConfigCache.config;
+    }
+
+    if (!db) {
+        return DEFAULT_GLOBAL_CONFIG;
+    }
+
+    try {
+        logger.info({ action: 'DB_READ', collection: 'config', doc: 'global' }, `[Firestore] Reading global config`);
+        const doc = await db.collection("config").doc("global").get();
+        if (doc.exists) {
+            const config = { ...DEFAULT_GLOBAL_CONFIG, ...doc.data() } as GlobalConfig;
+            globalConfigCache = { config, cachedAt: Date.now() };
+            return config;
+        }
+    } catch (err) {
+        logger.error({ err, action: 'DB_READ_ERROR', collection: 'config' }, `Failed to load global config`);
+    }
+
+    globalConfigCache = { config: DEFAULT_GLOBAL_CONFIG, cachedAt: Date.now() };
+    return DEFAULT_GLOBAL_CONFIG;
+}
+
 // ── Resolve user's effective config (plan + overrides) ─────────────
 
 export function resolveUserConfig(
@@ -422,21 +461,28 @@ export async function updateFolderSyncStatus(uid: string, folderId: string, stat
 export async function incrementPendingSyncCount(uid: string, folderId: string, delta: number): Promise<void> {
     if (!db) return;
     try {
-        const { FieldValue } = await import("firebase-admin/firestore");
-        await db.collection("folders").doc(folderId).update({
-            pendingSyncCount: FieldValue.increment(delta)
-        });
+        const folderRef = db.collection("folders").doc(folderId);
 
-        // Auto-idle if count hits zero or less
-        if (delta < 0) {
-            const doc = await db.collection("folders").doc(folderId).get();
-            if (doc.exists && (doc.data()?.pendingSyncCount || 0) <= 0) {
-                await db.collection("folders").doc(folderId).update({
-                    syncStatus: 'idle',
-                    pendingSyncCount: 0
+        await db.runTransaction(async (transaction) => {
+            const doc = await transaction.get(folderRef);
+            if (!doc.exists) return;
+
+            const currentCount = doc.data()?.pendingSyncCount || 0;
+            const newCount = Math.max(0, currentCount + delta); // Prevent negative numbers
+
+            if (newCount === 0) {
+                // Done syncing
+                transaction.update(folderRef, {
+                    pendingSyncCount: 0,
+                    syncStatus: 'idle'
+                });
+            } else {
+                // Still syncing
+                transaction.update(folderRef, {
+                    pendingSyncCount: newCount
                 });
             }
-        }
+        });
     } catch (err) {
         console.error(`[FIRESTORE] Failed to increment pending sync count for folder ${folderId}:`, err);
     }
@@ -521,11 +567,23 @@ export async function updateThreadInsight(uid: string, folderId: string, insight
                     outcomeCount: signals.allDesiredOutcomeTitles.length
                 });
 
-                // Delete original thread doc once we have structure
-                transaction.delete(threadRef);
+                // Preserve thread metadata but delete heavy content data to save storage
+                transaction.update(threadRef, {
+                    analysisStatus: 'success',
+                    extractedPainPoints: addedPainPoints,
+                    analysisCompletedAt: FieldValue.serverTimestamp(),
+                    data: FieldValue.delete()
+                });
             });
 
-            console.log(`[FIRESTORE] Aggregation complete and original thread deleted for ${insight.id}`);
+            console.log(`[FIRESTORE] Aggregation complete and thread preserved for ${insight.id}`);
+        } else if (insight.status === 'success') {
+            // Success but missing insights - treat as failed to prevent stuck processing
+            await threadRef.update({
+                analysisStatus: 'failed',
+                error: 'Analysis completed but no insights were returned.',
+                analysisTriggeredAt: FieldValue.serverTimestamp()
+            }).catch(() => { });
         } else if (insight.status === 'failed') {
             await folderRef.update({
                 failedCount: FieldValue.increment(1)
@@ -592,6 +650,36 @@ export async function saveThreadToFolder(uid: string, folderId: string, threadDa
             totalAnalysisCount: FieldValue.increment(1),
             pendingAnalysisCount: FieldValue.increment(1)
         });
+    }
+}
+
+export async function createPlaceholderThread(uid: string, folderId: string, url: string, meta?: any): Promise<void> {
+    if (!db) return;
+
+    // Use a clean hash or simplified URL as the ID until the worker resolves it
+    const tempId = `pending_${Buffer.from(url).toString('base64').substring(0, 15)}`;
+    const threadRef = db.collection("saved_threads").doc(`${folderId}_${tempId}`);
+
+    const snapshot: SavedThread = {
+        id: tempId,
+        folderId,
+        uid,
+        title: meta?.title || "Fetching Thread Data...",
+        author: meta?.author || "unknown",
+        subreddit: meta?.subreddit || (url.includes('news.ycombinator.com') ? 'Hacker News' : 'Reddit'),
+        commentCount: meta?.num_comments || 0,
+        source: url,
+        data: null,
+        tokenCount: 0,
+        savedAt: new Date().toISOString(),
+        analysisStatus: 'pending' // pending is a valid status type
+    };
+
+    const threadDoc = await threadRef.get();
+    if (!threadDoc.exists) {
+        await threadRef.set(snapshot);
+        // Note: We don't increment metrics here. We wait for the real saveThreadToFolder call to do that 
+        // to avoid double counting or messing up actual analysis tracking.
     }
 }
 

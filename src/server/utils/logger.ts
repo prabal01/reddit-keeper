@@ -1,5 +1,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import pino from 'pino';
+import { AsyncLocalStorage } from 'async_hooks';
+
+export const logContext = new AsyncLocalStorage<{ userId?: string }>();
 
 export class ClusterLogger {
     private filepath: string;
@@ -46,3 +50,45 @@ export class ClusterLogger {
         }
     }
 }
+
+// ── Global Application Logger ─────────────────────────────────────
+
+const transports = [];
+
+// Local formatting
+if (process.env.NODE_ENV !== 'production') {
+    transports.push({
+        target: 'pino-pretty',
+        options: {
+            colorize: true,
+            translateTime: 'SYS:standard',
+            ignore: 'pid,hostname',
+        },
+    });
+}
+
+// Remote Axiom logging
+if (process.env.AXIOM_TOKEN && process.env.AXIOM_DATASET) {
+    transports.push({
+        target: '@axiomhq/pino',
+        options: {
+            token: process.env.AXIOM_TOKEN,
+            dataset: process.env.AXIOM_DATASET,
+        },
+    });
+}
+
+export const logger = pino(
+    {
+        level: process.env.LOG_LEVEL || 'info',
+        mixin() {
+            const store = logContext.getStore();
+            if (store && store.userId) {
+                return { userId: store.userId };
+            }
+            return {};
+        }
+    },
+    transports.length > 0 ? pino.transport({ targets: transports }) : undefined
+);
+
