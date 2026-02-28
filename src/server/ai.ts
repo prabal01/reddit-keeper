@@ -6,7 +6,7 @@ const location = process.env.GOOGLE_CLOUD_LOCATION || "us-central1";
 
 console.log(`[AI] Initializing Vertex AI... Project: ${project}, Location: ${location}`);
 
-const vertexAI = new VertexAI({ project, location });
+export const vertexAI = new VertexAI({ project, location });
 
 // Schema Definitions using Vertex AI format ('object', 'string', etc.)
 const granularThreadInsightSchema: any = {
@@ -480,11 +480,12 @@ const synthesisSchema = {
                 properties: {
                     rank: { type: SchemaType.INTEGER },
                     initiative: { type: SchemaType.STRING },
+                    source_title: { type: SchemaType.STRING },
                     justification: { type: SchemaType.STRING },
                     evidence_mentions: { type: SchemaType.INTEGER },
                     threads_covered: { type: SchemaType.INTEGER }
                 },
-                required: ["rank", "initiative", "justification", "evidence_mentions", "threads_covered"]
+                required: ["rank", "initiative", "source_title", "justification", "evidence_mentions", "threads_covered"]
             }
         },
         market_attack_summary: { type: SchemaType.STRING },
@@ -532,7 +533,8 @@ STRICT INSTRUCTIONS:
 4. NEVER mix categories.
 5. NEVER fabricate counts (mention_count, threads_covered). You must extract numbers STRICTLY from the provided input data blocks. If you reference a cluster, pass through its exact counts.
 6. Provide brief justification referencing frequency and the provided data metrics.
-7. Return empty arrays if there is insufficient evidence for a category.`
+7. Return empty arrays if there is insufficient evidence for a category.
+8. For ranked_build_priorities, YOU MUST SET \`source_title\` exactly to the original 'title' provided in the \`pain_points\` input cluster this initiative stems from.`
         }]
     }
 });

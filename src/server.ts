@@ -870,8 +870,14 @@ app.post("/api/folders/:id/analyze", async (req: express.Request, res: express.R
         const injectPriorityContext = (priorities: any[] | undefined, clusters: any[]) => {
             if (!priorities) return [];
             return priorities.map(p => {
-                // Priorities are mapped from pain points, so we look up the initiative title
-                const matchedCluster = clusters.find(c => c.canonicalTitle === p.initiative);
+                // Priorities are mapped from pain points. The LLM is instructed to return the exact 'source_title'
+                // which matches the canonicalTitle of the original cluster.
+                const cleanInitiative = (p.source_title || p.initiative || "").toLowerCase().trim();
+                const matchedCluster = clusters.find(c => {
+                    const cleanTitle = (c.canonicalTitle || "").toLowerCase().trim();
+                    return cleanTitle === cleanInitiative;
+                });
+
                 let quote = "";
                 if (matchedCluster && matchedCluster.rawInsights && matchedCluster.rawInsights.length > 0) {
                     const firstInsight = matchedCluster.rawInsights.find((i: any) => i.quotes && i.quotes.length > 0);
