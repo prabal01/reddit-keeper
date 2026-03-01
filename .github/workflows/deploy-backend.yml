@@ -32,6 +32,9 @@ jobs:
           REDIS_URL: ${{ secrets.REDIS_URL }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_OPINIONDECK }}
+          SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
+          AXIOM_TOKEN: ${{ secrets.AXIOM_TOKEN }}
+          AXIOM_DATASET: ${{ secrets.AXIOM_DATASET }}
         run: |-
           node -e '
             const fs = require("fs");
@@ -41,7 +44,10 @@ jobs:
               REDIS_URL: process.env.REDIS_URL,
               GEMINI_API_KEY: process.env.GEMINI_API_KEY,
               FIREBASE_SERVICE_ACCOUNT: process.env.FIREBASE_SERVICE_ACCOUNT,
-              FIREBASE_STORAGE_BUCKET: "redditkeeperprod.firebasestorage.app"
+              FIREBASE_STORAGE_BUCKET: "redditkeeperprod.firebasestorage.app",
+              SERPER_API_KEY: process.env.SERPER_API_KEY,
+              AXIOM_TOKEN: process.env.AXIOM_TOKEN,
+              AXIOM_DATASET: process.env.AXIOM_DATASET
             };
             fs.writeFileSync("env.json", JSON.stringify(env));
           '
