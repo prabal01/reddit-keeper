@@ -7,10 +7,10 @@ export interface DiscoveryResult {
     num_comments: number;
     created_utc: number;
     url: string;
-    source: 'reddit' | 'hn';
+    source: 'reddit' | 'hn' | 'google';
     score: number;
     isCached?: boolean;
-    intentMarkers?: ('frustration' | 'alternative' | 'high_engagement' | 'question' | 'partial_match')[];
+    intentMarkers?: string[];
 }
 
 export interface DiscoveryPlan {
@@ -26,6 +26,11 @@ export interface DiscoveryPlan {
 export interface DiscoveryResponse {
     results: DiscoveryResult[];
     discoveryPlan: DiscoveryPlan;
+    intent?: {
+        persona: string;
+        pain: string;
+        domain: string;
+    };
 }
 
 export interface IDiscoveryService {

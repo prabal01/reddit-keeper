@@ -1229,6 +1229,25 @@ app.post("/api/discovery/search", authMiddleware, async (req: express.Request, r
     }
 });
 
+app.post("/api/discovery/idea", authMiddleware, async (req: express.Request, res: express.Response) => {
+    if (!req.user) {
+        return res.status(401).json({ error: "Authentication required for Idea Discovery" });
+    }
+    const { idea, communities, skipCache = false } = req.body;
+    if (!idea) {
+        return res.status(400).json({ error: "Idea is required" });
+    }
+
+    try {
+        console.log(`[Discovery] Starting Idea Discovery for: ${idea}`);
+        const { results, discoveryPlan } = await discoveryOrchestrator.ideaDiscovery(idea, communities, skipCache);
+        res.json({ results, discoveryPlan });
+    } catch (err: any) {
+        console.error(`[Discovery] Idea Search error:`, err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.get("/api/extractions", async (req: express.Request, res: express.Response) => {
     if (!req.user) {
         res.status(401).json({ error: "Unauthorized" });

@@ -9,6 +9,152 @@
     align-items: center;
 }
 
+.discovery-tabs {
+    display: flex;
+    gap: 8px;
+    background: rgba(15, 23, 42, 0.6);
+    padding: 6px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    margin-bottom: 30px;
+}
+
+.discovery-tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 12px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.discovery-tab:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+}
+
+.discovery-tab.active {
+    background: var(--primary-color);
+    color: white;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+}
+
+/* Idea Discovery Header Specifics */
+.idea-discovery .idea-input-container {
+    width: 100%;
+}
+
+.idea-text-box {
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    transition: all 0.4s ease;
+}
+
+.idea-text-box:focus-within {
+    border-color: var(--primary-color);
+    box-shadow: 0 20px 50px rgba(99, 102, 241, 0.15);
+}
+
+.idea-text-box textarea {
+    background: transparent;
+    border: none;
+    resize: none;
+    color: white;
+    font-size: 1.2rem;
+    font-weight: 500;
+    line-height: 1.5;
+    outline: none;
+    padding: 10px;
+}
+
+.idea-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 15px;
+}
+
+.seed-communities {
+    flex: 1;
+}
+
+.community-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.community-pill {
+    background: rgba(99, 102, 241, 0.1);
+    color: #a5a6f6;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.community-pill button {
+    background: transparent;
+    border: none;
+    color: #a5a6f6;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    opacity: 0.6;
+}
+
+.community-pill button:hover {
+    opacity: 1;
+}
+
+.add-community {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    padding: 4px 8px 4px 12px;
+}
+
+.add-community input {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 0.8rem;
+    outline: none;
+    width: 100px;
+}
+
+.add-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+.add-btn:hover {
+    color: white;
+}
+
 .discovery-workbench.hero {
     justify-content: center;
     padding-top: 15vh;
@@ -727,4 +873,61 @@
     transform: translateY(-2px);
     box-shadow: 0 10px 20px rgba(99, 102, 241, 0.2);
     filter: brightness(1.1);
+}
+
+/* Intent Banner (ChatGPT Browse Style) */
+.discovery-intent-banner {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: rgba(30, 41, 59, 0.4);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 12px 24px;
+    border-radius: 20px;
+    margin-bottom: 25px;
+    width: 100%;
+    max-width: 800px;
+    animation: fadeIn 0.6s ease-out;
+}
+
+.intent-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.intent-tags {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.intent-tag {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.03);
+    padding: 6px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.intent-tag b {
+    color: var(--primary-color);
+    font-weight: 600;
+    margin-right: 4px;
+}
+
+@media (max-width: 768px) {
+    .discovery-intent-banner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
 }

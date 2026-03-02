@@ -209,6 +209,25 @@ const granularModel = vertexAI.getGenerativeModel({
     }
 });
 
+const ideaDiscoverySchema: any = {
+    type: SchemaType.OBJECT,
+    properties: {
+        queries: {
+            type: SchemaType.ARRAY,
+            items: { type: SchemaType.STRING }
+        }
+    },
+    required: ["queries"]
+};
+
+const ideaModel = vertexAI.getGenerativeModel({
+    model: "gemini-2.0-flash",
+    generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: ideaDiscoverySchema
+    }
+});
+
 const arbitrationModel = vertexAI.getGenerativeModel({
     model: "gemini-2.0-flash",
     generationConfig: {
@@ -224,6 +243,85 @@ const arbitrationModel = vertexAI.getGenerativeModel({
         }
     }
 });
+
+export interface IdeaExpansion {
+    intent: {
+        persona: string;
+        pain: string;
+        domain: string;
+    };
+    queries: string[];
+}
+
+export async function expandIdeaToQueries(idea: string, communities?: string[]): Promise<IdeaExpansion> {
+    const communityContext = communities && communities.length > 0
+        ? `Focus on these subreddits if relevant: ${communities.join(', ')}.`
+        : "";
+
+    const prompt = `
+    You are a search expert. Analyze the following idea and prepare a structured search plan.
+    
+    IDEA: "${idea}"
+    ${communityContext}
+    
+    STEP 1: Problem Distillation
+    1.1 Root Problem: Extract the underlying problem in 2-3 words (e.g., "Budgeting", "Expense Tracking", "Habit Building").
+    1.2 Core Pain: What is the specific emotional struggle? (e.g., "feels like a chore", "hard to stay consistent").
+    
+    STEP 2: Generate Master Query (Single First)
+    Generate exactly ONE highly effective master query for Google/Serper.
+    
+    PATTERN:
+    [Root Problem] + frustrating site:reddit.com
+    
+    RULES:
+    - Return EXACTLY 1 query.
+    - Use the exact pattern: "[Root Problem] + frustrating site:reddit.com".
+    - Replace "frustrating" with "sucks" or "annoying" ONLY if it feels more natural for the specific problem.
+    - Example: "Expense Tracking + frustrating site:reddit.com"
+    
+    Return JSON format: 
+    { 
+      "intent": { "persona": "...", "pain": "...", "domain": "..." },
+      "queries": ["Master Query Here"] 
+    }
+    `;
+
+    try {
+        const result = await ideaModel.generateContent(prompt);
+        const text = result.response.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) throw new Error("No response from Idea Expansion Model");
+
+        // Clean up markdown if present
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        const cleanJson = jsonMatch ? jsonMatch[0] : text;
+        const parsed = JSON.parse(cleanJson);
+
+        // Final cleaning of queries to ensure no '+' or weird stuff
+        const finalQueries = (parsed.queries || []).map((q: string) =>
+            q.replace(/\+/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim()
+        ).slice(0, 6);
+
+        const finalIntent = parsed.intent || { persona: "general users", pain: idea, domain: "software" };
+
+        console.log(`[AI] [IDEA_EXPANSION] Intent Detected:`, finalIntent);
+        console.log(`[AI] [IDEA_EXPANSION] Generated ${finalQueries.length} queries`);
+        finalQueries.forEach((q: string, i: number) => console.log(`  Query ${i + 1}: ${q}`));
+
+        return {
+            intent: finalIntent,
+            queries: finalQueries
+        };
+    } catch (error) {
+        console.error("[AI] [IDEA_EXPANSION] Error:", error);
+        return {
+            intent: { persona: "unknown", pain: "unknown", domain: "unknown" },
+            queries: [idea]
+        };
+    }
+}
 
 interface ThreadContext {
     id: string;

@@ -36,6 +36,7 @@ export const useDiscovery = () => {
     const [platformFilter, setPlatformFilter] = useState<PlatformFilter>('all');
     const [intentFilter, setIntentFilter] = useState<IntentFilter>('all');
     const [status, setStatus] = useState<string | null>(null);
+    const [detectedIntent, setDetectedIntent] = useState<{ persona: string; pain: string; domain: string } | null>(null);
 
     const search = useCallback(async (query: string) => {
         if (!query.trim()) return;
@@ -79,7 +80,65 @@ export const useDiscovery = () => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [getIdToken]);
+
+    const ideaSearch = useCallback(async (idea: string, communities?: string[]) => {
+        if (!idea.trim()) return;
+
+        setLoading(true);
+        setStatus("Brainstorming search queries via AI...");
+
+        try {
+            const token = await getIdToken();
+
+            // Artificial delay to show the first status, or just proceed
+            setTimeout(() => {
+                if (loading) setStatus("Searching Reddit (Sequential 1 req/sec to respect limits)...");
+            }, 1500);
+
+            const response = await fetch(`${API_BASE}/discovery/idea`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ idea, communities })
+            });
+
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || 'Idea Discovery failed');
+            }
+
+            const data = await response.json();
+
+            if (data.results.length === 0) {
+                setStatus("No high-signal discussions found. Try broadening your idea description.");
+            } else {
+                setStatus(null);
+            }
+
+            if (data.intent) {
+                setDetectedIntent(data.intent);
+            }
+
+            const newResults = data.results as DiscoveryResult[];
+            setResults(newResults);
+
+            setAllDiscoveredMap(prev => {
+                const next = new Map(prev);
+                newResults.forEach(r => next.set(r.id, r));
+                return next;
+            });
+
+            setDiscoveryPlan(data.discoveryPlan);
+        } catch (err: any) {
+            console.error("Idea Discovery error:", err);
+            setStatus("Error: " + err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, [getIdToken, loading]);
 
     const toggleSelection = (id: string) => {
         setSelectedIds(prev => {
@@ -95,6 +154,7 @@ export const useDiscovery = () => {
         setDiscoveryPlan(null);
         setSelectedIds(new Set());
         setAllDiscoveredMap(new Map());
+        setDetectedIntent(null);
     };
 
     const filteredResults = useMemo(() => {
@@ -124,8 +184,10 @@ export const useDiscovery = () => {
         setIntentFilter,
         status,
         search,
+        ideaSearch,
         toggleSelection,
         clearResults,
-        setSelectedIds
+        setSelectedIds,
+        detectedIntent
     };
 };

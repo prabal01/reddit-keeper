@@ -7,13 +7,15 @@ import { logger } from '../utils/logger.js';
 export class HnDiscoveryService implements IDiscoveryService {
     private BASE_URL = 'https://hn.algolia.com/api/v1';
     private lastRequestTime = 0;
-    private MIN_REQUEST_INTERVAL = 1000;
 
     private async waitIfNecessary() {
         const now = Date.now();
         const timeSinceLastRequest = now - this.lastRequestTime;
-        if (timeSinceLastRequest < this.MIN_REQUEST_INTERVAL) {
-            const waitTime = this.MIN_REQUEST_INTERVAL - timeSinceLastRequest;
+        // Jitter: random interval 1s to 3s
+        const randomInterval = Math.floor(Math.random() * (3000 - 1000 + 1) + 1000);
+
+        if (timeSinceLastRequest < randomInterval) {
+            const waitTime = randomInterval - timeSinceLastRequest;
             await new Promise(resolve => setTimeout(resolve, waitTime));
         }
         this.lastRequestTime = Date.now();
@@ -226,6 +228,199 @@ export class HnDiscoveryService implements IDiscoveryService {
         score = Math.floor(score * recencyMultiplier);
 
         return { score, markers };
+    }
+
+    async ideaDiscovery(idea: string, queries: string[], skipCache = false, intent?: { persona: string; pain: string; domain: string }): Promise<{ results: DiscoveryResult[]; scannedCount: number; isFromCache: boolean }> {
+        const cleanIdea = idea.trim();
+        const cacheKey = `discovery_results:hn:idea:${Buffer.from(cleanIdea).toString('base64').slice(0, 32)}:v2`;
+
+        const cleanIntent = intent ? {
+            persona: (intent.persona || '').trim(),
+            pain: (intent.pain || '').trim(),
+            domain: (intent.domain || '').trim()
+        } : undefined;
+
+        const allResultsMap = new Map<string, DiscoveryResult>();
+        let scannedCount = 0;
+
+        // HN Algolia search is keyword-based. We should strip advanced Reddit filters if any slipped in.
+        const cleanQueries = queries.map(q => q.replace(/subreddit:\S+/g, '').trim());
+
+        for (const query of cleanQueries) {
+            await this.waitIfNecessary();
+            try {
+                const searchUrl = `${this.BASE_URL}/search?query=${encodeURIComponent(query)}&tags=story&hitsPerPage=30`;
+                logger.info({ platform: 'hn', action: 'API_FETCH_IDEA', url: searchUrl, searchTerm: query });
+                const res = await fetch(searchUrl, {
+                    headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
+                });
+
+                const bodyText = await res.text();
+                logger.debug({ platform: 'hn', status: res.status, bodySample: bodyText.slice(0, 100) }, "HN API Response received");
+
+                if (!res.ok) {
+                    logger.warn({ platform: 'hn', action: 'API_FETCH_ERROR', status: res.status, query, body: bodyText.slice(0, 100) }, "HN search failed");
+                    continue;
+                }
+
+                const data: any = JSON.parse(bodyText);
+                const hits = data.hits || [];
+                scannedCount += hits.length;
+                logger.info({ platform: 'hn', action: 'API_RESULT_COUNT', count: hits.length, query, totalScanned: scannedCount });
+
+                for (const hit of hits) {
+                    const { score, markers } = this.calculateIdeaRelevanceScore(hit, cleanIdea, cleanIntent, true);
+
+                    if (score > 4000) { // Tightened for better accuracy
+                        const result: DiscoveryResult = {
+                            id: hit.objectID,
+                            title: hit.title,
+                            author: hit.author,
+                            subreddit: 'Hacker News',
+                            ups: hit.points || 0,
+                            num_comments: hit.num_comments || 0,
+                            created_utc: hit.created_at_i,
+                            url: `https://news.ycombinator.com/item?id=${hit.objectID}`,
+                            source: 'hn',
+                            score,
+                            intentMarkers: markers
+                        };
+
+                        if (!allResultsMap.get(hit.objectID)?.score || allResultsMap.get(hit.objectID)!.score < score) {
+                            allResultsMap.set(hit.objectID, result);
+                        }
+                    }
+                }
+            } catch (err) {
+                logger.error({ err, platform: 'hn', query }, `Query failed`);
+            }
+        }
+
+        // Broader Fallback if no high-signal results found
+        if (allResultsMap.size < 3 && cleanQueries.length > 0) {
+            const words = cleanIdea.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+            const broadQuery = words.slice(0, 3).join(' ');
+
+            if (broadQuery) {
+                logger.info({ platform: 'hn', action: 'BROADER_SEARCH_FALLBACK', broadQuery }, "Attempting broad fallback search...");
+                await this.waitIfNecessary();
+                try {
+                    const searchUrl = `${this.BASE_URL}/search?query=${encodeURIComponent(broadQuery)}&tags=story&hitsPerPage=50`;
+                    const res = await fetch(searchUrl, {
+                        headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
+                    });
+                    if (res.ok) {
+                        const data: any = await res.json();
+                        const hits = data.hits || [];
+                        scannedCount += hits.length;
+                        logger.info({ platform: 'hn', action: 'API_RESULT_COUNT_FALLBACK', count: hits.length, query: broadQuery });
+                        for (const hit of hits) {
+                            const { score, markers } = this.calculateIdeaRelevanceScore(hit, cleanIdea, cleanIntent, true);
+                            if (score > 1000) {
+                                allResultsMap.set(hit.objectID, {
+                                    id: hit.objectID,
+                                    title: hit.title,
+                                    author: hit.author,
+                                    subreddit: 'Hacker News',
+                                    ups: hit.points || 0,
+                                    num_comments: hit.num_comments || 0,
+                                    created_utc: hit.created_at_i,
+                                    url: `https://news.ycombinator.com/item?id=${hit.objectID}`,
+                                    source: 'hn',
+                                    score,
+                                    intentMarkers: markers
+                                });
+                            }
+                        }
+                    }
+                } catch (err) {
+                    logger.error({ err, platform: 'hn' }, "Fallback search failed");
+                }
+            }
+        }
+
+        const finalResults = Array.from(allResultsMap.values())
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 50);
+
+        const enriched = await this.checkMetadataCacheStatus(finalResults);
+        return { results: enriched, isFromCache: false, scannedCount };
+    }
+
+    private calculateIdeaRelevanceScore(hit: any, idea: string, intent?: { persona: string; pain: string; domain: string }, isIdeaDiscovery = false): { score: number; markers: string[] } {
+        const title = (hit.title || '').toLowerCase();
+        const text = (hit.story_text || '').toLowerCase();
+        const combined = title + " " + text;
+
+        const STOP_WORDS = new Set(['want', 'make', 'that', 'like', 'feels', 'this', 'with', 'from', 'your', 'about', 'some', 'thing', 'user', 'people', 'would', 'could', 'should', 'will', 'just', 'best', 'good', 'apps', 'tool']);
+
+        let score = 0;
+        const detail: string[] = [];
+
+        // 1. Dual-Signal extraction
+        const searchTerms = idea.toLowerCase().split(/\s+/).filter(w => w.length > 3 && !STOP_WORDS.has(w));
+
+        // Exact Phrase Bonus
+        if (combined.includes(searchTerms.join(' '))) {
+            score += 5000;
+            detail.push('EXACT_PHRASE');
+        }
+
+        let termMatches = 0;
+        let titleMatch = false;
+        searchTerms.forEach(term => {
+            const regex = new RegExp(`\\b${term}\\b`, 'i');
+            if (regex.test(title)) {
+                score += 4000;
+                termMatches++;
+                titleMatch = true;
+                detail.push(`TITLE_MATCH:${term.toUpperCase()}`);
+            } else if (regex.test(text)) {
+                score += 1000;
+                termMatches++;
+                detail.push(`BODY_MATCH:${term.toUpperCase()}`);
+            }
+        });
+
+        // 2. Proximity Check (Window of 150 characters)
+        if (searchTerms.length >= 2) {
+            for (let i = 0; i < searchTerms.length; i++) {
+                for (let j = i + 1; j < searchTerms.length; j++) {
+                    const posI = combined.indexOf(searchTerms[i]);
+                    const posJ = combined.indexOf(searchTerms[j]);
+                    if (posI !== -1 && posJ !== -1 && Math.abs(posI - posJ) < 150) {
+                        score += 5000;
+                        detail.push('PROXIMITY_BOOST');
+                    }
+                }
+            }
+        }
+
+        // 3. Anti-Vague Filter
+        const domainTerms = ['budget', 'money', 'finance', 'expense', 'saving'];
+        const hasStrongDomain = domainTerms.some(d => {
+            const count = (combined.match(new RegExp(`\\b${d}\\b`, 'gi')) || []).length;
+            return count > 2 || title.includes(d);
+        });
+
+        if (isIdeaDiscovery && !hasStrongDomain && termMatches < 3) {
+            score -= 10000;
+            detail.push('PENALTY:VAGUE_DOMAIN');
+        }
+
+        // 4. Final Threshold kill
+        if (isIdeaDiscovery && score < 4000) {
+            return { score: 0, markers: [] };
+        }
+
+        // Engagement
+        score += (hit.points || 0) * 10;
+        score += (hit.num_comments || 0) * 20;
+
+        // Extra boost for Show HN
+        if (title.includes("show hn")) { score += 2000; detail.push('SHOW_HN'); }
+
+        return { score, markers: detail };
     }
 
     private async checkMetadataCacheStatus(results: DiscoveryResult[]): Promise<DiscoveryResult[]> {
