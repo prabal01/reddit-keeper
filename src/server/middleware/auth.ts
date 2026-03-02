@@ -37,7 +37,8 @@ export async function authMiddleware(
     req.user = null;
 
     const authHeader = req.headers.authorization;
-    const devBypass = req.headers['x-opiniondeck-dev'] === 'true';
+    const isProd = process.env.NODE_ENV === 'production';
+    const devBypass = !isProd && req.headers['x-opiniondeck-dev'] === 'true';
 
     const finish = () => {
         logContext.run({ userId: req.user?.uid }, () => next());

@@ -22,7 +22,7 @@ redis.on("connect", () => {
 });
 
 const WINDOW_SIZE_IN_SECONDS = 60;
-const MAX_WINDOW_REQUESTS = 60; // 60 requests per minute
+const FALLBACK_ANON_LIMIT = 5; // Aggressive throttling for unauthenticated IPs to stop abuse
 
 export const rateLimiterMiddleware = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -38,10 +38,20 @@ export const rateLimiterMiddleware = async (req: Request, res: Response, next: N
             await redis.expire(key, WINDOW_SIZE_IN_SECONDS);
         }
 
-        if (currentCount > MAX_WINDOW_REQUESTS) {
+        // Determine the dynamic max limit
+        let dynamicLimit = FALLBACK_ANON_LIMIT;
+        // @ts-ignore
+        if (req.user && req.user.config && req.user.config.rateLimit) {
+            // @ts-ignore
+            dynamicLimit = req.user.config.rateLimit;
+        }
+
+        if (currentCount > dynamicLimit) {
             res.status(429).json({
                 error: "Too many requests",
-                message: "You have exceeded the 60 requests in 1 minute limit!",
+                message: req.user
+                    ? `You have exceeded your plan limit of ${dynamicLimit} requests per minute. Upgrade to Pro for higher limits.`
+                    : "You have exceeded the API limits.",
             });
             return;
         }

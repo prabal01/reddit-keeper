@@ -2,6 +2,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 // Queue definitions removed (replaced by BullMQ)
 import { countComments } from "./reddit/tree-builder.js";
 import {
@@ -95,10 +96,16 @@ const allowedOrigins = [
     ])
 ];
 
+app.use(helmet());
+
 app.use(cors({
     origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
+        // Allow requests with no origin ONLY in development (curl, etc)
+        // In production, scrapers use no-origin so we block them
+        if (!origin) {
+            if (process.env.NODE_ENV !== 'production') return callback(null, true);
+            return callback(new Error('Origin missing'), false);
+        }
 
         // Allow Chrome Extensions
         if (origin.startsWith('chrome-extension://')) return callback(null, true);
@@ -113,6 +120,7 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '50mb' })); // Increased limit for large threads
 app.use(authMiddleware);
+app.use(rateLimiterMiddleware); // Apply global rate limits to all routes based on auth config
 
 // ── Helpers ────────────────────────────────────────────────────────
 
@@ -1174,6 +1182,9 @@ app.post("/api/extractions", async (req: express.Request, res: express.Response)
 });
 
 app.post("/api/discovery/compare", authMiddleware, async (req: express.Request, res: express.Response) => {
+    if (!req.user) {
+        return res.status(401).json({ error: "Authentication required for Discovery Lab" });
+    }
     const { query } = req.body;
     if (!query) return res.status(400).json({ error: "Query is required" });
 
@@ -1197,6 +1208,9 @@ app.post("/api/discovery/compare", authMiddleware, async (req: express.Request, 
 });
 
 app.post("/api/discovery/search", authMiddleware, async (req: express.Request, res: express.Response) => {
+    if (!req.user) {
+        return res.status(401).json({ error: "Authentication required for Discovery Search" });
+    }
     const { query, platform = 'all' } = req.body;
     if (!query) {
         return res.status(400).json({ error: "Query is required" });
