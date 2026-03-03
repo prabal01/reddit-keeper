@@ -5,6 +5,7 @@ import { GoogleDiscoveryService } from './google.service.js';
 import { DiscoveryResult, DiscoveryPlan, DiscoveryResponse } from './types.js';
 import { logger } from '../utils/logger.js';
 import { redis } from '../middleware/rateLimiter.js';
+import { getGlobalConfig } from '../firestore.js';
 
 export class DiscoveryOrchestrator {
     private redditService = new RedditDiscoveryService();
@@ -80,7 +81,7 @@ export class DiscoveryOrchestrator {
     }
 
     async ideaDiscovery(idea: string, communities?: string[], skipCache = false): Promise<DiscoveryResponse> {
-        const cacheKey = `discovery:idea:${Buffer.from(idea.trim().toLowerCase()).toString('base64').slice(0, 32)}:v5`;
+        const cacheKey = `discovery:idea:${Buffer.from(idea.trim().toLowerCase()).toString('base64')}:v6`;
 
         if (!skipCache) {
             try {
@@ -133,8 +134,12 @@ export class DiscoveryOrchestrator {
             .sort((a, b) => b.score - a.score);
 
         // 5. Enrichment Phase: Fetch metadata for top results (especially from Serper)
-        // We only enrich the top 5 to keep it fast.
-        const topToEnrich = finalResults.slice(0, 5);
+        const config = await getGlobalConfig();
+        const enrichmentLimit = config.discovery_enrichment_limit || 10;
+
+        logger.info({ action: 'ENRICHMENT_PHASE_START', limit: enrichmentLimit }, `Enriching metadata for top ${enrichmentLimit} results`);
+
+        const topToEnrich = finalResults.slice(0, enrichmentLimit);
         await Promise.all(topToEnrich.map(async (r) => {
             if (r.ups === 0 && (r.source === 'reddit' || r.source === 'hn')) {
                 try {
@@ -262,7 +267,7 @@ export class DiscoveryOrchestrator {
     }
 
     async fetchFullThread(urlOrId: string, source: 'reddit' | 'hn'): Promise<any> {
-        const cacheKey = `thread_data:v1:${Buffer.from(urlOrId).toString('base64').slice(0, 32)}`;
+        const cacheKey = `thread_data:v1:${Buffer.from(urlOrId).toString('base64')}`;
 
         try {
             const cached = await redis.get(cacheKey);

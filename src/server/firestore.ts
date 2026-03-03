@@ -248,10 +248,12 @@ export async function getPlanConfig(plan: string): Promise<PlanConfig> {
 
 export interface GlobalConfig {
     discovery_cache_ttl: number; // in seconds
+    discovery_enrichment_limit: number;
 }
 
 const DEFAULT_GLOBAL_CONFIG: GlobalConfig = {
-    discovery_cache_ttl: 7 * 24 * 3600 // 7 days in seconds
+    discovery_cache_ttl: 7 * 24 * 3600, // 7 days in seconds
+    discovery_enrichment_limit: 10
 };
 
 const GLOBAL_CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache

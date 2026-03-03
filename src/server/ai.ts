@@ -8,6 +8,35 @@ console.log(`[AI] Initializing Vertex AI... Project: ${project}, Location: ${loc
 
 export const vertexAI = new VertexAI({ project, location });
 
+/**
+ * Robust retry wrapper for Vertex AI calls to handle 429 Resource Exhausted errors.
+ */
+async function withRetry<T>(fn: () => Promise<T>, maxRetries = 5, baseDelay = 5000): Promise<T> {
+    let lastError: any;
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            return await fn();
+        } catch (err: any) {
+            lastError = err;
+            const errorText = JSON.stringify(err).toLowerCase() + (err?.message || '').toLowerCase();
+            const isRateLimit = errorText.includes('429') ||
+                errorText.includes('resource_exhausted') ||
+                err?.status === 429 ||
+                err?.response?.status === 429;
+
+            if (isRateLimit && i < maxRetries - 1) {
+                // Exponential backoff: 5s, 10s, 20s, 40s...
+                const delay = baseDelay * Math.pow(2, i) + (Math.random() * 2000);
+                console.warn(`[AI] Rate limit hit (429). Retrying in ${Math.round(delay)}ms... (Attempt ${i + 1}/${maxRetries})`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                continue;
+            }
+            throw err;
+        }
+    }
+    throw lastError;
+}
+
 // Schema Definitions using Vertex AI format ('object', 'string', etc.)
 const granularThreadInsightSchema: any = {
     type: 'object',
@@ -272,13 +301,13 @@ export async function expandIdeaToQueries(idea: string, communities?: string[]):
     Generate exactly ONE highly effective master query for Google/Serper.
     
     PATTERN:
-    [Root Problem] + frustrating site:reddit.com
+    [Root Problem] (site:reddit.com OR site:news.ycombinator.com) frustrating
     
     RULES:
     - Return EXACTLY 1 query.
-    - Use the exact pattern: "[Root Problem] + frustrating site:reddit.com".
+    - Use the exact pattern: "[Root Problem] (site:reddit.com OR site:news.ycombinator.com) frustrating".
     - Replace "frustrating" with "sucks" or "annoying" ONLY if it feels more natural for the specific problem.
-    - Example: "Expense Tracking + frustrating site:reddit.com"
+    - Example: "Expense Tracking (site:reddit.com OR site:news.ycombinator.com) frustrating"
     
     Return JSON format: 
     { 
@@ -288,7 +317,7 @@ export async function expandIdeaToQueries(idea: string, communities?: string[]):
     `;
 
     try {
-        const result = await ideaModel.generateContent(prompt);
+        const result = await withRetry(() => ideaModel.generateContent(prompt));
         const text = result.response.candidates?.[0]?.content?.parts?.[0]?.text;
         if (!text) throw new Error("No response from Idea Expansion Model");
 
@@ -404,7 +433,7 @@ ${threadData.map(t => `--- THREAD START ---\nTitle: ${t.title}\nSubreddit: r/${t
 
     try {
         console.log(`[AI] Calling Vertex AI with ${threads.length} threads...`);
-        const result = await model.generateContent(systemPrompt);
+        const result = await withRetry(() => model.generateContent(systemPrompt));
         const response = result.response;
 
         // Vertex AI SDK response format
@@ -484,7 +513,7 @@ ${threadContent}
 
     try {
         console.log(`[AI] [GRANULAR] Analyzing thread ${thread.id} via Vertex AI...`);
-        const result = await granularModel.generateContent(systemPrompt);
+        const result = await withRetry(() => granularModel.generateContent(systemPrompt));
         console.log('granual result', result)
         const text = result.response.candidates?.[0]?.content?.parts?.[0]?.text;
 
@@ -514,7 +543,7 @@ export async function arbitrateSimilarity(titleA: string, titleB: string) {
     `;
 
     try {
-        const result = await arbitrationModel.generateContent(prompt);
+        const result = await withRetry(() => arbitrationModel.generateContent(prompt));
         const text = result.response.candidates?.[0]?.content?.parts?.[0]?.text;
         if (!text) throw new Error("No response from Arbitration Model");
         return {
@@ -542,11 +571,11 @@ export async function getEmbeddings(texts: string[]) {
         const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${model}:predict`;
 
         const instances = texts.map(text => ({ content: text }));
-        const response = await client.request({
+        const response = await withRetry(() => client.request({
             url,
             method: 'POST',
             data: { instances }
-        }) as any;
+        })) as any;
 
         if (!response.data?.predictions) {
             throw new Error("No predictions returned from Vertex AI Embeddings");
@@ -651,9 +680,9 @@ export async function synthesizeReport(categories: { painPoints: any[], triggers
         }
     });
 
-    const result = await synthesisModel.generateContent({
+    const result = await withRetry(() => synthesisModel.generateContent({
         contents: [{ role: 'user', parts: [{ text: inputContent }] }]
-    });
+    }));
 
     const response = result.response;
     if (!response.candidates || response.candidates.length === 0) {

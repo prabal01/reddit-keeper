@@ -61,6 +61,19 @@ To ensure "Vague results" are purged, the following scorers were implemented in 
 
 ### Metadata Enrichment
 Since search engines (Serper/Google) don't return upvotes or comment counts, the Orchestrator runs a **Background Enrichment Phase**:
-- It identifies the Top 5 results with "0" metadata.
+- It identifies the top results with "0" metadata.
 - It performs a parallel fetch of the real Reddit/HN JSON to pull actual engagement stats.
+- **Configurability**: The number of enriched results is controlled by `discovery_enrichment_limit` in the global database config (default: **10**).
 - This ensures the Discovery UI shows real-world signal (e.g., "79 Upvotes") instead of empty placeholders.
+
+---
+
+## 5. API Resilience & Self-Healing
+
+The engine now includes a robust **Self-Healing layer** in \`ai.ts\` to handle high-volume analysis.
+
+### Exponential Backoff (with Jitter)
+When analyzing large folders (50+ threads), the system may hit Vertex AI's \`429 Resource Exhausted\` limits. 
+- **The Solution**: All LLM calls (Embeddings, Clustering, and Synthesis) are wrapped in a \`withRetry\` helper in \`src/server/ai.ts\`.
+- **Behavior**: If a 429 is detected, the system waits (2s, 4s, 8s...) with added randomness to avoid synchronization issues, ensuring the analysis finishes successfully rather than crashing.
+

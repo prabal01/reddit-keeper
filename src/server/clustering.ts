@@ -69,25 +69,36 @@ export class ClusterEngine {
         // 2. Clustering Loop
         for (const insight of insightsWithEmbeddings) {
             let matched = false;
+            let bestCandidate: { cluster: Cluster; similarity: number } | null = null;
 
+            // Phase 1: Rapid Search (Auto-Merge or Identify Best Arbitration Candidate)
             for (const cluster of clusters) {
                 const similarity = this.cosineSimilarity(insight.embedding, cluster.embedding!);
-                // Only log highish similarities to avoid spam
-                if (similarity > 0.5) {
-                    logger.log(`Similarity: ${(similarity * 100).toFixed(1)}% between '${insight.title}' and '${cluster.canonicalTitle}'`);
-                }
 
+                // Level 1: High Confidence Auto-Merge
                 if (similarity >= this.thresholdMerge) {
-                    logger.log(`-> Auto-Merged '${insight.title}' into '${cluster.canonicalTitle}'`);
+                    logger.log(`-> Auto-Merged '${insight.title}' into '${cluster.canonicalTitle}' (${(similarity * 100).toFixed(1)}%)`);
                     cluster.rawInsights.push(insight);
                     matched = true;
                     break;
-                } else if (similarity >= this.thresholdArbitrate) {
+                }
+
+                // Level 2: Potential match for LLM Arbitration
+                if (similarity >= this.thresholdArbitrate) {
+                    if (!bestCandidate || similarity > bestCandidate.similarity) {
+                        bestCandidate = { cluster, similarity };
+                    }
+                }
+            }
+
+            // Phase 2: Surgical LLM Arbitration (Only for the SINGLE most similar candidate)
+            if (!matched && bestCandidate) {
+                const { cluster, similarity } = bestCandidate;
+                logger.log(`Performing Arbitration: '${insight.title}' vs best match '${cluster.canonicalTitle}' (${(similarity * 100).toFixed(1)}%)`);
+
+                try {
                     const arbitration = await arbitrateSimilarity(cluster.canonicalTitle, insight.title);
 
-                    logger.log(`Arbitration ('${insight.title}' vs '${cluster.canonicalTitle}'): areSame=${arbitration.areSame}`);
-
-                    // Track Arbitration Tokens & Cost
                     if (arbitration.usage) {
                         const cost = this.calculateCost(arbitration.usage);
                         await updateUserAicost(this.uid, {
@@ -98,11 +109,17 @@ export class ClusterEngine {
                     }
 
                     if (arbitration.areSame) {
+                        logger.log(`-> Arbitration SUCCESS: Merged into '${arbitration.canonicalTitle}'`);
                         cluster.rawInsights.push(insight);
-                        cluster.canonicalTitle = arbitration.canonicalTitle; // Update to best title
+                        cluster.canonicalTitle = arbitration.canonicalTitle;
                         matched = true;
-                        break;
+                    } else {
+                        logger.log(`-> Arbitration FAILED: Keeping as distinct.`);
                     }
+                    // MANDATORY PACING: Avoid hitting RPM limits
+                    await new Promise(resolve => setTimeout(resolve, 1200));
+                } catch (err) {
+                    logger.log(`-> Arbitration CRASHED: ${err instanceof Error ? err.message : 'Unknown error'}. Defaulting to distinct.`);
                 }
             }
 
@@ -117,6 +134,8 @@ export class ClusterEngine {
                     mentionCount: 0,
                     category
                 });
+                // Small pacing even for new clusters
+                await new Promise(resolve => setTimeout(resolve, 300));
             }
         }
 
