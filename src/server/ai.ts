@@ -282,9 +282,13 @@ export interface IdeaExpansion {
     queries: string[];
 }
 
-export async function expandIdeaToQueries(idea: string, communities?: string[]): Promise<IdeaExpansion> {
+export async function expandIdeaToQueries(idea: string, communities?: string[], competitors?: string[]): Promise<IdeaExpansion> {
     const communityContext = communities && communities.length > 0
         ? `Focus on these subreddits if relevant: ${communities.join(', ')}.`
+        : "";
+
+    const competitorContext = competitors && competitors.length > 0
+        ? `Existing competitors in this space: ${competitors.join(', ')}.`
         : "";
 
     const prompt = `
@@ -292,6 +296,7 @@ export async function expandIdeaToQueries(idea: string, communities?: string[]):
     
     IDEA: "${idea}"
     ${communityContext}
+    ${competitorContext}
     
     STEP 1: Problem Distillation
     1.1 Root Problem: Extract the underlying problem in 2-3 words (e.g., "Budgeting", "Expense Tracking", "Habit Building").

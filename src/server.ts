@@ -1239,7 +1239,7 @@ app.post("/api/discovery/idea", authMiddleware, async (req: express.Request, res
     if (!req.user) {
         return res.status(401).json({ error: "Authentication required for Idea Discovery" });
     }
-    const { idea, communities, skipCache = false } = req.body;
+    const { idea, communities, competitors, skipCache = false } = req.body;
     if (!idea) {
         return res.status(400).json({ error: "Idea is required" });
     }
@@ -1250,7 +1250,43 @@ app.post("/api/discovery/idea", authMiddleware, async (req: express.Request, res
         res.json({ results, discoveryPlan });
     } catch (err: any) {
         console.error(`[Discovery] Idea Search error:`, err);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: "Discovery failed" });
+    }
+});
+
+// Bulk Import Metadata Enrichment
+app.post("/api/discovery/metadata", authMiddleware, async (req: express.Request, res: express.Response) => {
+    const { url, source } = req.body;
+
+    if (!url || !source) {
+        return res.status(400).json({ error: "URL and source are required" });
+    }
+
+    try {
+        const orchestrator = discoveryOrchestrator;
+        const fullData = await orchestrator.fetchFullThread(url, source);
+
+        if (!fullData || !fullData.post) {
+            return res.status(404).json({ error: "Failed to fetch thread metadata" });
+        }
+
+        const result = {
+            id: Buffer.from(url).toString('base64'),
+            title: fullData.post.title || "Unknown Title",
+            author: fullData.post.author || "unknown",
+            subreddit: fullData.post.subreddit || (source === 'hn' ? 'Hacker News' : 'unknown'),
+            num_comments: fullData.post.num_comments || 0,
+            created_utc: fullData.post.created_utc || Math.floor(Date.now() / 1000),
+            url: url,
+            source: source,
+            score: 0,
+            isCached: true
+        };
+
+        res.json({ result });
+    } catch (err: any) {
+        console.error(`[Discovery] Failed to enrich metadata for bulk import (URL: ${url}):`, err);
+        res.status(500).json({ error: "Failed to enrich metadata" });
     }
 });
 

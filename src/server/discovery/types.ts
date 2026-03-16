@@ -3,7 +3,6 @@ export interface DiscoveryResult {
     title: string;
     author: string;
     subreddit: string; // Used for HN as well (e.g., 'Hacker News')
-    ups: number;
     num_comments: number;
     created_utc: number;
     url: string;

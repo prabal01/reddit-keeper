@@ -56,10 +56,10 @@ export class DiscoveryOrchestrator {
             return this.search(boostedQuery, platforms); // Recursive call with boosted query
         }
 
-        // If STILL no results even after boosting, fallback to Serper baseline
+        // If STILL no results even after boosting, fallback to JustSerp baseline
         if (allResults.length === 0) {
-            logger.info({ action: 'FALLBACK_SERPER', searchTerm: query }, `No results found. Falling back to Serper...`);
-            return this.serperBaseline(query);
+            logger.info({ action: 'FALLBACK_JUSTSERP', searchTerm: query }, `No results found. Falling back to JustSerp...`);
+            return this.justSerpBaseline(query);
         }
 
         const sortedResults = allResults.sort((a, b) => b.score - a.score);
@@ -80,7 +80,7 @@ export class DiscoveryOrchestrator {
         };
     }
 
-    async ideaDiscovery(idea: string, communities?: string[], skipCache = false): Promise<DiscoveryResponse> {
+    async ideaDiscovery(idea: string, communities?: string[], competitors?: string[], skipCache = false): Promise<DiscoveryResponse> {
         const cacheKey = `discovery:idea:${Buffer.from(idea.trim().toLowerCase()).toString('base64')}:v6`;
 
         if (!skipCache) {
@@ -97,18 +97,18 @@ export class DiscoveryOrchestrator {
 
         logger.info({ action: 'IDEA_DISCOVERY_START_SERPER_PRIMARY', idea, skipCache }, `Master Query phase starting via Serper...`);
         const { expandIdeaToQueries } = await import('../ai.js');
-        const { intent, queries } = await expandIdeaToQueries(idea, communities);
+        const { intent, queries } = await expandIdeaToQueries(idea, communities, competitors);
         const masterQuery = queries[0];
         logger.info({ masterQuery }, `Generated Master Query: ${masterQuery}`);
 
-        // 2. Primary Phase (Serper API)
-        const serperResp = await this.serperBaseline(masterQuery);
-        let allResults = [...serperResp.results];
-        let scannedCount = serperResp.discoveryPlan.scannedCount;
+        // 2. Primary Phase (JustSerp API)
+        const serpResp = await this.justSerpBaseline(masterQuery);
+        let allResults = [...serpResp.results];
+        let scannedCount = serpResp.discoveryPlan.scannedCount;
 
         // 3. Fallback Enhancement: If signal is too low, expand search to direct platform APIs
         if (allResults.length < 3) {
-            logger.info({ action: 'DEEP_SEARCH_TRIGGERED', count: allResults.length }, "Low signal from Serper. Expanding to platform-specific deep search...");
+            logger.info({ action: 'DEEP_SEARCH_TRIGGERED', count: allResults.length }, "Low signal from JustSerp. Expanding to platform-specific deep search...");
             const [redditResp, hnResp] = await Promise.all([
                 this.redditService.ideaDiscovery(idea, [idea], skipCache, intent).catch((err: Error) => {
                     logger.error({ err, platform: 'reddit' }, "Reddit fallback CRASHED");
@@ -133,27 +133,36 @@ export class DiscoveryOrchestrator {
             })
             .sort((a, b) => b.score - a.score);
 
-        // 5. Enrichment Phase: Fetch metadata for top results (especially from Serper)
+        // 5. Enrichment Phase: Fetch metadata for top results (especially from JustSerp)
         const config = await getGlobalConfig();
         const enrichmentLimit = config.discovery_enrichment_limit || 10;
-
-        logger.info({ action: 'ENRICHMENT_PHASE_START', limit: enrichmentLimit }, `Enriching metadata for top ${enrichmentLimit} results`);
-
         const topToEnrich = finalResults.slice(0, enrichmentLimit);
-        await Promise.all(topToEnrich.map(async (r) => {
-            if (r.ups === 0 && (r.source === 'reddit' || r.source === 'hn')) {
+
+        const needsEnrichment = topToEnrich.filter((r): r is DiscoveryResult & { source: 'reddit' | 'hn' } =>
+            r.num_comments === 0 && (r.source === 'reddit' || r.source === 'hn')
+        );
+
+        if (needsEnrichment.length > 0) {
+            logger.info({
+                action: 'ENRICHMENT_PHASE_START',
+                totalChecked: topToEnrich.length,
+                toEnrich: needsEnrichment.length
+            }, `Enriching metadata for ${needsEnrichment.length} results (skipped ${topToEnrich.length - needsEnrichment.length} with existing metadata)`);
+
+            await Promise.all(needsEnrichment.map(async (r) => {
                 try {
                     const fullData = await this.fetchFullThread(r.url, r.source);
                     if (fullData && fullData.post) {
-                        r.ups = fullData.post.ups || 0;
                         r.num_comments = fullData.post.num_comments || 0;
-                        r.isCached = true; // Mark as successfully fetched/cached
+                        r.isCached = true;
                     }
                 } catch (err) {
                     logger.warn({ url: r.url }, "Failed to enrich metadata for result");
                 }
-            }
-        }));
+            }));
+        } else {
+            logger.info({ action: 'ENRICHMENT_PHASE_SKIPPED', count: topToEnrich.length }, "All top results have metadata, skipping enrichment phase.");
+        }
 
         logger.info({
             action: 'IDEA_DISCOVERY_COMPLETE',
@@ -162,7 +171,7 @@ export class DiscoveryOrchestrator {
         }, `Master query discovery complete. Found ${finalResults.length} matches.`);
 
         // Log Top 10 results for visibility in terminal
-        const topLog = finalResults.slice(0, 10).map(r => `[${r.source.toUpperCase()}][Score: ${r.score.toFixed(0)}][Ups: ${r.ups}] ${r.title}`);
+        const topLog = finalResults.slice(0, 10).map(r => `[${r.source.toUpperCase()}][Score: ${r.score.toFixed(0)}][Comments: ${r.num_comments}] ${r.title}`);
         logger.info({ topResults: topLog }, "TOP 10 MASTER DISCOVERY RESULTS");
 
         const totalCached = finalResults.filter(r => r.isCached).length;
@@ -194,33 +203,50 @@ export class DiscoveryOrchestrator {
         return response;
     }
 
-    private async serperBaseline(query: string): Promise<DiscoveryResponse> {
-        const SERPER_API_KEY = process.env.SERPER_API_KEY;
-        if (!SERPER_API_KEY) {
-            logger.error("SERPER_API_KEY is missing");
+    private async justSerpBaseline(query: string): Promise<DiscoveryResponse> {
+        const JUST_SERP_KEY = process.env.JUST_SERP_KEY;
+        if (!JUST_SERP_KEY) {
+            logger.error("JUST_SERP_KEY is missing");
             return { results: [], discoveryPlan: this.emptyPlan() };
         }
 
-        const serperUrl = "https://google.serper.dev/search";
-        logger.info({ platform: 'serper', action: 'API_FETCH', url: serperUrl, searchTerm: query });
+        const justSerpUrl = "https://api.justserp.com/v1/search";
+        logger.info({ platform: 'justserp', action: 'API_FETCH', url: justSerpUrl, searchTerm: query });
 
         try {
-            const response = await fetch(serperUrl, {
+            const response = await fetch(justSerpUrl, {
                 method: "POST",
-                headers: { "X-API-KEY": SERPER_API_KEY, "Content-Type": "application/json" },
-                body: JSON.stringify({ q: query, num: 20 })
+                headers: { "X-API-KEY": JUST_SERP_KEY, "Content-Type": "application/json" },
+                body: JSON.stringify({ keyword: query, num: 20 })
             });
 
             if (!response.ok) {
-                logger.error({ status: response.status, statusText: response.statusText }, "Serper API call failed");
+                logger.error({ status: response.status, statusText: response.statusText }, "JustSerp API call failed");
                 return { results: [], discoveryPlan: this.emptyPlan() };
             }
 
             const data: any = await response.json();
-            const organic = data.organic || [];
+            const organic = data.organic_results || [];
 
             const rawResults: DiscoveryResult[] = organic.map((r: any) => {
                 const source = r.link.includes('news.ycombinator.com') ? 'hn' : (r.link.includes('reddit.com') ? 'reddit' : 'google');
+
+                // Optimized parsing for comment counts from displayedLink (e.g., "120+ comments")
+                let numComments = 0;
+                if (source === 'reddit' && r.displayedLink) {
+                    const match = r.displayedLink.match(/(\d+)\+? comments/);
+                    if (match) {
+                        numComments = parseInt(match[1], 10);
+                    }
+                }
+
+                const markers = ['general_discussion'];
+                if (numComments > 50) markers.push('high_engagement');
+                const titleLower = r.title.toLowerCase();
+                if (titleLower.includes('how') || titleLower.includes('help') || titleLower.includes('?')) markers.push('question');
+                if (titleLower.includes('alternative') || titleLower.includes('vs') || titleLower.includes('better')) markers.push('alternative');
+                if (titleLower.includes('sucks') || titleLower.includes('hate') || titleLower.includes('annoy')) markers.push('frustration');
+
                 return {
                     id: r.link,
                     title: r.title,
@@ -228,11 +254,10 @@ export class DiscoveryOrchestrator {
                     subreddit: r.link.includes('/r/') ? `r/${r.link.split('/r/')[1].split('/')[0]}` : (source === 'hn' ? 'Hacker News' : 'Web'),
                     author: 'unknown',
                     source,
-                    ups: 0,
-                    num_comments: 0,
+                    num_comments: numComments,
                     created_utc: Math.floor(Date.now() / 1000),
-                    score: source !== 'google' ? 8000 : 5000, // Boost discussions
-                    intentMarkers: ['SERPER_BASELINE']
+                    score: source !== 'google' ? 8000 : 5000,
+                    intentMarkers: markers
                 } as DiscoveryResult;
             });
 
@@ -249,7 +274,7 @@ export class DiscoveryOrchestrator {
                 }
             };
         } catch (err) {
-            logger.error({ err }, "Serper fetch failed");
+            logger.error({ err }, "JustSerp fetch failed");
             return { results: [], discoveryPlan: this.emptyPlan() };
         }
     }

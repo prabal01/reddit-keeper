@@ -6,9 +6,10 @@ export interface DiscoveryResult {
     title: string;
     url: string;
     subreddit: string;
-    ups: number;
+    author?: string;
     num_comments: number;
     score: number;
+    isBulk?: boolean;
     isCached?: boolean;
     source: 'reddit' | 'hn';
     intentMarkers?: ('frustration' | 'alternative' | 'high_engagement' | 'question')[];
@@ -37,6 +38,7 @@ export const useDiscovery = () => {
     const [intentFilter, setIntentFilter] = useState<IntentFilter>('all');
     const [status, setStatus] = useState<string | null>(null);
     const [detectedIntent, setDetectedIntent] = useState<{ persona: string; pain: string; domain: string } | null>(null);
+    const [showSelectedOnly, setShowSelectedOnly] = useState(false);
 
     const search = useCallback(async (query: string) => {
         if (!query.trim()) return;
@@ -82,7 +84,7 @@ export const useDiscovery = () => {
         }
     }, [getIdToken]);
 
-    const ideaSearch = useCallback(async (idea: string, communities?: string[]) => {
+    const ideaSearch = useCallback(async (idea: string, communities?: string[], competitors?: string[]) => {
         if (!idea.trim()) return;
 
         setLoading(true);
@@ -102,7 +104,7 @@ export const useDiscovery = () => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ idea, communities })
+                body: JSON.stringify({ idea, communities, competitors })
             });
 
             if (!response.ok) {
@@ -140,6 +142,63 @@ export const useDiscovery = () => {
         }
     }, [getIdToken, loading]);
 
+    const importUrls = useCallback(async (urls: string[]) => {
+        if (urls.length === 0) return;
+
+        setLoading(true);
+        setStatus(`Importing ${urls.length} urls...`);
+
+        const initialResults: DiscoveryResult[] = urls.map(url => {
+            const parsedUrl = new URL(url);
+            const source = parsedUrl.hostname.includes('reddit.com') ? 'reddit' : 'hn';
+            let title = "Syncing thread...";
+            let subreddit = "known";
+
+            if (source === 'reddit') {
+                const paths = parsedUrl.pathname.split('/').filter(Boolean);
+                subreddit = paths[1] || 'reddit';
+                if (paths[4]) {
+                    title = paths[4].replace(/-/g, ' ').replace(/_/g, ' ');
+                    title = title.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                }
+            } else {
+                subreddit = "Hacker News";
+            }
+
+            return {
+                id: btoa(url),
+                title,
+                url,
+                subreddit,
+                author: 'unknown',
+                num_comments: 0,
+                score: 50,
+                source,
+                isBulk: true,
+                isCached: false
+            };
+        });
+
+        // Show results immediately
+        setResults(initialResults);
+
+        // Update selection and global map
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            initialResults.forEach(r => next.add(r.id));
+            return next;
+        });
+
+        setAllDiscoveredMap(prev => {
+            const next = new Map(prev);
+            initialResults.forEach(r => next.set(r.id, r));
+            return next;
+        });
+
+        setStatus(null);
+        setLoading(false);
+    }, []);
+
     const toggleSelection = (id: string) => {
         setSelectedIds(prev => {
             const next = new Set(prev);
@@ -157,19 +216,86 @@ export const useDiscovery = () => {
         setDetectedIntent(null);
     };
 
+    const enrichResult = useCallback(async (id: string, url: string, source: string) => {
+        setLoading(true);
+        setStatus("Enriching metadata...");
+        try {
+            const token = await getIdToken();
+            const response = await fetch(`${API_BASE}/discovery/metadata`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ url, source })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const updatedResult = { ...data.result, isBulk: false } as DiscoveryResult;
+
+                setResults(prev => prev.map(r => r.id === id ? updatedResult : r));
+                setAllDiscoveredMap(prev => {
+                    const next = new Map(prev);
+                    next.set(id, updatedResult);
+                    return next;
+                });
+            }
+        } catch (err) {
+            console.error("Failed to enrich metadata:", err);
+        } finally {
+            setLoading(false);
+            setStatus(null);
+        }
+    }, [getIdToken]);
+
     const filteredResults = useMemo(() => {
-        return results.filter(r => {
+        // Ensure selected items that are NOT in the current search results (e.g. Bulk Imports) 
+        // stay visible in the grid as "sticky" items until unselected.
+        const currentResultIds = new Set(results.map(r => r.id));
+        const persistentItems = Array.from(selectedIds)
+            .filter(id => !currentResultIds.has(id))
+            .map(id => allDiscoveredMap.get(id))
+            .filter(Boolean) as DiscoveryResult[];
+
+        let combined = [...persistentItems, ...results];
+
+        // Apply "Show Selected Only" filter
+        if (showSelectedOnly) {
+            combined = combined.filter(r => selectedIds.has(r.id));
+        }
+
+        return combined.filter(r => {
             const matchesPlatform = platformFilter === 'all' || r.source === platformFilter;
-            const matchesIntent = intentFilter === 'all' || (r.intentMarkers && r.intentMarkers.includes(intentFilter as any));
+            // For Bulk items, we don't apply intent filtering as they are minimally parsed.
+            const matchesIntent = r.isBulk || intentFilter === 'all' || (r.intentMarkers && r.intentMarkers.some((m: string) => m.toLowerCase() === intentFilter.toLowerCase()));
             return matchesPlatform && matchesIntent;
         });
-    }, [results, platformFilter, intentFilter]);
+    }, [results, selectedIds, allDiscoveredMap, platformFilter, intentFilter, showSelectedOnly]);
 
     const selectedResults = useMemo(() => {
         return Array.from(selectedIds)
             .map(id => allDiscoveredMap.get(id))
             .filter(Boolean) as DiscoveryResult[];
     }, [selectedIds, allDiscoveredMap]);
+
+    const selectAllVisible = () => {
+        const visibleIds = filteredResults.map(r => r.id);
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            visibleIds.forEach(id => next.add(id));
+            return next;
+        });
+    };
+
+    const unselectAllVisible = () => {
+        const visibleIds = filteredResults.map(r => r.id);
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            visibleIds.forEach(id => next.delete(id));
+            return next;
+        });
+    };
 
     return {
         results: filteredResults,
@@ -185,9 +311,15 @@ export const useDiscovery = () => {
         status,
         search,
         ideaSearch,
+        importUrls,
+        enrichResult,
         toggleSelection,
+        selectAllVisible,
+        unselectAllVisible,
         clearResults,
         setSelectedIds,
-        detectedIntent
+        detectedIntent,
+        showSelectedOnly,
+        setShowSelectedOnly
     };
 };

@@ -37,44 +37,50 @@ export const FolderSelect: React.FC<FolderSelectProps> = ({
     }, []);
 
     return (
-        <div className={`custom-folder-select ${isOpen ? 'open' : ''}`} ref={dropdownRef}>
-            <div className="select-trigger" onClick={() => setIsOpen(!isOpen)}>
-                <FolderIcon size={16} className="trigger-icon" />
-                <span className="selected-value">
+        <div className="relative w-full" ref={dropdownRef}>
+            <div
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5 border transition-all duration-200 cursor-pointer ${isOpen ? 'border-[#6366f1] bg-white/10 shadow-[0_0_15px_rgba(99,102,241,0.1)]' : 'border-white/10 hover:border-white/20'}`}
+                onClick={() => setIsOpen(!isOpen)}
+            >
+                <FolderIcon size={16} className={isOpen ? 'text-[#6366f1]' : 'text-slate-400'} />
+                <span className={`flex-1 text-sm font-medium ${selectedFolder ? 'text-white' : 'text-slate-500'}`}>
                     {selectedFolder ? selectedFolder.name : placeholder}
                 </span>
-                <ChevronDown size={16} className={`chevron ${isOpen ? 'up' : ''}`} />
+                <ChevronDown size={16} className={`text-slate-500 transition-transform duration-300 ${isOpen ? 'rotate-180 text-[#6366f1]' : ''}`} />
             </div>
 
             {isOpen && (
-                <div className="select-dropdown">
-                    <div className="search-container">
-                        <Search size={14} className="search-icon" />
-                        <input
-                            type="text"
-                            placeholder="Find folder..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            autoFocus
-                        />
+                <div className="absolute bottom-full left-0 right-0 mb-2 bg-[#1e293b] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-20 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                    <div className="p-3 border-b border-white/5 bg-slate-900/40">
+                        <div className="flex items-center gap-2 px-3 py-2 bg-black/20 rounded-lg border border-white/5 focus-within:border-[#6366f1]/30 transition-all">
+                            <Search size={14} className="text-slate-500" />
+                            <input
+                                className="bg-transparent border-none text-white text-xs outline-none w-full"
+                                type="text"
+                                placeholder="Find folder..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                autoFocus
+                            />
+                        </div>
                     </div>
-                    <div className="options-list">
+                    <div className="max-h-[240px] overflow-y-auto scrollbar-hide py-2">
                         {filteredFolders.length > 0 ? (
                             filteredFolders.map(folder => (
                                 <div
                                     key={folder.id}
-                                    className={`option-item ${folder.id === selectedId ? 'selected' : ''}`}
+                                    className={`flex items-center justify-between px-4 py-2.5 mx-2 rounded-lg cursor-pointer transition-all ${folder.id === selectedId ? 'bg-[#6366f1]/10 text-[#6366f1]' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
                                     onClick={() => {
                                         onSelect(folder.id);
                                         setIsOpen(false);
                                     }}
                                 >
-                                    <span className="option-name">{folder.name}</span>
-                                    {folder.id === selectedId && <Check size={14} className="check-icon" />}
+                                    <span className="text-sm font-medium">{folder.name}</span>
+                                    {folder.id === selectedId && <Check size={14} />}
                                 </div>
                             ))
                         ) : (
-                            <div className="no-options">No folders found</div>
+                            <div className="px-4 py-8 text-center text-xs text-slate-500 italic">No folders found</div>
                         )}
                     </div>
                 </div>
