@@ -456,10 +456,15 @@ import { redis } from "./server/middleware/rateLimiter.js"; // Reuse Redis conne
 // as it manages its own connections for blocking/non-blocking.
 const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
 
+const sharedConnectionConfig = {
+    url: redisUrl,
+    family: 0,
+    maxRetriesPerRequest: null,
+    enableReadyCheck: false
+};
+
 const analysisQueue = new Queue("analysis", {
-    connection: {
-        url: redisUrl
-    },
+    connection: sharedConnectionConfig,
     defaultJobOptions: {
         removeOnComplete: {
             count: 100, // Keep last 100 jobs to avoid race conditions with waitUntilFinished
@@ -481,7 +486,7 @@ console.log("[INIT] BullMQ Analysis Queue initialized.");
 // ── Reddit Sync Queue (BullMQ) ───────────────────────────────────
 
 const syncQueue = new Queue("reddit-sync", {
-    connection: { url: redisUrl },
+    connection: sharedConnectionConfig,
     defaultJobOptions: {
         removeOnComplete: { count: 50, age: 3600 },
         removeOnFail: { count: 100, age: 24 * 3600 },
@@ -491,7 +496,7 @@ const syncQueue = new Queue("reddit-sync", {
 });
 
 const granularAnalysisQueue = new Queue("granular-analysis", {
-    connection: { url: redisUrl },
+    connection: sharedConnectionConfig,
     defaultJobOptions: {
         removeOnComplete: { count: 100, age: 3600 },
         removeOnFail: { count: 100, age: 24 * 3600 },
@@ -543,13 +548,14 @@ const syncWorker = new Worker("reddit-sync", async (job) => {
         await incrementPendingSyncCount(userUid, folderId, -1);
     }
 }, {
-    connection: { url: redisUrl },
+    connection: sharedConnectionConfig,
     concurrency: 1, // STRICT rate limiting (1 thread at a time per worker instance)
     limiter: {
         max: 1,
         duration: 1000 // 1 per second
     },
-    drainDelay: 10000 // Only poll Redis every 10s if idle to save Upstash quota
+    drainDelay: 300, // 300 seconds (5 mins) instead of 10000 to match Upstash idle timeout
+    stalledInterval: 300000 // Check for stalled jobs every 5 mins instead of 30s to save Upstash quota
 });
 
 syncWorker.on('failed', (job, err) => {
@@ -675,9 +681,10 @@ const granularAnalysisWorker = new Worker("granular-analysis", async (job) => {
         }
     }
 }, {
-    connection: { url: redisUrl },
+    connection: sharedConnectionConfig,
     concurrency: 3, // Balanced for speed and API safety
-    drainDelay: 10000 // Save Upstash quota
+    drainDelay: 300, // Match Upstash idle timeout
+    stalledInterval: 300000 // Check for stalled jobs every 5 mins instead of 30s
 });
 
 // Worker Processor (Analysis)
@@ -754,11 +761,10 @@ const analysisWorker = new Worker("analysis", async (job) => {
         throw err;
     }
 }, {
-    connection: {
-        url: redisUrl
-    },
+    connection: sharedConnectionConfig,
     concurrency: 5, // Process 5 AI jobs concurrently
-    drainDelay: 10000 // Save Upstash quota
+    drainDelay: 300, // Match Upstash idle timeout
+    stalledInterval: 300000 // Check for stalled jobs every 5 mins instead of 30s
 });
 
 analysisWorker.on('completed', (job, returnvalue) => {
