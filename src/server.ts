@@ -458,7 +458,6 @@ const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
 
 const sharedConnectionConfig = {
     url: redisUrl,
-    family: 0,
     maxRetriesPerRequest: null,
     enableReadyCheck: false
 };
@@ -554,8 +553,8 @@ const syncWorker = new Worker("reddit-sync", async (job) => {
         max: 1,
         duration: 1000 // 1 per second
     },
-    drainDelay: 300, // 300 seconds (5 mins) instead of 10000 to match Upstash idle timeout
-    stalledInterval: 300000 // Check for stalled jobs every 5 mins instead of 30s to save Upstash quota
+    drainDelay: 5, // Back to default for optimal performance
+    stalledInterval: 30000 // Normal stalled job polling (30s)
 });
 
 syncWorker.on('failed', (job, err) => {
@@ -683,8 +682,8 @@ const granularAnalysisWorker = new Worker("granular-analysis", async (job) => {
 }, {
     connection: sharedConnectionConfig,
     concurrency: 3, // Balanced for speed and API safety
-    drainDelay: 300, // Match Upstash idle timeout
-    stalledInterval: 300000 // Check for stalled jobs every 5 mins instead of 30s
+    drainDelay: 5, // Optimal speed
+    stalledInterval: 30000 // Normal stalled job polling
 });
 
 // Worker Processor (Analysis)
@@ -763,8 +762,8 @@ const analysisWorker = new Worker("analysis", async (job) => {
 }, {
     connection: sharedConnectionConfig,
     concurrency: 5, // Process 5 AI jobs concurrently
-    drainDelay: 300, // Match Upstash idle timeout
-    stalledInterval: 300000 // Check for stalled jobs every 5 mins instead of 30s
+    drainDelay: 5, // Optimal speed
+    stalledInterval: 30000 // Normal stalled job polling
 });
 
 analysisWorker.on('completed', (job, returnvalue) => {
