@@ -28,7 +28,7 @@ export type PlatformFilter = 'all' | 'reddit' | 'hn';
 export type IntentFilter = 'frustration' | 'alternative' | 'high_engagement' | 'all';
 
 export const useDiscovery = () => {
-    const { getIdToken } = useAuth();
+    const { getIdToken, refreshPlan } = useAuth();
     const [results, setResults] = useState<DiscoveryResult[]>([]);
     const [allDiscoveredMap, setAllDiscoveredMap] = useState<Map<string, DiscoveryResult>>(new Map());
     const [loading, setLoading] = useState(false);
@@ -76,6 +76,8 @@ export const useDiscovery = () => {
             });
 
             setDiscoveryPlan(data.discoveryPlan);
+            // Sync usage credits in UI
+            refreshPlan();
         } catch (err: any) {
             console.error("Discovery error:", err);
             setStatus("Error: " + err.message);
@@ -134,6 +136,8 @@ export const useDiscovery = () => {
             });
 
             setDiscoveryPlan(data.discoveryPlan);
+            // Sync usage credits in UI
+            refreshPlan();
         } catch (err: any) {
             console.error("Idea Discovery error:", err);
             setStatus("Error: " + err.message);

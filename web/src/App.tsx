@@ -15,6 +15,7 @@ import { ReportsView } from "./components/ReportsView";
 import { SettingsView } from "./components/SettingsView";
 import { ResearchView } from "./components/ResearchView";
 import { DiscoveryLab } from "./components/discovery/LabDiscovery";
+import { UpgradeModal } from "./components/UpgradeModal";
 
 import { LoginView } from "./components/LoginView";
 
@@ -71,7 +72,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 }
 
 function AppContent() {
-  const { getIdToken, loading, user } = useAuth();
+  const { getIdToken, loading, user, isUpgradeModalOpen, closeUpgradeModal } = useAuth();
 
   // Wire up the token getter for API calls
   useEffect(() => {
@@ -181,6 +182,11 @@ function AppContent() {
         </main>
 
         {!user && <Footer />}
+
+        <UpgradeModal
+          isOpen={isUpgradeModalOpen}
+          onClose={closeUpgradeModal}
+        />
       </div>
     </div>
   );

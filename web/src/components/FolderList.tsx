@@ -56,6 +56,8 @@ const FolderCard: React.FC<FolderCardProps> = ({ folder, onClick }) => {
 export const FolderList: React.FC<{ onSelect: (folder: Folder) => void }> = ({ onSelect }) => {
     const { user } = useAuth();
     const { folders, loading, createFolder, error: contextError } = useFolders();
+    console.log("[FolderList] Render - loading:", loading, "folders:", folders.length);
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newName, setNewName] = useState('');
     const [newDesc, setNewDesc] = useState('');

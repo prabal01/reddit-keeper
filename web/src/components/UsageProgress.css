@@ -1,0 +1,85 @@
+.usage-progress-container {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 20px;
+    font-size: 0.8rem;
+}
+
+.usage-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.plan-badge {
+    background: rgba(59, 130, 246, 0.1);
+    color: #60a5fa;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+}
+
+.upgrade-link-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    color: #fbbf24;
+    text-decoration: underline;
+    font-weight: 500;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.upgrade-link-btn:hover {
+    opacity: 0.8;
+}
+
+.usage-items {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.usage-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.usage-info {
+    display: flex;
+    justify-content: space-between;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.usage-info .label {
+    font-weight: 500;
+}
+
+.usage-info .value {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.progress-track {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+.progress-bar.near-limit {
+    filter: saturate(1.5) brightness(1.2);
+    box-shadow: 0 0 8px currentColor;
+}

@@ -5,6 +5,7 @@ import {
     useState,
     useCallback,
     type ReactNode,
+    useMemo,
 } from "react";
 import {
     onAuthStateChanged,
@@ -13,7 +14,7 @@ import {
     type User,
 } from "firebase/auth";
 import { auth, googleProvider } from "../lib/firebase";
-import { API_BASE, type PlanConfig } from "../lib/api";
+import { API_BASE, type PlanConfig, type UserUsage } from "../lib/api";
 
 
 interface AuthUser {
@@ -27,6 +28,7 @@ interface AuthContextType {
     user: AuthUser | null;
     plan: "free" | "pro" | "past_due" | null;
     config: PlanConfig | null;
+    usage: UserUsage | null;
     loading: boolean;
     firebaseConfigured: boolean;
     signInWithGoogle: () => Promise<void>;
@@ -35,6 +37,9 @@ interface AuthContextType {
     getIdToken: () => Promise<string | null>;
     userStats: any | null;
     refreshStats: () => Promise<void>;
+    isUpgradeModalOpen: boolean;
+    openUpgradeModal: () => void;
+    closeUpgradeModal: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -43,18 +48,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<AuthUser | null>(null);
     const [plan, setPlan] = useState<"free" | "pro" | "past_due" | null>(null);
     const [config, setConfig] = useState<PlanConfig | null>(null);
+    const [usage, setUsage] = useState<UserUsage | null>(null);
     const [loading, setLoading] = useState(!!auth); // only loading if Firebase is configured
     const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
 
     const firebaseConfigured = !!auth;
 
     const [userStats, setUserStats] = useState<any | null>(null);
+    const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+
+    const openUpgradeModal = useCallback(() => setIsUpgradeModalOpen(true), []);
+    const closeUpgradeModal = useCallback(() => setIsUpgradeModalOpen(false), []);
 
     // Fetch plan from server
     const fetchPlan = useCallback(async (fbUser: User | null) => {
         if (!fbUser) {
             setPlan(null);
             setConfig(null);
+            setUsage(null);
             setUserStats(null);
             return;
         }
@@ -68,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const data = await res.json();
                 setPlan(data.plan);
                 setConfig(data.config);
+                setUsage(data.usage);
             }
         } catch (err) {
             console.error("Failed to fetch plan:", err);
@@ -113,6 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setUser(null);
                 setPlan(null);
                 setConfig(null);
+                setUsage(null);
                 setUserStats(null);
             }
             setLoading(false);
@@ -182,6 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setPlan(null);
         setConfig(null);
+        setUsage(null);
         setUserStats(null);
     }, []);
 
@@ -198,22 +212,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return firebaseUser.getIdToken(false); // Changed from true to false to stop forcing refresh
     }, [firebaseUser]);
 
+    const contextValue = useMemo(() => ({
+        user,
+        plan,
+        config,
+        usage,
+        loading,
+        firebaseConfigured,
+        signInWithGoogle,
+        signOut: signOutUser,
+        refreshPlan,
+        getIdToken,
+        userStats,
+        refreshStats,
+        isUpgradeModalOpen,
+        openUpgradeModal,
+        closeUpgradeModal
+    }), [
+        user, plan, config, usage, loading, firebaseConfigured,
+        signInWithGoogle, signOutUser, refreshPlan, getIdToken,
+        userStats, refreshStats, isUpgradeModalOpen, openUpgradeModal, closeUpgradeModal
+    ]);
+
     return (
-        <AuthContext.Provider
-            value={{
-                user,
-                plan,
-                config,
-                loading,
-                firebaseConfigured,
-                signInWithGoogle,
-                signOut: signOutUser,
-                refreshPlan,
-                getIdToken,
-                userStats,
-                refreshStats
-            }}
-        >
+        <AuthContext.Provider value={contextValue}>
             {children}
         </AuthContext.Provider>
     );

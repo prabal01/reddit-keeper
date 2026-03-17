@@ -17,6 +17,16 @@ export interface PlanConfig {
     exportHistory: boolean;
     exportHistoryDays: number;
     priorityQueue: boolean;
+    discoveryLimit: number;
+    analysisLimit: number;
+    savedThreadLimit: number;
+    commentDepth: number;
+}
+
+export interface UserUsage {
+    discoveryCount: number;
+    analysisCount: number;
+    savedThreadCount: number;
 }
 
 // ── Auth header helper ─────────────────────────────────────────────
@@ -86,42 +96,6 @@ export async function fetchThread(options: FetchOptions): Promise<FetchResult> {
     return response.json();
 }
 
-// ── Create Checkout Session ────────────────────────────────────────
-
-export async function createCheckoutSession(interval: "month" | "year" = "month"): Promise<string> {
-    const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE}/create-checkout-session`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ interval }),
-    });
-
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: "Failed" }));
-        throw new Error(error.error || "Failed to create checkout session");
-    }
-
-    const data = await response.json();
-    return data.url;
-}
-
-// ── Create Portal Session ──────────────────────────────────────────
-
-export async function createPortalSession(): Promise<string> {
-    const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE}/create-portal-session`, {
-        method: "POST",
-        headers,
-    });
-
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: "Failed" }));
-        throw new Error(error.error || "Failed to open billing portal");
-    }
-
-    const data = await response.json();
-    return data.url;
-}
 
 // ── Fetch Folder Analysis ──────────────────────────────────────────
 
@@ -167,6 +141,21 @@ export async function aggregateInsights(folderId: string): Promise<any> {
     if (!response.ok) {
         const error = await response.json().catch(() => ({}));
         throw new Error(error.error || `Failed to aggregate insights: ${response.status}`);
+    }
+
+    return response.json();
+}
+
+export async function createRazorpayOrder(): Promise<any> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE}/payments/create-order`, {
+        method: "POST",
+        headers,
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || "Failed to create payment order");
     }
 
     return response.json();

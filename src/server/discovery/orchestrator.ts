@@ -13,7 +13,7 @@ export class DiscoveryOrchestrator {
     private googleService = new GoogleDiscoveryService();
     private brain = new DiscoveryBrain();
 
-    async search(query: string, platforms: ('reddit' | 'hn')[] | 'all' = 'all', useAiBrain = false, skipCache = false): Promise<DiscoveryResponse> {
+    async search(query: string, platforms: ('reddit' | 'hn')[] | 'all' = 'all', useAiBrain = false, skipCache = false, plan: 'free' | 'pro' = 'free'): Promise<DiscoveryResponse> {
         logger.info({ action: 'SEARCH_START', searchTerm: query, platforms, useAiBrain, skipCache }, `Searching for "${query}" (AI Brain: ${useAiBrain}, SkipCache: ${skipCache})`);
 
         const platformList: ('reddit' | 'hn')[] = platforms === 'all' ? ['reddit', 'hn'] : platforms;
@@ -80,7 +80,7 @@ export class DiscoveryOrchestrator {
         };
     }
 
-    async ideaDiscovery(idea: string, communities?: string[], competitors?: string[], skipCache = false): Promise<DiscoveryResponse> {
+    async ideaDiscovery(idea: string, communities?: string[], competitors?: string[], skipCache = false, plan: 'free' | 'pro' = 'free'): Promise<DiscoveryResponse> {
         const cacheKey = `discovery:idea:${Buffer.from(idea.trim().toLowerCase()).toString('base64')}:v6`;
 
         if (!skipCache) {
@@ -95,16 +95,27 @@ export class DiscoveryOrchestrator {
             }
         }
 
-        logger.info({ action: 'IDEA_DISCOVERY_START_SERPER_PRIMARY', idea, skipCache }, `Master Query phase starting via Serper...`);
+        logger.info({ action: 'IDEA_DISCOVERY_START_SERPER_PRIMARY', idea, skipCache, plan }, `Master Query phase starting via Serper...`);
         const { expandIdeaToQueries } = await import('../ai.js');
-        const { intent, queries } = await expandIdeaToQueries(idea, communities, competitors);
-        const masterQuery = queries[0];
-        logger.info({ masterQuery }, `Generated Master Query: ${masterQuery}`);
 
-        // 2. Primary Phase (JustSerp API)
-        const serpResp = await this.justSerpBaseline(masterQuery);
-        let allResults = [...serpResp.results];
-        let scannedCount = serpResp.discoveryPlan.scannedCount;
+        // Dynamic Query Density based on Plan
+        const queryCount = plan === 'pro' ? 3 : 1;
+        const { intent, queries } = await expandIdeaToQueries(idea, communities, competitors, queryCount);
+
+        logger.info({ queries }, `Generated ${queries.length} queries for ${plan} plan`);
+
+        // 2. Primary Phase (JustSerp API) - Parallel for Pro
+        const serpResponses = await Promise.all(
+            queries.map(q => this.justSerpBaseline(q))
+        );
+
+        let allResults: DiscoveryResult[] = [];
+        let scannedCount = 0;
+
+        serpResponses.forEach(resp => {
+            allResults = [...allResults, ...resp.results];
+            scannedCount += resp.discoveryPlan.scannedCount;
+        });
 
         // 3. Fallback Enhancement: If signal is too low, expand search to direct platform APIs
         if (allResults.length < 3) {

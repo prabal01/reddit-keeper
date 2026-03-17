@@ -18,6 +18,11 @@ declare global {
                 email: string;
                 plan: UserDoc["plan"];
                 config: PlanConfig;
+                usage: {
+                    discoveryCount: number;
+                    analysisCount: number;
+                    savedThreadCount: number;
+                };
             } | null;
         }
     }
@@ -54,6 +59,11 @@ export async function authMiddleware(
             email: "extension-dev@local.dev",
             plan: "pro",
             config: await getPlanConfig("pro"),
+            usage: {
+                discoveryCount: 0,
+                analysisCount: 0,
+                savedThreadCount: 0
+            }
         };
         return finish();
     }
@@ -84,6 +94,11 @@ export async function authMiddleware(
             email: user.email,
             plan: user.plan,
             config,
+            usage: {
+                discoveryCount: user.discoveryCount || 0,
+                analysisCount: user.analysisCount || 0,
+                savedThreadCount: user.savedThreadCount || 0
+            }
         };
     } catch (err) {
         // Invalid / expired token → treat as unauthenticated

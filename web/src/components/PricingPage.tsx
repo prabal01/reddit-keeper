@@ -1,46 +1,21 @@
-import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { createCheckoutSession } from "../lib/api";
 
 const FEATURES = [
-    { name: "AI Research Reports", free: "5 (Teaser)", pro: "50 / month", highlight: true },
-    { name: "AI Research Reports", free: "5 / month", pro: "Unlimited", highlight: true },
-    { name: "Pain Points & Themes", free: "Top 3", pro: "✅ Unlimited", highlight: true },
-    { name: "Commercial Intent", free: "Locked 🔒", pro: "✅", highlight: true },
-    { name: "Strength Analysis", free: "Locked 🔒", pro: "✅", highlight: true },
-    { name: "Commercial Intent & Leads", free: "Locked 🔒", pro: "✅", highlight: true },
-    { name: "Engagement Strategy", free: "Locked 🔒", pro: "✅" },
+    { name: "Deep-Scan Discovery", free: "Standard (1x)", pro: "3x Resolution", highlight: true },
+    { name: "Research Discoveries", free: "3 total", pro: "30 / month", highlight: true },
+    { name: "Full Intelligence Reports", free: "1 (Blurred)", pro: "10 Full Reports", highlight: true },
+    { name: "Pain Points & Triggers", free: "Top 2 shown", pro: "✅ Unrestricted", highlight: true },
+    { name: "Ranked Build Roadmap", free: "Top 2 shown", pro: "✅ Unrestricted", highlight: true },
     { name: "Max Comments / Thread", free: "50", pro: "5,000" },
-    { name: "Saved Threads", free: "Up to 30", pro: "Unlimited" },
-    { name: "Research Folders", free: "1", pro: "Unlimited" },
+    { name: "Saved Threads", free: "Up to 5", pro: "Up to 500" },
+    { name: "Export (PDF/JSON/MD)", free: "❌", pro: "✅" },
 ];
 
 export function PricingPage() {
-    const { user, plan, signInWithGoogle } = useAuth();
-    const [upgrading, setUpgrading] = useState(false);
-    const [interval, setInterval] = useState<"month" | "year">("year");
-    const [error, setError] = useState<string | null>(null);
+    const { plan, openUpgradeModal } = useAuth();
 
     const handleUpgrade = async () => {
-        setError(null);
-
-        if (!user) {
-            try {
-                await signInWithGoogle();
-            } catch {
-                return;
-            }
-        }
-
-        setUpgrading(true);
-        try {
-            const url = await createCheckoutSession(interval);
-            window.location.href = url;
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setUpgrading(false);
-        }
+        openUpgradeModal();
     };
 
     const isPro = plan === "pro";
@@ -76,31 +51,19 @@ export function PricingPage() {
                     </button>
                 </div>
 
-                {/* Pro Plan */}
-                <div className="pricing-card pricing-card-pro" aria-label="Pro plan">
-                    <div className="pricing-card-badge">Most Popular</div>
+                {/* Founding Access Plan */}
+                <div className="pricing-card pricing-card-pro" aria-label="Founding Access">
+                    <div className="pricing-card-badge">Founding Access</div>
                     <div className="pricing-card-header">
-                        <span className="plan-emoji" aria-hidden="true">💎</span>
-                        <h3 className="plan-name">Pro</h3>
-
-                        <div className="card-toggle-row">
-                            <span className={`toggle-label ${interval === "month" ? "active" : ""}`}>Monthly</span>
-                            <button
-                                className={`pricing-toggle ${interval}`}
-                                onClick={() => setInterval(interval === "month" ? "year" : "month")}
-                                aria-label="Toggle billing"
-                            >
-                                <div className="toggle-handle" />
-                            </button>
-                            <span className={`toggle-label ${interval === "year" ? "active" : ""}`}>Yearly</span>
-                        </div>
+                        <span className="plan-emoji" aria-hidden="true">🚀</span>
+                        <h3 className="plan-name">Lifetime Founding</h3>
 
                         <div className="plan-price">
-                            <span className="price-amount">${interval === "month" ? "9" : "7.50"}</span>
-                            <span className="price-period">/ month</span>
+                            <span className="price-amount">$19</span>
+                            <span className="price-period">/ one-time</span>
                         </div>
                         <div className="billing-msg">
-                            {interval === "month" ? "Billed monthly" : "Billed $90 yearly"}
+                            Early access lifetime pricing. Pay once, own forever.
                         </div>
                     </div>
                     <ul className="plan-features" aria-label="Pro plan features">
@@ -116,24 +79,17 @@ export function PricingPage() {
                     </ul>
 
                     {isPro ? (
-                        <button className="plan-cta pro-cta active" disabled aria-label="Currently on Pro plan">
-                            ✓ Active
+                        <button className="plan-cta pro-cta active" disabled aria-label="Currently on Founding plan">
+                            ✓ Founding Member
                         </button>
                     ) : (
                         <button
                             className="plan-cta pro-cta"
                             onClick={handleUpgrade}
-                            disabled={upgrading}
-                            aria-label={`Upgrade to Pro for ${interval === "month" ? "$9/mo" : "$7.50/mo"}`}
+                            aria-label="Unlock Founding Access"
                         >
-                            {upgrading ? "Redirecting..." : "Upgrade to Pro →"}
+                            Unlock Founding Access →
                         </button>
-                    )}
-
-                    {error && (
-                        <p className="pricing-error" role="alert">
-                            {error}
-                        </p>
                     )}
                 </div>
             </div>

@@ -112,6 +112,10 @@ export interface PlanConfig {
     exportHistory: boolean;
     exportHistoryDays: number;
     priorityQueue: boolean;
+    discoveryLimit: number;      // 30 scans/search for Pro, 3 for Free
+    analysisLimit: number;       // 10 reports for Pro, 1 for Free
+    savedThreadLimit: number;    // 500 for Pro, 5 for Free
+    commentDepth: number;        // 500 for Pro, 50 for Free
 }
 
 export interface UserDoc {
@@ -123,6 +127,9 @@ export interface UserDoc {
     stripeSubscriptionId: string | null;
     createdAt: string;
     fetchCount: number;
+    discoveryCount: number;      // Track discovery searches
+    analysisCount: number;       // Track AI reports generated
+    savedThreadCount: number;    // Track total saved threads across folders
 }
 
 export interface Folder {
@@ -198,6 +205,10 @@ const DEFAULT_FREE_CONFIG: PlanConfig = {
     exportHistory: false,
     exportHistoryDays: 0,
     priorityQueue: false,
+    discoveryLimit: 3,
+    analysisLimit: 1,
+    savedThreadLimit: 5,
+    commentDepth: 50,
 };
 
 const DEFAULT_PRO_CONFIG: PlanConfig = {
@@ -210,6 +221,10 @@ const DEFAULT_PRO_CONFIG: PlanConfig = {
     exportHistory: true,
     exportHistoryDays: 30,
     priorityQueue: true,
+    discoveryLimit: 30,
+    analysisLimit: 10,
+    savedThreadLimit: 500,
+    commentDepth: 500,
 };
 
 // ── Plan config cache (5-min TTL) ──────────────────────────────────
@@ -230,7 +245,8 @@ export async function getPlanConfig(plan: string): Promise<PlanConfig> {
     try {
         const doc = await db.collection("plan_configs").doc(plan).get();
         if (doc.exists) {
-            const config = doc.data() as PlanConfig;
+            const defaults = plan === "pro" ? DEFAULT_PRO_CONFIG : DEFAULT_FREE_CONFIG;
+            const config = { ...defaults, ...doc.data() } as PlanConfig;
             planConfigCache.set(plan, { config, cachedAt: Date.now() });
             return config;
         }
@@ -330,6 +346,9 @@ export async function getOrCreateUser(
         stripeSubscriptionId: null,
         createdAt: new Date().toISOString(),
         fetchCount: 0,
+        discoveryCount: 0,
+        analysisCount: 0,
+        savedThreadCount: 0,
     };
 
     await ref.set(newUser);
@@ -373,6 +392,38 @@ export async function incrementFetchCount(uid: string): Promise<void> {
         .collection("users")
         .doc(uid)
         .update({ fetchCount: FieldValue.increment(1) });
+}
+
+export async function incrementDiscoveryCount(uid: string): Promise<void> {
+    if (!db) return;
+    const { FieldValue } = await import("firebase-admin/firestore");
+    await db.collection("users").doc(uid).update({
+        discoveryCount: FieldValue.increment(1)
+    });
+}
+
+export async function incrementAnalysisCount(uid: string): Promise<void> {
+    if (!db) return;
+    const { FieldValue } = await import("firebase-admin/firestore");
+    await db.collection("users").doc(uid).update({
+        analysisCount: FieldValue.increment(1)
+    });
+}
+
+export async function incrementSavedThreadCount(uid: string): Promise<void> {
+    if (!db) return;
+    const { FieldValue } = await import("firebase-admin/firestore");
+    await db.collection("users").doc(uid).update({
+        savedThreadCount: FieldValue.increment(1)
+    });
+}
+
+export async function decrementSavedThreadCount(uid: string): Promise<void> {
+    if (!db) return;
+    const { FieldValue } = await import("firebase-admin/firestore");
+    await db.collection("users").doc(uid).update({
+        savedThreadCount: FieldValue.increment(-1)
+    });
 }
 
 // ── Find user by Stripe Customer ID ────────────────────────────────
@@ -445,8 +496,16 @@ export async function deleteFolder(uid: string, folderId: string): Promise<void>
             .get();
 
         const batch = db.batch();
+        const threadCount = threads.size;
         threads.docs.forEach((d: any) => batch.delete(d.ref));
         batch.delete(ref);
+
+        // Decrement global savedThreadCount
+        const { FieldValue } = await import("firebase-admin/firestore");
+        batch.update(db.collection("users").doc(uid), {
+            savedThreadCount: FieldValue.increment(-threadCount)
+        });
+
         await batch.commit();
     }
 }
@@ -651,6 +710,10 @@ export async function saveThreadToFolder(uid: string, folderId: string, threadDa
             threadCount: FieldValue.increment(1),
             totalAnalysisCount: FieldValue.increment(1),
             pendingAnalysisCount: FieldValue.increment(1)
+        });
+        // Increment global savedThreadCount
+        await db.collection("users").doc(uid).update({
+            savedThreadCount: FieldValue.increment(1)
         });
     }
 }
@@ -950,6 +1013,14 @@ export async function updateStats(uid: string, updates: Partial<UserStats>): Pro
         }
 
         await ref.set(dbUpdates, { merge: true });
+
+        // If a report was generated, increment the global analysisCount
+        if (updates.reportsGenerated) {
+            await db.collection("users").doc(uid).update({
+                analysisCount: FieldValue.increment(updates.reportsGenerated)
+            });
+        }
+
         console.log(`[FIRESTORE] Updated stats for ${uid}:`, updates);
     } catch (err) {
         console.error(`[FIRESTORE] Failed to update stats for ${uid}:`, err);

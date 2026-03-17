@@ -14,8 +14,9 @@ interface LabResult {
 }
 
 export const DiscoveryLab: React.FC = () => {
-    const { getIdToken } = useAuth();
+    const { getIdToken, refreshPlan } = useAuth();
     const [competitor, setCompetitor] = useState('');
+
     const [loading, setLoading] = useState(false);
     const [skipCache, setSkipCache] = useState(true);
     const [baselineResults, setBaselineResults] = useState<LabResult[]>([]);
@@ -59,6 +60,7 @@ export const DiscoveryLab: React.FC = () => {
 
             setBaselineResults(data.baseline || []);
             setAiResults(data.enhanced || []);
+            refreshPlan();
 
             const aiOnlyCount = (data.enhanced || []).filter((r: any) =>
                 !(data.baseline || []).some((b: any) => b.url === r.url)

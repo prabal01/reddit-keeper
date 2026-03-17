@@ -483,3 +483,42 @@ h2.strategic-title {
     margin-top: 2px;
     flex-shrink: 0;
 }
+
+/* --- Blurred / Restricted View Styles --- */
+.blurred-row {
+    background: rgba(15, 23, 42, 0.2) !important;
+}
+
+.blurred-cell {
+    padding: 24px !important;
+    text-align: center;
+}
+
+.lock-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.blurred-item {
+    display: flex;
+    align-items: center;
+    justify-content: center !important;
+    gap: 8px;
+    padding: 16px !important;
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 0.8rem;
+    font-weight: 500;
+    font-style: italic;
+    background: rgba(15, 23, 42, 0.1);
+    filter: blur(0.5px);
+}
+
+.blurred-item span,
+.lock-content span {
+    letter-spacing: 0.02em;
+}

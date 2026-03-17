@@ -1,7 +1,8 @@
 import React from 'react';
 import './AnalysisResults.css';
-import { Clock, FileDown, Lightbulb, Bug, Fingerprint, CheckCircle2, Target, Download, FileText } from 'lucide-react';
+import { Clock, FileDown, Lightbulb, Bug, Fingerprint, CheckCircle2, Target, Download, FileText, Lock } from 'lucide-react';
 import { exportReportToPDF } from '../lib/pdfExport';
+import { useAuth } from '../contexts/AuthContext';
 
 interface RankedBuildPriority {
     rank: number;
@@ -34,6 +35,9 @@ interface AnalysisData {
 }
 
 export const AnalysisResults: React.FC<{ data: AnalysisData; onCitationClick?: (id: string) => void }> = ({ data }) => {
+    const { plan, openUpgradeModal } = useAuth();
+    const isPro = plan === 'pro';
+
     const hasDashboardData = !!(data.ranked_build_priorities?.length || data.high_intensity_pain_points?.length || data.top_switch_triggers?.length);
 
     if (!hasDashboardData) {
@@ -166,6 +170,18 @@ export const AnalysisResults: React.FC<{ data: AnalysisData; onCitationClick?: (
                             </thead>
                             <tbody>
                                 {data.ranked_build_priorities.map((bp, i) => {
+                                    if (!isPro && i >= 2) {
+                                        return (
+                                            <tr key={i} className="blurred-row" onClick={openUpgradeModal} style={{ cursor: 'pointer' }}>
+                                                <td className="col-rank">#?</td>
+                                                <td colSpan={3} className="blurred-cell">
+                                                    <div className="lock-content">
+                                                        <Lock size={14} /> <span>Upgrade to unlock priority #{i + 1}</span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    }
                                     const pct = Math.min(100, ((bp.evidence_mentions || 0) / 15) * 100);
                                     return (
                                         <tr key={i}>
@@ -203,19 +219,28 @@ export const AnalysisResults: React.FC<{ data: AnalysisData; onCitationClick?: (
                             </div>
                         </div>
                         <div className="dense-list-container">
-                            {data.high_intensity_pain_points.map((pp, i) => (
-                                <div key={i} className="dense-list-item" style={{ flexDirection: 'column', gap: '6px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                                        <div className="dense-list-item-icon" style={{ color: '#ef4444' }}>•</div>
-                                        <div style={{ fontWeight: 600 }}>{typeof pp === 'string' ? pp : pp.title}</div>
-                                    </div>
-                                    {typeof pp !== 'string' && pp.context_quote && (
-                                        <div style={{ paddingLeft: '20px', fontSize: '0.85rem', color: 'var(--text-tertiary)', fontStyle: 'italic', lineHeight: '1.4' }}>
-                                            "{pp.context_quote}"
+                            {data.high_intensity_pain_points.map((pp, i) => {
+                                if (!isPro && i >= 2) {
+                                    return (
+                                        <div key={i} className="dense-list-item blurred-item" onClick={openUpgradeModal} style={{ cursor: 'pointer' }}>
+                                            <Lock size={12} /> <span>Upgrade to unlock pain point #{i + 1}</span>
                                         </div>
-                                    )}
-                                </div>
-                            ))}
+                                    );
+                                }
+                                return (
+                                    <div key={i} className="dense-list-item" style={{ flexDirection: 'column', gap: '6px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                                            <div className="dense-list-item-icon" style={{ color: '#ef4444' }}>•</div>
+                                            <div style={{ fontWeight: 600 }}>{typeof pp === 'string' ? pp : pp.title}</div>
+                                        </div>
+                                        {typeof pp !== 'string' && pp.context_quote && (
+                                            <div style={{ paddingLeft: '20px', fontSize: '0.85rem', color: 'var(--text-tertiary)', fontStyle: 'italic', lineHeight: '1.4' }}>
+                                                "{pp.context_quote}"
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 )}
@@ -229,19 +254,28 @@ export const AnalysisResults: React.FC<{ data: AnalysisData; onCitationClick?: (
                             </div>
                         </div>
                         <div className="dense-list-container">
-                            {data.top_switch_triggers.map((st, i) => (
-                                <div key={i} className="dense-list-item" style={{ flexDirection: 'column', gap: '6px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                                        <div className="dense-list-item-icon" style={{ color: '#6366f1' }}>•</div>
-                                        <div style={{ fontWeight: 600 }}>{typeof st === 'string' ? st : st.title}</div>
-                                    </div>
-                                    {typeof st !== 'string' && st.context_quote && (
-                                        <div style={{ paddingLeft: '20px', fontSize: '0.85rem', color: 'var(--text-tertiary)', fontStyle: 'italic', lineHeight: '1.4' }}>
-                                            "{st.context_quote}"
+                            {data.top_switch_triggers.map((st, i) => {
+                                if (!isPro && i >= 2) {
+                                    return (
+                                        <div key={i} className="dense-list-item blurred-item" onClick={openUpgradeModal} style={{ cursor: 'pointer' }}>
+                                            <Lock size={12} /> <span>Upgrade to unlock switch trigger #{i + 1}</span>
                                         </div>
-                                    )}
-                                </div>
-                            ))}
+                                    );
+                                }
+                                return (
+                                    <div key={i} className="dense-list-item" style={{ flexDirection: 'column', gap: '6px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                                            <div className="dense-list-item-icon" style={{ color: '#6366f1' }}>•</div>
+                                            <div style={{ fontWeight: 600 }}>{typeof st === 'string' ? st : st.title}</div>
+                                        </div>
+                                        {typeof st !== 'string' && st.context_quote && (
+                                            <div style={{ paddingLeft: '20px', fontSize: '0.85rem', color: 'var(--text-tertiary)', fontStyle: 'italic', lineHeight: '1.4' }}>
+                                                "{st.context_quote}"
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 )}
@@ -255,19 +289,28 @@ export const AnalysisResults: React.FC<{ data: AnalysisData; onCitationClick?: (
                             </div>
                         </div>
                         <div className="dense-list-container">
-                            {data.top_desired_outcomes.map((o, i) => (
-                                <div key={i} className="dense-list-item" style={{ flexDirection: 'column', gap: '6px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                                        <CheckCircle2 size={16} color="#10b981" className="dense-list-item-icon" />
-                                        <div style={{ fontWeight: 600 }}>{typeof o === 'string' ? o : o.title}</div>
-                                    </div>
-                                    {typeof o !== 'string' && o.context_quote && (
-                                        <div style={{ paddingLeft: '24px', fontSize: '0.85rem', color: 'var(--text-tertiary)', fontStyle: 'italic', lineHeight: '1.4' }}>
-                                            "{o.context_quote}"
+                            {data.top_desired_outcomes.map((o, i) => {
+                                if (!isPro && i >= 2) {
+                                    return (
+                                        <div key={i} className="dense-list-item blurred-item" onClick={openUpgradeModal} style={{ cursor: 'pointer' }}>
+                                            <Lock size={12} /> <span>Upgrade to unlock outcome #{i + 1}</span>
                                         </div>
-                                    )}
-                                </div>
-                            ))}
+                                    );
+                                }
+                                return (
+                                    <div key={i} className="dense-list-item" style={{ flexDirection: 'column', gap: '6px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                                            <CheckCircle2 size={16} color="#10b981" className="dense-list-item-icon" />
+                                            <div style={{ fontWeight: 600 }}>{typeof o === 'string' ? o : o.title}</div>
+                                        </div>
+                                        {typeof o !== 'string' && o.context_quote && (
+                                            <div style={{ paddingLeft: '24px', fontSize: '0.85rem', color: 'var(--text-tertiary)', fontStyle: 'italic', lineHeight: '1.4' }}>
+                                                "{o.context_quote}"
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 )}

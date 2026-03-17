@@ -14,13 +14,15 @@ import {
     getFirebaseStatus,
     getAdminAuth,
     incrementFetchCount,
+    incrementDiscoveryCount,
     getPlanConfig,
     logFetchEvent,
     SavedThread
 } from "./server/firestore.js";
 import { authMiddleware, getEffectiveConfig } from "./server/middleware/auth.js";
+import { usageGuard } from "./server/middleware/usageGuard.js";
 import { rateLimiterMiddleware } from "./server/middleware/rateLimiter.js";
-import { initPayments, createCheckoutUrl } from "./server/stripe.js";
+import { createFoundingOrder, verifySignature } from "./server/payments/razorpay.js";
 import {
     getFolders,
     getFolder,
@@ -63,7 +65,6 @@ try {
 
 try {
     console.log("[INIT] Initializing Payments...");
-    initPayments();
     console.log("[INIT] Payments initialization complete.");
 } catch (err: any) {
     console.error("[INIT] error during Payments init:", err);
@@ -166,6 +167,7 @@ app.get("/api/user/plan", async (req: express.Request, res: express.Response) =>
             plan: req.user.plan,
             authenticated: true,
             config: req.user.config,
+            usage: req.user.usage,
         });
     } catch (err: any) {
         console.error("GET /api/user/plan - Fatal Error:", err);
@@ -175,23 +177,49 @@ app.get("/api/user/plan", async (req: express.Request, res: express.Response) =>
 
 // ── Upgrade (stub — no payment provider yet) ───────────────────────
 
-app.post("/api/create-checkout-session", async (req: express.Request, res: express.Response) => {
+app.post("/api/payments/create-order", authMiddleware, async (req: express.Request, res: express.Response) => {
     if (!req.user) {
         res.status(401).json({ error: "Please sign in to upgrade." });
         return;
     }
 
     try {
-        const { interval } = req.body;
-        console.log(`[Checkout] Creating session for user ${req.user.uid} (Interval: ${interval || 'month'})`);
-        const url = await createCheckoutUrl(req.user.uid, req.user.email);
-        res.json({ url });
+        const order = await createFoundingOrder(req.user.uid);
+        res.json(order);
     } catch (err: any) {
-        res.status(503).json({
-            error: err.message,
-            hint: "Payment provider not configured. Set plan manually in Firestore.",
-        });
+        console.error("[Razorpay] Create Order Error:", err);
+        res.status(500).json({ error: "Failed to create payment order." });
     }
+});
+
+app.post("/api/payments/webhook", express.json(), async (req: express.Request, res: express.Response) => {
+    const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    const signature = req.headers["x-razorpay-signature"] as string;
+
+    if (secret && signature) {
+        const isValid = verifySignature(JSON.stringify(req.body), signature, secret);
+        if (!isValid) {
+            console.error("[Razorpay] Invalid Webhook Signature");
+            res.status(400).send("Invalid signature");
+            return;
+        }
+    }
+
+    const event = req.body.event;
+    console.log(`[Razorpay] Webhook received: ${event}`);
+
+    if (event === "order.paid") {
+        const { notes } = req.body.payload.order.entity;
+        const userId = notes?.userId;
+
+        if (userId) {
+            console.log(`[Razorpay] Upgrading user ${userId} to Founding Access`);
+            const { updateUserPlan } = await import("./server/firestore.js");
+            await updateUserPlan(userId, "pro");
+        }
+    }
+
+    res.json({ status: "ok" });
 });
 
 // ── Folder Routes ──────────────────────────────────────────────────
@@ -788,7 +816,7 @@ app.post("/api/folders/:id/status", async (req: express.Request, res: express.Re
     }
 });
 
-app.post("/api/folders/:id/analyze", async (req: express.Request, res: express.Response) => {
+app.post("/api/folders/:id/analyze", authMiddleware, usageGuard('ANALYSIS'), async (req: express.Request, res: express.Response) => {
     if (!req.user) {
         res.status(401).json({ error: "Unauthorized" });
         return;
@@ -919,8 +947,10 @@ app.post("/api/folders/:id/analyze", async (req: express.Request, res: express.R
             }
         };
 
-        // 5. Save the final report
         await firestore.saveAnalysis(req.user.uid, folderId, finalReport, "gemini-2.0-flash", synthesisResult.usage);
+
+        // Increment usage count
+        await firestore.incrementAnalysisCount(req.user.uid);
 
         res.json({
             success: true,
@@ -1063,7 +1093,7 @@ app.get("/api/folders/:id/analysis", async (req: express.Request, res: express.R
 
 import { saveExtractedData, listExtractions } from "./server/firestore.js";
 
-app.post("/api/extractions", async (req: express.Request, res: express.Response) => {
+app.post("/api/extractions", authMiddleware, usageGuard('SAVED_THREADS'), async (req: express.Request, res: express.Response) => {
     if (!req.user) {
         res.status(401).json({ error: "Unauthorized" });
         return;
@@ -1186,7 +1216,7 @@ app.post("/api/extractions", async (req: express.Request, res: express.Response)
     }
 });
 
-app.post("/api/discovery/compare", authMiddleware, async (req: express.Request, res: express.Response) => {
+app.post("/api/discovery/compare", authMiddleware, usageGuard('DISCOVERY'), async (req: express.Request, res: express.Response) => {
     if (!req.user) {
         return res.status(401).json({ error: "Authentication required for Discovery Lab" });
     }
@@ -1202,6 +1232,9 @@ app.post("/api/discovery/compare", authMiddleware, async (req: express.Request, 
         // Run AI-Brain (Always skip cache in Lab for testing)
         const enhanced = await discoveryOrchestrator.search(query, 'all', true, true);
 
+        // Increment usage count (counts as 1 discovery)
+        await incrementDiscoveryCount(req.user.uid);
+
         res.json({
             baseline: baseline.results,
             enhanced: enhanced.results
@@ -1212,7 +1245,7 @@ app.post("/api/discovery/compare", authMiddleware, async (req: express.Request, 
     }
 });
 
-app.post("/api/discovery/search", authMiddleware, async (req: express.Request, res: express.Response) => {
+app.post("/api/discovery/search", authMiddleware, usageGuard('DISCOVERY'), async (req: express.Request, res: express.Response) => {
     if (!req.user) {
         return res.status(401).json({ error: "Authentication required for Discovery Search" });
     }
@@ -1225,7 +1258,10 @@ app.post("/api/discovery/search", authMiddleware, async (req: express.Request, r
         console.log(`[Discovery] Starting search for: ${query} (Platform: ${platform})`);
 
         const platforms: ('reddit' | 'hn')[] | 'all' = platform === 'all' ? 'all' : [platform as 'reddit' | 'hn'];
-        const { results, discoveryPlan } = await discoveryOrchestrator.search(query, platforms);
+        const { results, discoveryPlan } = await discoveryOrchestrator.search(query, platforms, false, false, req.user.plan === 'past_due' ? 'free' : req.user.plan);
+
+        // Increment usage count for authorized user
+        await incrementDiscoveryCount(req.user.uid);
 
         res.json({ results, discoveryPlan });
     } catch (err: any) {
@@ -1234,7 +1270,7 @@ app.post("/api/discovery/search", authMiddleware, async (req: express.Request, r
     }
 });
 
-app.post("/api/discovery/idea", authMiddleware, async (req: express.Request, res: express.Response) => {
+app.post("/api/discovery/idea", authMiddleware, usageGuard('DISCOVERY'), async (req: express.Request, res: express.Response) => {
     if (!req.user) {
         return res.status(401).json({ error: "Authentication required for Idea Discovery" });
     }
@@ -1245,7 +1281,11 @@ app.post("/api/discovery/idea", authMiddleware, async (req: express.Request, res
 
     try {
         console.log(`[Discovery] Starting Idea Discovery for: ${idea}`);
-        const { results, discoveryPlan } = await discoveryOrchestrator.ideaDiscovery(idea, communities, skipCache);
+        const { results, discoveryPlan } = await discoveryOrchestrator.ideaDiscovery(idea, communities, competitors, skipCache, req.user.plan === 'past_due' ? 'free' : req.user.plan);
+
+        // Increment usage count for authorized user
+        await incrementDiscoveryCount(req.user.uid);
+
         res.json({ results, discoveryPlan });
     } catch (err: any) {
         console.error(`[Discovery] Idea Search error:`, err);

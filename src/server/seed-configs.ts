@@ -24,10 +24,14 @@ async function seed() {
         exportHistory: false,
         exportHistoryDays: 0,
         priorityQueue: false,
+        discoveryLimit: 3,
+        analysisLimit: 1,
+        savedThreadLimit: 5,
+        commentDepth: 50,
     };
 
     const proConfig = {
-        commentLimit: -1,
+        commentLimit: 5000,
         rateLimit: 30,
         rateLimitWindow: 60,
         maxMoreCommentsBatches: -1,
@@ -36,6 +40,10 @@ async function seed() {
         exportHistory: true,
         exportHistoryDays: 30,
         priorityQueue: true,
+        discoveryLimit: 30,
+        analysisLimit: 10,
+        savedThreadLimit: 500,
+        commentDepth: 500,
     };
 
     await db.collection("plan_configs").doc("free").set(freeConfig, { merge: true });

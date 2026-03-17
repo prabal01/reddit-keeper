@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from './AuthContext';
 import { API_BASE } from '../lib/api';
 
@@ -22,7 +22,7 @@ interface FolderContextType {
     createFolder: (name: string, description?: string) => Promise<Folder>;
     deleteFolder: (id: string) => Promise<void>;
     saveThread: (folderId: string, threadData: any) => Promise<void>;
-    getFolderThreads: (folderId: string) => Promise<any[]>;
+    getFolderThreads: (folderId: string) => Promise<any | { threads: any[], meta: any }>;
     analyzeFolder: (folderId: string) => Promise<any>;
     syncThreads: (folderId: string, urls: string[], items?: any[]) => Promise<void>;
 }
@@ -33,7 +33,7 @@ export const FolderProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const [folders, setFolders] = useState<Folder[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const { user, getIdToken } = useAuth();
+    const { user, getIdToken, refreshPlan } = useAuth();
 
     const fetchFolders = useCallback(async () => {
         if (!user) return;
@@ -55,7 +55,7 @@ export const FolderProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         } finally {
             setLoading(false);
         }
-    }, [user]);
+    }, [user?.uid, getIdToken]);
 
     const createFolder = async (name: string, description?: string) => {
         if (!user) throw new Error('Not authenticated');
@@ -113,6 +113,8 @@ export const FolderProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             setFolders(prev => prev.map(f =>
                 f.id === folderId ? { ...f, threadCount: f.threadCount + 1 } : f
             ));
+            // Sync usage credits
+            refreshPlan();
         } catch (err: any) {
             setError(err.message);
             throw err;
@@ -151,7 +153,10 @@ export const FolderProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 const errorData = await res.json().catch(() => ({}));
                 throw new Error(errorData.error || 'Analysis failed');
             }
-            return await res.json();
+            const result = await res.json();
+            // Sync usage credits after analysis
+            refreshPlan();
+            return result;
         } catch (err: any) {
             console.error(err);
             throw err;
@@ -177,6 +182,8 @@ export const FolderProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             setFolders(prev => prev.map(f =>
                 f.id === folderId ? { ...f, syncStatus: 'syncing' } : f
             ));
+            // Sync usage credits (since sync increments counts)
+            refreshPlan();
         } catch (err: any) {
             setError(err.message);
             throw err;
@@ -187,19 +194,21 @@ export const FolderProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         fetchFolders();
     }, [fetchFolders]);
 
+    const contextValue = useMemo(() => ({
+        folders,
+        loading,
+        error,
+        fetchFolders,
+        createFolder,
+        deleteFolder,
+        saveThread,
+        getFolderThreads,
+        analyzeFolder,
+        syncThreads
+    }), [folders, loading, error, fetchFolders]);
+
     return (
-        <FolderContext.Provider value={{
-            folders,
-            loading,
-            error,
-            fetchFolders,
-            createFolder,
-            deleteFolder,
-            saveThread,
-            getFolderThreads,
-            analyzeFolder,
-            syncThreads
-        }}>
+        <FolderContext.Provider value={contextValue}>
             {children}
         </FolderContext.Provider>
     );

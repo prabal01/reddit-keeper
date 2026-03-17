@@ -282,7 +282,7 @@ export interface IdeaExpansion {
     queries: string[];
 }
 
-export async function expandIdeaToQueries(idea: string, communities?: string[], competitors?: string[]): Promise<IdeaExpansion> {
+export async function expandIdeaToQueries(idea: string, communities?: string[], competitors?: string[], numQueries = 1): Promise<IdeaExpansion> {
     const communityContext = communities && communities.length > 0
         ? `Focus on these subreddits if relevant: ${communities.join(', ')}.`
         : "";
@@ -302,22 +302,23 @@ export async function expandIdeaToQueries(idea: string, communities?: string[], 
     1.1 Root Problem: Extract the underlying problem in 2-3 words (e.g., "Budgeting", "Expense Tracking", "Habit Building").
     1.2 Core Pain: What is the specific emotional struggle? (e.g., "feels like a chore", "hard to stay consistent").
     
-    STEP 2: Generate Master Query (Single First)
-    Generate exactly ONE highly effective master query for Google/Serper.
+    STEP 2: Generate Search Queries
+    Generate exactly ${numQueries} distinct search angles to find high-signal discussions.
     
-    PATTERN:
-    [Root Problem] (site:reddit.com OR site:news.ycombinator.com) frustrating
+    PATTERN for each query:
+    [Root Problem/Angle] (site:reddit.com OR site:news.ycombinator.com) [Intent Word]
+    
+    EXAMPLES OF INTENT WORDS: frustrating, sucks, annoying, alternative, "how to", "is it worth it"
     
     RULES:
-    - Return EXACTLY 1 query.
-    - Use the exact pattern: "[Root Problem] (site:reddit.com OR site:news.ycombinator.com) frustrating".
-    - Replace "frustrating" with "sucks" or "annoying" ONLY if it feels more natural for the specific problem.
-    - Example: "Expense Tracking (site:reddit.com OR site:news.ycombinator.com) frustrating"
+    - Return EXACTLY ${numQueries} queries.
+    - Each query must be unique and cover a different angle (e.g. pain point, competitor comparison, desired transition).
+    - Use the exact platform filtering (site:reddit.com OR site:news.ycombinator.com).
     
     Return JSON format: 
     { 
       "intent": { "persona": "...", "pain": "...", "domain": "..." },
-      "queries": ["Master Query Here"] 
+      "queries": ["Query 1", "Query 2", ...] 
     }
     `;
 

@@ -20,17 +20,8 @@ import { Skeleton } from "./Skeleton";
 import { BRANDING } from "../constants/branding";
 import { AlertTriangle, Check, X, Activity, FolderOpen, Clock, MessageSquare } from 'lucide-react';
 
-import { fetchUserStats } from "../lib/api";
-
 export function HomeView() {
-    const { plan, user } = useAuth();
-    const [stats, setStats] = useState<any>(null);
-
-    useEffect(() => {
-        if (user) {
-            fetchUserStats().then(setStats).catch(console.error);
-        }
-    }, [user]);
+    const { plan, user, userStats: stats } = useAuth();
 
     const { thread, metadata, loading, error, fetch: fetchThread } = useRedditThread();
     const [filters, setFilters] = useState<FilterState>({
@@ -42,16 +33,12 @@ export function HomeView() {
     });
     const navigate = useNavigate();
     const { saveThread, folders, createFolder } = useFolders();
+
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
     const [showNewFolder, setShowNewFolder] = useState(false);
     const [newFolderName, setNewFolderName] = useState('');
     const newFolderInputRef = useRef<HTMLInputElement>(null);
-    const { fetchFolders } = useFolders();
     const [isExtensionModalOpen, setIsExtensionModalOpen] = useState(false);
-
-    useEffect(() => {
-        fetchFolders();
-    }, [fetchFolders]);
 
     const handleFetch = (url: string, sort: string) => {
         fetchThread({ url, sort });

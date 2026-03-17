@@ -1,12 +1,11 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import { BRANDING } from '../constants/branding';
 import { LayoutDashboard, RefreshCw, Settings, Globe, Search, Loader2, FlaskConical } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
+import { UsageProgress } from './UsageProgress';
 
 export const Sidebar: React.FC = () => {
-    const { plan, userStats } = useAuth();
     const navigate = useNavigate();
     const [extensionConnected, setExtensionConnected] = useState<boolean | null>(null);
 
@@ -114,14 +113,7 @@ export const Sidebar: React.FC = () => {
                         )}
                     </div>
                 </div>
-                <div className="credit-badge-sidebar">
-                    <div className="label">Opinion Credits</div>
-                    <div className="value">
-                        {plan === 'pro'
-                            ? `${Math.max(0, 50 - (userStats?.reportsGenerated || 0))} / 50`
-                            : `${Math.max(0, 5 - (userStats?.reportsGenerated || 0))} / 5`}
-                    </div >
-                </div >
+                <UsageProgress />
                 <NavLink to="/settings" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'} style={{ padding: '8px 0' }}>
                     <Settings size={18} /> <span className="link-text">Settings</span>
                 </NavLink>

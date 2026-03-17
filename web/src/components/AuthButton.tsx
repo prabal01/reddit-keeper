@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { createPortalSession } from "../lib/api";
 
 export function AuthButton() {
-    const { user, plan, loading, signInWithGoogle, signOut } = useAuth();
+    const { user, plan, loading, signInWithGoogle, signOut, openUpgradeModal } = useAuth();
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [signingIn, setSigningIn] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -58,7 +57,7 @@ export function AuthButton() {
         );
     }
 
-    const planBadge = plan === "pro" ? "⚡ Pro" : "🆓 Free";
+    const planBadge = plan === "pro" ? "✨ Founding" : "🆓 Free";
 
     return (
         <div className="auth-dropdown" ref={dropdownRef}>
@@ -96,22 +95,6 @@ export function AuthButton() {
                     </div>
                     <div className="dropdown-divider" role="separator" />
 
-                    {plan === "pro" && (
-                        <button
-                            className="dropdown-item"
-                            role="menuitem"
-                            onClick={async () => {
-                                try {
-                                    const url = await createPortalSession();
-                                    window.location.href = url;
-                                } catch (err) {
-                                    console.error("Portal error:", err);
-                                }
-                            }}
-                        >
-                            💳 Manage Billing
-                        </button>
-                    )}
 
                     {plan !== "pro" && (
                         <button
@@ -119,11 +102,10 @@ export function AuthButton() {
                             role="menuitem"
                             onClick={() => {
                                 setDropdownOpen(false);
-                                // Scroll to pricing or trigger checkout
-                                document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" });
+                                openUpgradeModal();
                             }}
                         >
-                            ⚡ Upgrade to Pro
+                            ✨ Founding Access
                         </button>
                     )}
 

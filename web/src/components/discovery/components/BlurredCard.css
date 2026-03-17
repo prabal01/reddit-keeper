@@ -1,0 +1,101 @@
+.blurred-card {
+    position: relative;
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 24px;
+    padding: 24px;
+    height: 180px;
+    overflow: hidden;
+    user-select: none;
+    pointer-events: none;
+}
+
+.blurred-content {
+    filter: blur(8px);
+    opacity: 0.3;
+}
+
+.skeleton-line {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    margin-bottom: 12px;
+}
+
+.skeleton-line.title {
+    height: 20px;
+    width: 80%;
+}
+
+.skeleton-line.meta {
+    height: 14px;
+    width: 40%;
+}
+
+.skeleton-line.body {
+    height: 60px;
+    width: 100%;
+}
+
+.lock-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    text-align: center;
+    pointer-events: all;
+    background: radial-gradient(circle at center, rgba(15, 23, 42, 0.4) 0%, transparent 100%);
+}
+
+.lock-icon-container {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+    color: var(--text-secondary);
+}
+
+.lock-overlay h3 {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 4px;
+    letter-spacing: -0.01em;
+}
+
+.lock-overlay p {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 16px;
+}
+
+.upgrade-btn-small {
+    background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+    color: #451a03;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(217, 119, 6, 0.2);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.upgrade-btn-small:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(217, 119, 6, 0.3);
+}

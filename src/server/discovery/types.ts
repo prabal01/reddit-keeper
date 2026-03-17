@@ -9,6 +9,7 @@ export interface DiscoveryResult {
     source: 'reddit' | 'hn' | 'google';
     score: number;
     isCached?: boolean;
+    ups?: number;
     intentMarkers?: string[];
 }
 

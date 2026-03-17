@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { createCheckoutSession } from "../lib/api";
 
 interface UpgradePromptProps {
     totalComments: number;
@@ -8,30 +7,13 @@ interface UpgradePromptProps {
 }
 
 export function UpgradePrompt({ totalComments, commentsShown }: UpgradePromptProps) {
-    const { user, signInWithGoogle } = useAuth();
-    const [upgrading, setUpgrading] = useState(false);
+    const { openUpgradeModal } = useAuth();
     const [dismissed, setDismissed] = useState(false);
 
     if (dismissed) return null;
 
-    const handleUpgrade = async () => {
-        if (!user) {
-            try {
-                await signInWithGoogle();
-            } catch {
-                return;
-            }
-        }
-
-        setUpgrading(true);
-        try {
-            const url = await createCheckoutSession();
-            window.location.href = url;
-        } catch (err) {
-            console.error("Upgrade error:", err);
-        } finally {
-            setUpgrading(false);
-        }
+    const handleUpgrade = () => {
+        openUpgradeModal();
     };
 
     const hiddenCount = totalComments - commentsShown;
@@ -46,17 +28,16 @@ export function UpgradePrompt({ totalComments, commentsShown }: UpgradePromptPro
                     </p>
                     <p className="upgrade-prompt-desc">
                         {hiddenCount.toLocaleString()} more comments available.
-                        {" "}Upgrade to Pro to see the full thread.
+                        {" "}Get Founding Access to see the full thread.
                     </p>
                 </div>
                 <div className="upgrade-prompt-actions">
                     <button
                         className="upgrade-prompt-cta"
                         onClick={handleUpgrade}
-                        disabled={upgrading}
-                        aria-label="Upgrade to Pro for $5 per month to see all comments"
+                        aria-label="Get Founding Access to see all comments"
                     >
-                        {upgrading ? "Redirecting..." : "Upgrade — $5/mo"}
+                        Unlock Deep Thread
                     </button>
                     <button
                         className="upgrade-prompt-dismiss"

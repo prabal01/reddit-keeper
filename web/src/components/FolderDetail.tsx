@@ -13,8 +13,7 @@ import { AlertTriangle, Sparkles, Trash2, BarChart2, Calendar, MessageSquare as 
 import { exportReportToPDF } from '../lib/pdfExport';
 import { IntelligenceScanner } from './IntelligenceScanner';
 import { BulkImportModal } from './BulkImportModal';
-import { doc, onSnapshot, collection, query, where } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+// Removed direct firestore imports to avoid permission errors and keep logic in backend
 
 interface SavedThread {
     id: string;
@@ -63,66 +62,63 @@ export const FolderDetail: React.FC = () => {
     const [isAggregating, setIsAggregating] = useState(false);
     const [showImportModal, setShowImportModal] = useState(false);
 
-    // Real-time Folder & Insights Listener
+    // Replace Real-time listeners with API Fetches to avoid permission errors
     useEffect(() => {
-        if (!folderId || folderId === 'inbox' || !db) return;
-
-        // 1. Listen to Folder for Metrics
-        const folderDocRef = doc(db, 'folders', folderId);
-        const unsubFolder = onSnapshot(folderDocRef, (doc) => {
-            if (doc.exists()) {
-                const data = doc.data();
-                setRealtimeFolder(data);
-                if (data.analysisStatus === 'processing') {
-                    setIsAnalyzing(true);
-                } else if (data.analysisStatus === 'complete' || data.analysisStatus === 'idle') {
-                    setIsAnalyzing(false);
-                }
-            }
-        });
-
-        // 2. Listen to Threads
-        const threadsQuery = query(
-            collection(db, 'saved_threads'),
-            where('folderId', '==', folderId)
-        );
-        const unsubThreads = onSnapshot(threadsQuery, (snapshot) => {
-            const threadData = snapshot.docs.map(doc => ({
-                ...doc.data(),
-                id: doc.id
-            })) as SavedThread[];
-            setThreads(threadData);
+        if (!folderId || folderId === 'inbox') {
             setLoading(false);
-        });
+            return;
+        }
 
-        // 3. Listen to Analysis Results
-        const analysisQuery = query(
-            collection(db, 'folder_analyses'),
-            where('folderId', '==', folderId)
-        );
-        const unsubAnalysis = onSnapshot(analysisQuery, (snapshot) => {
-            const analysisData = snapshot.docs.map(doc => {
-                const raw = doc.data();
-                return {
-                    ...(raw.data || raw),
-                    id: doc.id,
-                    createdAt: raw.createdAt || (raw.data && raw.data.createdAt),
-                    model: raw.model
-                };
-            }).sort((a: any, b: any) => {
-                const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-                const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-                return dateB - dateA;
-            });
-            setAnalyses(analysisData);
-        });
+        const loadFolderData = async () => {
+            try {
+                // 1. Fetch Threads
+                const threadData = await getFolderThreads(folderId) as any;
+                setThreads(Array.isArray(threadData) ? threadData : (threadData.threads || []));
+
+                // 2. Fetch Analysis
+                const analysisData = await fetchFolderAnalysis(folderId);
+                if (analysisData) {
+                    const processData = (d: any) => ({
+                        ...(d.data || d),
+                        id: d.id,
+                        createdAt: d.createdAt || (d.data && d.data.createdAt),
+                        model: d.model
+                    });
+                    if (Array.isArray(analysisData)) {
+                        setAnalyses(analysisData.map(processData).sort((a: any, b: any) =>
+                            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                        ));
+                    } else {
+                        setAnalyses([processData(analysisData)]);
+                    }
+                }
+
+                // 3. Update realtime folder state from context
+                const f = folders.find(f => f.id === folderId);
+                if (f) {
+                    setRealtimeFolder(f);
+                    setIsAnalyzing(f.syncStatus === 'syncing');
+                }
+            } catch (err) {
+                console.error("[FolderDetail] Error loading data:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadFolderData();
+
+        // Poll for updates if folder is syncing/analyzing
+        const currentFolder = folders.find(f => f.id === folderId);
+        let pollInterval: any;
+        if (currentFolder?.syncStatus === 'syncing' || isAnalyzing) {
+            pollInterval = setInterval(loadFolderData, 10000);
+        }
 
         return () => {
-            unsubFolder();
-            unsubThreads();
-            unsubAnalysis();
+            if (pollInterval) clearInterval(pollInterval);
         };
-    }, [folderId, getFolderThreads]);
+    }, [folderId, folders]);
 
     // Helper to select thread with lazy loading
     const handleSelectThread = async (item: any) => {

@@ -1,0 +1,53 @@
+# Gemini Development Guide
+
+## Build & Development Commands
+- **Full Dev Environment**: `npm run dev` (Runs both server and web concurrently)
+- **Backend Only**: `npm run dev:server` (Starts `src/server.ts` with tsx watch)
+- **Frontend Only**: `npm run dev:web` (Starts Vite dev server in `web/` folder)
+- **Production Build**: `npm run build` (Compiles TypeScript in the root)
+- **Frontend Build**: `cd web && npm run build`
+- **Backend Deployment**: `npm run deploy` (Builds Docker image, pushes to GCR, and deploys to Cloud Run)
+
+## Infrastructure & Redis
+- **Provision Redis VM (GCP)**: `./scripts/deploy-redis.sh` (Allocates e2-micro instance on project `redditkeeperprod`)
+- **Run Redis (on VM)**: Use `scripts/docker-compose.redis.yml` on the compute instance with `sudo docker compose up -d`.
+- **Redis Connection**: Always check `REDIS_URL` in `.env`. Must start with `redis://`.
+
+## Tech Stack
+- **Backend**: Node.js, Express, TypeScript, BullMQ (Queueing), ioredis (Redis Client).
+- **Frontend**: React, Vite, TypeScript, Tailwind CSS, Lucide Icons.
+- **Database/Auth**: Firebase (Firestore, Admin Auth, Storage).
+- **AI**: Google Vertex AI / AI Studio (Gemini 2.0 Flash).
+
+## Project Structure
+- `src/`: Backend source code.
+- `src/server.ts`: Main entry point and API route definitions.
+- `src/reddit/`: Logic for interacting with Reddit and tree building.
+- `src/server/discovery/`: Orchestration logic for Research/Discovery features.
+- `web/`: Frontend React application.
+- `scripts/`: Operational and deployment scripts.
+
+## Rate Limiting (CRITICAL)
+Always adhere to these limits to prevent service interruption:
+- **Global API**: Managed via `rateLimiter.ts`. Anonymous users are capped at 5 req/min. Logged-in users have dynamic limits based on their plan (found in `req.user.config.rateLimit`).
+- **Reddit/HN Syncing**: Strictly limited to 1 thread per second (`concurrency: 1`) in workers to avoid IP bans.
+- **AI Analysis**: Gemini 2.0 Flash is sensitive to RPM limits. Ensure batching or sequential processing where necessary to stay within the 10-15 RPM free tier or designated Vertex quotas.
+
+## Conventions & Rules
+- **Queue Configuration**: BullMQ workers in `src/server.ts` use a `sharedConnectionConfig`.
+- **Performance**: High-frequency intervals for `stalledInterval` (30s) and `drainDelay` (5s) are preferred when using the self-hosted Redis on GCP.
+- **Security**: Never commit `.env` or `service-account.json`. Sensitive files are listed in `.gitignore`.
+- **Surgical Edits**: Maintain existing functional logic (state mutations, event listeners) when refactoring. Always preserve rate-limiting middleware and worker concurrency settings.
+- **Simplicity**: Favor simpler, readable code over complex abstractions.
+
+## Architecture & Code Organization
+- **Component Directory**: React components are located in `web/src/components`. Large feature sets (like Discovery) should have their own subdirectories.
+- **Common Components**: If a component is used in 3+ places (e.g., `AuthButton`, `Skeleton`, `ThemeToggle`), it should be treated as a common component. Reuse existing styles and logic instead of duplicating.
+- **File Splitting**: 
+  - **Backend**: Avoid bloating `server.ts`. Move specific business logic to `src/server/` modules (like `ai.ts`, `firestore.ts`, `discovery/`).
+  - **Frontend**: Break down massive components (e.g., `FolderDetail.tsx`) into smaller, focused sub-components. If a component exceeds 600 lines, it's a candidate for splitting.
+- **Styles**: Keep CSS files adjacent to their components (`Component.tsx` + `Component.css`). Use Tailwind for utility-first styling.
+- **Naming Conventions**:
+  - Components: `PascalCase.tsx`
+  - Logic/Utils: `camelCase.ts`
+  - Constants: `SCREAMING_SNAKE_CASE`

@@ -3,6 +3,8 @@ import { MessageSquare } from 'lucide-react';
 import type { DiscoveryResult } from '../hooks/useDiscovery';
 
 import { DiscoveryResultCard } from './DiscoveryResultCard';
+import { BlurredCard } from './BlurredCard';
+import { useAuth } from '../../../contexts/AuthContext';
 
 interface ResultGridProps {
     results: DiscoveryResult[];
@@ -29,17 +31,27 @@ export const ResultGrid: React.FC<ResultGridProps> = ({ results, selectedIds, on
         ? "grid-cols-1 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-2"
         : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5";
 
+    const { plan } = useAuth();
+    const isPro = plan === 'pro';
+    const displayLimit = isPro ? results.length : 10;
+
     return (
         <div className={`grid ${gridCols} gap-4 pb-24 animate-in fade-in slide-in-from-bottom-5 duration-700 w-full`}>
-            {results.map(thread => (
-                <DiscoveryResultCard
-                    key={thread.id}
-                    thread={thread}
-                    isSelected={selectedIds.has(thread.id)}
-                    onToggle={onToggle}
-                    onEnrich={onEnrichResult}
-                />
-            ))}
+            {results.map((thread, index) => {
+                if (index < displayLimit) {
+                    return (
+                        <DiscoveryResultCard
+                            key={thread.id}
+                            thread={thread}
+                            isSelected={selectedIds.has(thread.id)}
+                            onToggle={onToggle}
+                            onEnrich={onEnrichResult}
+                        />
+                    );
+                } else {
+                    return <BlurredCard key={`blurred-${index}`} />;
+                }
+            })}
         </div>
     );
 };
