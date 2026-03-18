@@ -51,3 +51,9 @@ Always adhere to these limits to prevent service interruption:
   - Components: `PascalCase.tsx`
   - Logic/Utils: `camelCase.ts`
   - Constants: `SCREAMING_SNAKE_CASE`
+## Features
+### Discovery History
+- **Persistence**: Saved to Firestore (`discovery_history` collection) keyed by `uid`.
+- **Logic**: Handled in `DiscoveryOrchestrator` (backend) and `useDiscovery` hook (frontend).
+- **Trigger**: Located in the Tab Bar of `DiscoveryWorkbench.tsx`.
+- **UI**: Displayed via `DiscoveryHistoryPopover.tsx` with high z-index and solid background for overlay reliability.

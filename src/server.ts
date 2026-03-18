@@ -38,7 +38,9 @@ import {
     incrementPendingSyncCount,
     updateFolderAnalysisStatus,
     updateThreadInsight,
-    getDb
+    getDb,
+    getDiscoveryHistory,
+    deleteDiscoveryHistory
 } from "./server/firestore.js";
 import { analyzeThreads, analyzeThreadGranular } from "./server/ai.js";
 const app = express();
@@ -1227,10 +1229,10 @@ app.post("/api/discovery/compare", authMiddleware, usageGuard('DISCOVERY'), asyn
         console.log(`[Discovery] [LAB] Starting comparison for: ${query}`);
 
         // Run Baseline (Always skip cache in Lab for testing)
-        const baseline = await discoveryOrchestrator.search(query, 'all', false, true);
+        const baseline = await discoveryOrchestrator.search(req.user.uid, query, 'all', false, true);
 
         // Run AI-Brain (Always skip cache in Lab for testing)
-        const enhanced = await discoveryOrchestrator.search(query, 'all', true, true);
+        const enhanced = await discoveryOrchestrator.search(req.user.uid, query, 'all', true, true);
 
         // Increment usage count (counts as 1 discovery)
         await incrementDiscoveryCount(req.user.uid);
@@ -1258,7 +1260,7 @@ app.post("/api/discovery/search", authMiddleware, usageGuard('DISCOVERY'), async
         console.log(`[Discovery] Starting search for: ${query} (Platform: ${platform})`);
 
         const platforms: ('reddit' | 'hn')[] | 'all' = platform === 'all' ? 'all' : [platform as 'reddit' | 'hn'];
-        const { results, discoveryPlan } = await discoveryOrchestrator.search(query, platforms, false, false, req.user.plan === 'past_due' ? 'free' : req.user.plan);
+        const { results, discoveryPlan } = await discoveryOrchestrator.search(req.user.uid, query, platforms, false, false, req.user.plan === 'past_due' ? 'free' : req.user.plan);
 
         // Increment usage count for authorized user
         await incrementDiscoveryCount(req.user.uid);
@@ -1281,7 +1283,7 @@ app.post("/api/discovery/idea", authMiddleware, usageGuard('DISCOVERY'), async (
 
     try {
         console.log(`[Discovery] Starting Idea Discovery for: ${idea}`);
-        const { results, discoveryPlan } = await discoveryOrchestrator.ideaDiscovery(idea, communities, competitors, skipCache, req.user.plan === 'past_due' ? 'free' : req.user.plan);
+        const { results, discoveryPlan } = await discoveryOrchestrator.ideaDiscovery(req.user.uid, idea, communities, competitors, skipCache, req.user.plan === 'past_due' ? 'free' : req.user.plan);
 
         // Increment usage count for authorized user
         await incrementDiscoveryCount(req.user.uid);
@@ -1290,6 +1292,28 @@ app.post("/api/discovery/idea", authMiddleware, usageGuard('DISCOVERY'), async (
     } catch (err: any) {
         console.error(`[Discovery] Idea Search error:`, err);
         res.status(500).json({ error: "Discovery failed" });
+    }
+});
+
+// ── Discovery History ─────────────────────────────────────────────
+
+app.get("/api/discovery/history", authMiddleware, async (req: express.Request, res: express.Response) => {
+    if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+    try {
+        const history = await getDiscoveryHistory(req.user.uid);
+        res.json(history);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete("/api/discovery/history/:id", authMiddleware, async (req: express.Request, res: express.Response) => {
+    if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+    try {
+        await deleteDiscoveryHistory(req.user.uid, req.params.id as string);
+        res.json({ success: true });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
     }
 });
 

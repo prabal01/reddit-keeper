@@ -193,6 +193,27 @@ export interface ThreadInsight {
     analyzedAt?: string;
 }
 
+export interface DiscoveryHistoryEntry {
+    id: string;
+    uid: string;
+    type: 'competitor' | 'idea' | 'bulk';
+    query: string;
+    params: {
+        communities?: string[];
+        competitors?: string[];
+        platforms: ('reddit' | 'hn')[];
+        useAiBrain?: boolean;
+    };
+    resultsCount: number;
+    createdAt: string;
+    topResults?: {
+        title: string;
+        url: string;
+        source: 'reddit' | 'hn' | 'google';
+        score: number;
+    }[];
+}
+
 // ── Default configs (used if Firestore not available) ──────────────
 
 const DEFAULT_FREE_CONFIG: PlanConfig = {
@@ -1024,5 +1045,56 @@ export async function updateStats(uid: string, updates: Partial<UserStats>): Pro
         console.log(`[FIRESTORE] Updated stats for ${uid}:`, updates);
     } catch (err) {
         console.error(`[FIRESTORE] Failed to update stats for ${uid}:`, err);
+    }
+}
+
+// ── Discovery History ─────────────────────────────────────────────
+
+export async function saveDiscoveryHistory(uid: string, entry: Omit<DiscoveryHistoryEntry, 'id' | 'uid' | 'createdAt'>): Promise<string> {
+    if (!db) throw new Error("Firebase DB not initialized.");
+    try {
+        console.log(`[FIRESTORE] Saving discovery history for ${uid}:`, entry.query);
+        const ref = db.collection("discovery_history").doc();
+        const fullEntry: DiscoveryHistoryEntry = {
+            id: ref.id,
+            uid,
+            ...entry,
+            createdAt: new Date().toISOString()
+        };
+        await ref.set(fullEntry);
+        return ref.id;
+    } catch (err) {
+        console.error("[FIRESTORE] Failed to save discovery history:", err);
+        throw err;
+    }
+}
+
+export async function getDiscoveryHistory(uid: string, limit: number = 50): Promise<DiscoveryHistoryEntry[]> {
+    if (!db) throw new Error("Firebase DB not initialized.");
+    try {
+        const snapshot = await db.collection("discovery_history")
+            .where("uid", "==", uid)
+            .orderBy("createdAt", "desc")
+            .limit(limit)
+            .get();
+
+        return snapshot.docs.map(doc => doc.data() as DiscoveryHistoryEntry);
+    } catch (err) {
+        console.error("[FIRESTORE] Failed to get discovery history:", err);
+        return [];
+    }
+}
+
+export async function deleteDiscoveryHistory(uid: string, id: string): Promise<void> {
+    if (!db) throw new Error("Firebase DB not initialized.");
+    try {
+        const ref = db.collection("discovery_history").doc(id);
+        const doc = await ref.get();
+        if (doc.exists && doc.data()?.uid === uid) {
+            await ref.delete();
+        }
+    } catch (err) {
+        console.error("[FIRESTORE] Failed to delete discovery history:", err);
+        throw err;
     }
 }

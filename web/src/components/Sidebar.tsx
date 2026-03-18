@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { BRANDING } from '../constants/branding';
-import { LayoutDashboard, RefreshCw, Settings, Globe, Search, Loader2, FlaskConical } from 'lucide-react';
+import { LayoutDashboard, RefreshCw, Settings, Globe, Search, Loader2, FlaskConical, Star } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { UsageProgress } from './UsageProgress';
 
@@ -76,6 +76,14 @@ export const Sidebar: React.FC = () => {
                     className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
                 >
                     <FlaskConical size={18} /> <span className="link-text">Discovery Lab</span>
+                </NavLink>
+
+                <NavLink
+                    to="/pricing"
+                    className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
+                    style={{ marginTop: 'auto' }}
+                >
+                    <Star size={18} color="#FFD700" /> <span className="link-text" style={{ fontWeight: 700, color: '#FFD700' }}>Upgrade to Pro</span>
                 </NavLink>
             </nav>
 

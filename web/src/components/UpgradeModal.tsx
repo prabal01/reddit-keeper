@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Crown, Check, Zap, ShieldCheck, Star } from 'lucide-react';
+import { X, Crown, Zap, ShieldCheck, Star } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { createRazorpayOrder } from '../lib/api';
 import { loadRazorpay } from '../lib/razorpay';

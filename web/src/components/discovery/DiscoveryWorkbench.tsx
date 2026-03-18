@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useFolders } from '../../contexts/FolderContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { useDiscovery } from './hooks/useDiscovery';
 import { SearchHeader } from './components/SearchHeader';
 import { IdeaSearchHeader } from './components/IdeaSearchHeader';
@@ -7,11 +8,14 @@ import { BulkImportHeader } from './components/BulkImportHeader';
 import { ResultGrid } from './components/ResultGrid';
 import { DiscoverySidebar } from './components/DiscoverySidebar';
 import { DiscoverySuccessView } from './components/DiscoverySuccessView';
-import { Info, Search as SearchIcon, Lightbulb, Sidebar as SidebarIcon, Zap } from 'lucide-react';
+import DiscoveryHistoryPopover from './components/DiscoveryHistoryPopover';
+import { UpgradeModal } from '../UpgradeModal';
+import { Info, Search as SearchIcon, Lightbulb, Sidebar as SidebarIcon, Zap, History as HistoryIcon } from 'lucide-react';
 import './DiscoveryWorkbench.css';
 
 export const DiscoveryWorkbench: React.FC = () => {
     const { syncThreads, folders } = useFolders();
+    const { isUpgradeModalOpen, closeUpgradeModal } = useAuth();
     const {
         results,
         selectedResults,
@@ -34,10 +38,13 @@ export const DiscoveryWorkbench: React.FC = () => {
         setSelectedIds,
         detectedIntent,
         showSelectedOnly,
-        setShowSelectedOnly
+        setShowSelectedOnly,
+        history,
+        historyLoading,
+        deleteHistoryItem
     } = useDiscovery();
 
-    const [activeTab, setActiveTab] = useState<'competitor' | 'idea' | 'bulk'>('competitor');
+    const [activeTab, setActiveTab] = useState<'competitor' | 'idea' | 'bulk'>('idea');
     const [competitor, setCompetitor] = useState('');
     const [idea, setIdea] = useState('');
     const [communities, setCommunities] = useState<string[]>([]);
@@ -46,6 +53,7 @@ export const DiscoveryWorkbench: React.FC = () => {
 
     const [isSearchingStarted, setIsSearchingStarted] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [lastSyncInfo, setLastSyncInfo] = useState<{ count: number, folderName: string, folderId: string } | null>(null);
 
     const handleSearch = async () => {
@@ -110,6 +118,23 @@ export const DiscoveryWorkbench: React.FC = () => {
         setIdea('');
         setCompetitorsList('');
         setCommunities([]);
+    };
+
+    const handleHistorySelect = async (entry: any) => {
+        if (entry.type === 'competitor') {
+            setActiveTab('competitor');
+            setCompetitor(entry.query);
+            setIsSearchingStarted(true);
+            await search(entry.query);
+        } else if (entry.type === 'idea') {
+            setActiveTab('idea');
+            setIdea(entry.query);
+            setCommunities(entry.params.communities || []);
+            setCompetitorsList(entry.params.competitors?.join(', ') || '');
+            setIsSearchingStarted(true);
+            await ideaSearch(entry.query, entry.params.communities, entry.params.competitors);
+        }
+        setIsHistoryOpen(false);
     };
 
     const renderHeader = () => {
@@ -192,10 +217,23 @@ export const DiscoveryWorkbench: React.FC = () => {
                                     Bulk Import
                                 </button>
                             </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    className={`dw-tab-btn ${isHistoryOpen ? 'active' : ''}`}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsHistoryOpen(!isHistoryOpen);
+                                    }}
+                                    title="Search History"
+                                >
+                                    <HistoryIcon size={14} />
+                                    History
+                                </button>
+                            </div>
                         </div>
 
                         {/* Search Input Area */}
-                        <div className="py-2 px-4 sm:px-8">
+                        <div className="py-2 px-4 sm:px-8 relative">
                             {renderHeader()}
                         </div>
                     </div>
@@ -274,7 +312,7 @@ export const DiscoveryWorkbench: React.FC = () => {
                         </div>
                     )}
 
-                    <main className="mt-0 w-full">
+                    <main className="mt-0 w-full mb-20">
                         {lastSyncInfo ? (
                             <DiscoverySuccessView
                                 {...lastSyncInfo}
@@ -290,6 +328,15 @@ export const DiscoveryWorkbench: React.FC = () => {
                             />
                         )}
                     </main>
+
+                    <DiscoveryHistoryPopover
+                        history={history}
+                        isOpen={isHistoryOpen}
+                        onClose={() => setIsHistoryOpen(false)}
+                        onSelect={handleHistorySelect}
+                        onDelete={deleteHistoryItem}
+                        isLoading={historyLoading}
+                    />
                 </div>
 
                 {isSidebarOpen && (
@@ -302,6 +349,11 @@ export const DiscoveryWorkbench: React.FC = () => {
                     />
                 )}
             </div>
+
+            <UpgradeModal
+                isOpen={isUpgradeModalOpen}
+                onClose={closeUpgradeModal}
+            />
         </div>
     );
 };

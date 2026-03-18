@@ -37,9 +37,9 @@ export const IdeaSearchHeader: React.FC<IdeaSearchHeaderProps> = ({
     return (
         <div className="w-full flex flex-col items-center transition-all duration-500 z-10">
             <div className="dw-search-wrapper">
-                <div className="dw-input-container">
+                <div className="dw-input-container relative">
                     <textarea
-                        className="w-full bg-transparent border-none resize-none text-white text-lg font-bold leading-relaxed outline-none p-1.5 placeholder:text-slate-600 tracking-tight"
+                        className="w-full bg-transparent border-none resize-none text-white text-lg font-bold leading-relaxed outline-none p-1.5 placeholder:text-slate-600 tracking-tight pr-10"
                         placeholder="Describe your idea... (e.g. A tool that helps developers find niche communities)"
                         rows={2}
                         value={idea}

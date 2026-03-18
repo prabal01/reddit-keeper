@@ -5,7 +5,7 @@ import { GoogleDiscoveryService } from './google.service.js';
 import { DiscoveryResult, DiscoveryPlan, DiscoveryResponse } from './types.js';
 import { logger } from '../utils/logger.js';
 import { redis } from '../middleware/rateLimiter.js';
-import { getGlobalConfig } from '../firestore.js';
+import { getGlobalConfig, saveDiscoveryHistory } from '../firestore.js';
 
 export class DiscoveryOrchestrator {
     private redditService = new RedditDiscoveryService();
@@ -13,8 +13,8 @@ export class DiscoveryOrchestrator {
     private googleService = new GoogleDiscoveryService();
     private brain = new DiscoveryBrain();
 
-    async search(query: string, platforms: ('reddit' | 'hn')[] | 'all' = 'all', useAiBrain = false, skipCache = false, plan: 'free' | 'pro' = 'free'): Promise<DiscoveryResponse> {
-        logger.info({ action: 'SEARCH_START', searchTerm: query, platforms, useAiBrain, skipCache }, `Searching for "${query}" (AI Brain: ${useAiBrain}, SkipCache: ${skipCache})`);
+    async search(uid: string, query: string, platforms: ('reddit' | 'hn')[] | 'all' = 'all', useAiBrain = false, skipCache = false, plan: 'free' | 'pro' = 'free'): Promise<DiscoveryResponse> {
+        logger.info({ action: 'SEARCH_START', uid, searchTerm: query, platforms, useAiBrain, skipCache }, `Searching for "${query}" (AI Brain: ${useAiBrain}, SkipCache: ${skipCache})`);
 
         const platformList: ('reddit' | 'hn')[] = platforms === 'all' ? ['reddit', 'hn'] : platforms;
 
@@ -53,7 +53,7 @@ export class DiscoveryOrchestrator {
         if (highSignalCount === 0 && !query.includes('software') && !query.includes('app') && !query.includes('tool')) {
             logger.info({ action: 'CONTEXT_BOOST', searchTerm: query }, `Low signal for "${query}". Attempting Context Boost...`);
             const boostedQuery = `${query} software OR app OR tool`; // Try to force tech context
-            return this.search(boostedQuery, platforms); // Recursive call with boosted query
+            return this.search(uid, boostedQuery, platforms); // Recursive call with boosted query
         }
 
         // If STILL no results even after boosting, fallback to JustSerp baseline
@@ -74,13 +74,33 @@ export class DiscoveryOrchestrator {
             recommendedPath: sortedResults.slice(0, 5).map(r => r.title)
         };
 
-        return {
+        const response: DiscoveryResponse = {
             results: sortedResults,
             discoveryPlan
         };
+
+        // Save to History (Awaited to ensure consistency before response)
+        try {
+            await saveDiscoveryHistory(uid, {
+                type: 'competitor',
+                query,
+                params: { platforms: platformList, useAiBrain },
+                resultsCount: sortedResults.length,
+                topResults: sortedResults.slice(0, 5).map(r => ({
+                    title: r.title,
+                    url: r.url,
+                    source: r.source,
+                    score: r.score
+                }))
+            });
+        } catch (err) {
+            logger.error({ err }, "Failed to save search history");
+        }
+
+        return response;
     }
 
-    async ideaDiscovery(idea: string, communities?: string[], competitors?: string[], skipCache = false, plan: 'free' | 'pro' = 'free'): Promise<DiscoveryResponse> {
+    async ideaDiscovery(uid: string, idea: string, communities?: string[], competitors?: string[], skipCache = false, plan: 'free' | 'pro' = 'free'): Promise<DiscoveryResponse> {
         const cacheKey = `discovery:idea:${Buffer.from(idea.trim().toLowerCase()).toString('base64')}:v6`;
 
         if (!skipCache) {
@@ -88,9 +108,29 @@ export class DiscoveryOrchestrator {
                 const cached = await redis.get(cacheKey);
                 if (cached) {
                     logger.info({ action: 'CACHE_HIT_IDEA_DISCOVERY', idea }, "Returning cached discovery results");
-                    return JSON.parse(cached);
-                }
-            } catch (err) {
+                   const res = JSON.parse(cached) as DiscoveryResponse;
+            
+            // Save to history even on cache hit
+            saveDiscoveryHistory(uid, {
+                type: 'idea',
+                query: idea,
+                params: { 
+                    communities: communities || [], 
+                    competitors: competitors || [],
+                    platforms: ['reddit', 'hn'] 
+                },
+                resultsCount: res.results.length,
+                topResults: res.results.slice(0, 5).map(r => ({
+                    title: r.title,
+                    url: r.url,
+                    source: r.source,
+                    score: r.score
+                }))
+            }).catch(err => logger.error({ err }, "Failed to save idea history on cache hit"));
+
+            return res;
+        }
+    } catch (err) {
                 logger.error({ err }, "Cache read error in ideaDiscovery");
             }
         }
@@ -209,6 +249,28 @@ export class DiscoveryOrchestrator {
             logger.info({ action: 'CACHE_SAVE_IDEA_DISCOVERY', idea }, "Saved discovery results to cache");
         } catch (err) {
             logger.error({ err }, "Cache save error in ideaDiscovery");
+        }
+
+        // Save to History (Awaited to ensure consistency before response)
+        try {
+            await saveDiscoveryHistory(uid, {
+                type: 'idea',
+                query: idea,
+                params: {
+                    communities,
+                    competitors,
+                    platforms: ['reddit', 'hn']
+                },
+                resultsCount: finalResults.length,
+                topResults: finalResults.slice(0, 5).map(r => ({
+                    title: r.title,
+                    url: r.url,
+                    source: r.source,
+                    score: r.score
+                }))
+            });
+        } catch (err) {
+            logger.error({ err }, "Failed to save idea history");
         }
 
         return response;

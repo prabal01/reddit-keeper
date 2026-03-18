@@ -16,6 +16,7 @@ import { SettingsView } from "./components/SettingsView";
 import { ResearchView } from "./components/ResearchView";
 import { DiscoveryLab } from "./components/discovery/LabDiscovery";
 import { UpgradeModal } from "./components/UpgradeModal";
+import { PricingPage } from "./components/PricingPage";
 
 import { LoginView } from "./components/LoginView";
 
@@ -175,6 +176,11 @@ function AppContent() {
               <Route path="/lab/discovery" element={
                 <RequireAuth>
                   <DiscoveryLab />
+                </RequireAuth>
+              } />
+              <Route path="/pricing" element={
+                <RequireAuth>
+                  <PricingPage />
                 </RequireAuth>
               } />
             </Routes>

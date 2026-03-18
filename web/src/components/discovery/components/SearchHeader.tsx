@@ -21,7 +21,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
     return (
         <div className="w-full flex flex-col items-center transition-all duration-500 z-10">
             <div className="dw-search-wrapper">
-                <div className="dw-search-input-box">
+                <div className="dw-search-input-box relative">
                     <input
                         className="flex-1 bg-transparent border-none px-6 py-1 text-base font-bold text-white outline-none placeholder:text-slate-500 tracking-tight"
                         type="text"

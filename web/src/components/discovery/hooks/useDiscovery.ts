@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { API_BASE } from '../../../lib/api';
 export interface DiscoveryResult {
@@ -24,6 +24,26 @@ export interface DiscoveryPlan {
     isFromCache?: boolean;
 }
 
+export interface DiscoveryHistoryEntry {
+    id: string;
+    type: 'competitor' | 'idea' | 'bulk';
+    query: string;
+    params: {
+        communities?: string[];
+        competitors?: string[];
+        platforms: ('reddit' | 'hn')[];
+        useAiBrain?: boolean;
+    };
+    resultsCount: number;
+    createdAt: string;
+    topResults?: {
+        title: string;
+        url: string;
+        source: 'reddit' | 'hn' | 'google';
+        score: number;
+    }[];
+}
+
 export type PlatformFilter = 'all' | 'reddit' | 'hn';
 export type IntentFilter = 'frustration' | 'alternative' | 'high_engagement' | 'all';
 
@@ -39,6 +59,8 @@ export const useDiscovery = () => {
     const [status, setStatus] = useState<string | null>(null);
     const [detectedIntent, setDetectedIntent] = useState<{ persona: string; pain: string; domain: string } | null>(null);
     const [showSelectedOnly, setShowSelectedOnly] = useState(false);
+    const [history, setHistory] = useState<DiscoveryHistoryEntry[]>([]);
+    const [historyLoading, setHistoryLoading] = useState(false);
 
     const search = useCallback(async (query: string) => {
         if (!query.trim()) return;
@@ -78,6 +100,7 @@ export const useDiscovery = () => {
             setDiscoveryPlan(data.discoveryPlan);
             // Sync usage credits in UI
             refreshPlan();
+            fetchHistory();
         } catch (err: any) {
             console.error("Discovery error:", err);
             setStatus("Error: " + err.message);
@@ -138,6 +161,7 @@ export const useDiscovery = () => {
             setDiscoveryPlan(data.discoveryPlan);
             // Sync usage credits in UI
             refreshPlan();
+            fetchHistory();
         } catch (err: any) {
             console.error("Idea Discovery error:", err);
             setStatus("Error: " + err.message);
@@ -253,6 +277,44 @@ export const useDiscovery = () => {
         }
     }, [getIdToken]);
 
+    const fetchHistory = useCallback(async () => {
+        setHistoryLoading(true);
+        try {
+            const token = await getIdToken();
+            const response = await fetch(`${API_BASE}/discovery/history`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                console.log("[useDiscovery] Fetched history:", data.length, "items");
+                setHistory(data);
+            }
+        } catch (err) {
+            console.error("Failed to fetch discovery history:", err);
+        } finally {
+            setHistoryLoading(false);
+        }
+    }, [getIdToken]);
+
+    const deleteHistoryItem = useCallback(async (id: string) => {
+        try {
+            const token = await getIdToken();
+            const response = await fetch(`${API_BASE}/discovery/history/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                setHistory(prev => prev.filter(item => item.id !== id));
+            }
+        } catch (err) {
+            console.error("Failed to delete history item:", err);
+        }
+    }, [getIdToken]);
+
+    useEffect(() => {
+        fetchHistory();
+    }, [fetchHistory]);
+
     const filteredResults = useMemo(() => {
         // Ensure selected items that are NOT in the current search results (e.g. Bulk Imports) 
         // stay visible in the grid as "sticky" items until unselected.
@@ -324,6 +386,10 @@ export const useDiscovery = () => {
         setSelectedIds,
         detectedIntent,
         showSelectedOnly,
-        setShowSelectedOnly
+        setShowSelectedOnly,
+        history,
+        historyLoading,
+        fetchHistory,
+        deleteHistoryItem
     };
 };
