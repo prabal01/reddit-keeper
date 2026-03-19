@@ -2,15 +2,13 @@ import React, { useState } from 'react';
 import { useFolders } from '../../contexts/FolderContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useDiscovery } from './hooks/useDiscovery';
-import { SearchHeader } from './components/SearchHeader';
-import { IdeaSearchHeader } from './components/IdeaSearchHeader';
-import { BulkImportHeader } from './components/BulkImportHeader';
+import { DiscoveryInput } from './components/DiscoveryInput';
 import { ResultGrid } from './components/ResultGrid';
 import { DiscoverySidebar } from './components/DiscoverySidebar';
 import { DiscoverySuccessView } from './components/DiscoverySuccessView';
 import DiscoveryHistoryPopover from './components/DiscoveryHistoryPopover';
 import { UpgradeModal } from '../UpgradeModal';
-import { Info, Search as SearchIcon, Lightbulb, Sidebar as SidebarIcon, Zap, History as HistoryIcon } from 'lucide-react';
+import { Lightbulb, Sidebar as SidebarIcon, History as HistoryIcon } from 'lucide-react';
 import './DiscoveryWorkbench.css';
 
 export const DiscoveryWorkbench: React.FC = () => {
@@ -47,6 +45,7 @@ export const DiscoveryWorkbench: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'competitor' | 'idea' | 'bulk'>('idea');
     const [competitor, setCompetitor] = useState('');
     const [idea, setIdea] = useState('');
+    const [bulkUrls, setBulkUrls] = useState('');
     const [communities, setCommunities] = useState<string[]>([]);
     const [competitorsList, setCompetitorsList] = useState('');
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -74,10 +73,6 @@ export const DiscoveryWorkbench: React.FC = () => {
         await importUrls(urls);
     };
 
-    const handleTabChange = (tab: 'competitor' | 'idea' | 'bulk') => {
-        setActiveTab(tab);
-    };
-
     const handleSaveSelection = async (folderId: string) => {
         const urls = selectedResults.map(r => r.url);
         const items = selectedResults.map(r => ({
@@ -103,6 +98,7 @@ export const DiscoveryWorkbench: React.FC = () => {
             setIsSearchingStarted(false);
             setCompetitor('');
             setIdea('');
+            setBulkUrls('');
             setCompetitorsList('');
         } catch (err) {
             console.error("Failed to save selection:", err);
@@ -116,6 +112,7 @@ export const DiscoveryWorkbench: React.FC = () => {
         setIsSearchingStarted(false);
         setCompetitor('');
         setIdea('');
+        setBulkUrls('');
         setCompetitorsList('');
         setCommunities([]);
     };
@@ -137,223 +134,174 @@ export const DiscoveryWorkbench: React.FC = () => {
         setIsHistoryOpen(false);
     };
 
-    const renderHeader = () => {
-        switch (activeTab) {
-            case 'competitor':
-                return (
-                    <SearchHeader
-                        competitor={competitor}
-                        setCompetitor={setCompetitor}
-                        onSearch={handleSearch}
-                        loading={loading}
-                        platformFilter={platformFilter}
-                        setPlatformFilter={setPlatformFilter}
-                        intentFilter={intentFilter}
-                        setIntentFilter={setIntentFilter}
-                    />
-                );
-            case 'idea':
-                return (
-                    <IdeaSearchHeader
-                        idea={idea}
-                        setIdea={setIdea}
-                        communities={communities}
-                        addCommunity={(comm) => setCommunities([...communities, comm])}
-                        removeCommunity={(comm) => setCommunities(communities.filter(c => c !== comm))}
-                        competitors={competitorsList}
-                        setCompetitors={setCompetitorsList}
-                        onSearch={handleIdeaSearch}
-                        loading={loading}
-                        platformFilter={platformFilter}
-                        setPlatformFilter={setPlatformFilter}
-                        intentFilter={intentFilter}
-                        setIntentFilter={setIntentFilter}
-                    />
-                );
-            case 'bulk':
-                return (
-                    <BulkImportHeader
-                        onImport={handleBulkImport}
-                        loading={loading}
-                    />
-                );
-        }
-    };
-
     return (
-        <div className={`w-full px-5 min-h-[calc(100vh-80px)] flex flex-col transition-all duration-500 ease-in-out ${isSearchingStarted || results.length > 0 ? 'active' : 'hero'} ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
-            <header className={`mb-4 ${isSearchingStarted || results.length > 0 ? 'text-left scale-90 origin-left mb-1' : 'text-center mt-[5vh]'}`}>
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold mb-0 tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-white to-[#FF8717] transition-all duration-700">
+        <div className={`w-full px-5 min-h-[calc(100vh-80px)] flex flex-col transition-all duration-700 ease-in-out ${isSearchingStarted || results.length > 0 ? 'active' : 'hero'} ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
+            <header className={`transition-all duration-700 ${isSearchingStarted || results.length > 0 ? 'h-0 opacity-0 overflow-hidden mb-0' : 'text-center mt-[8vh] mb-12'}`}>
+                <h1 className="text-4xl md:text-5xl lg:text-7xl font-extrabold mb-3 tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-white/20">
                     Discovery Workbench
                 </h1>
-                <p className="text-sm text-slate-400 opacity-80">Build your research intelligence from Reddit & Hacker News.</p>
+                <p className="text-sm font-medium text-slate-500 tracking-widest uppercase">Intelligent Research Engine</p>
             </header>
 
-            <div className="flex gap-6 w-full flex-1 relative min-w-0">
-                <div className="flex-1 min-w-0 flex flex-col transition-all duration-400">
+            <div className="flex gap-8 w-full flex-1 relative min-w-0">
+                <div className="flex-1 min-w-0 flex flex-col">
                     <div className="dw-container">
-                        {/* Tab Bar */}
-                        <div className="dw-tab-bar">
-                            <div className="flex gap-4 w-full justify-start items-center">
-                                <button
-                                    className={`dw-tab-btn ${activeTab === 'competitor' ? 'active' : ''}`}
-                                    onClick={() => handleTabChange('competitor')}
-                                    role="tab"
-                                    aria-selected={activeTab === 'competitor'}
-                                    aria-controls="competitor-panel"
-                                >
-                                    <SearchIcon size={14} />
-                                    Competitors
-                                </button>
-                                <button
-                                    className={`dw-tab-btn ${activeTab === 'idea' ? 'active' : ''}`}
-                                    onClick={() => handleTabChange('idea')}
-                                    role="tab"
-                                    aria-selected={activeTab === 'idea'}
-                                    aria-controls="idea-panel"
-                                >
-                                    <Lightbulb size={14} />
-                                    Idea Search
-                                </button>
-                                <button
-                                    className={`dw-tab-btn ${activeTab === 'bulk' ? 'active' : ''}`}
-                                    onClick={() => handleTabChange('bulk')}
-                                    role="tab"
-                                    aria-selected={activeTab === 'bulk'}
-                                    aria-controls="bulk-panel"
-                                >
-                                    <Zap size={14} />
-                                    Bulk Import
-                                </button>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    className={`dw-tab-btn ${isHistoryOpen ? 'active' : ''}`}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setIsHistoryOpen(!isHistoryOpen);
-                                    }}
-                                    title="Search History"
-                                    aria-label="View search history"
-                                    aria-expanded={isHistoryOpen}
-                                >
-                                    <HistoryIcon size={14} />
-                                    History
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Search Input Area */}
-                        <div className="py-2 px-4 sm:px-8 relative">
-                            {renderHeader()}
-                        </div>
+                        <DiscoveryInput
+                            activeTab={activeTab}
+                            setActiveTab={setActiveTab}
+                            competitor={competitor}
+                            setCompetitor={setCompetitor}
+                            onCompetitorSearch={handleSearch}
+                            idea={idea}
+                            setIdea={setIdea}
+                            communities={communities}
+                            addCommunity={(comm: string) => setCommunities([...communities, comm])}
+                            removeCommunity={(comm: string) => setCommunities(communities.filter(c => c !== comm))}
+                            competitorsList={competitorsList}
+                            setCompetitorsList={setCompetitorsList}
+                            onIdeaSearch={handleIdeaSearch}
+                            bulkUrls={bulkUrls}
+                            setBulkUrls={setBulkUrls}
+                            onBulkImport={handleBulkImport}
+                            loading={loading}
+                        />
                     </div>
 
-                    <div className="flex flex-wrap items-center justify-between gap-y-4 gap-x-6 mt-2 mb-3 w-full px-2">
-                        <div className="flex flex-wrap gap-3 items-center z-10">
-                            {results.length > 0 && !loading && (
-                                <>
-                                    <button className="dw-icon-btn hover:!bg-white/10" onClick={selectAllVisible}>Select All Shown</button>
-                                    <button className="dw-icon-btn hover:!border-white/40 hover:!bg-white/10" onClick={unselectAllVisible}>Clear Shown</button>
-                                </>
-                            )}
-                            <button
-                                className="dw-icon-btn hover:!text-red-500 hover:!border-red-500/30 hover:!bg-red-500/10"
-                                onClick={handleClear}
-                            >
-                                Clear All
-                            </button>
-                        </div>
-
-                        {discoveryPlan && !loading && (
-                            <div className="flex gap-6 bg-white/[0.03] backdrop-blur-2xl px-8 py-3.5 rounded-[18px] border border-white/10 shadow-2xl z-20 order-last xl:order-none mx-auto xl:mx-0 ring-1 ring-white/5">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Scanned</span>
-                                    <span className="text-sm font-bold text-white tabular-nums">{discoveryPlan.scannedCount}</span>
-                                </div>
-                                <div className="w-px h-4 bg-white/10" />
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">High Signal</span>
-                                    <span className="text-sm font-bold text-[#FF8717] tabular-nums">{discoveryPlan.totalFound}</span>
-                                </div>
-                                {discoveryPlan.isFromCache && (
-                                    <>
-                                        <div className="w-px h-4 bg-white/10" />
-                                        <div className="flex items-center gap-1.5 text-[10px] font-black text-emerald-500 uppercase tracking-widest">
-                                            <Info size={12} />
-                                            <span>Cached</span>
+                    {(isSearchingStarted || results.length > 0 || loading) && (
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both">
+                            {/* Unified Control Bar */}
+                            <div className="relative flex flex-wrap items-center justify-between gap-4 mt-6 mb-8 w-full px-4 py-3 bg-white/[0.02] border border-white/5 rounded-2xl backdrop-blur-xl">
+                                <div className="flex items-center gap-3">
+                                    <button 
+                                        className={`dw-tab-btn !px-4 !py-2 !rounded-xl !border-white/5 ${isHistoryOpen ? 'active' : ''}`}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setIsHistoryOpen(!isHistoryOpen);
+                                        }}
+                                    >
+                                        <HistoryIcon size={14} />
+                                        History
+                                    </button>
+                                    <div className="w-px h-4 bg-white/10 mx-1" />
+                                    {results.length > 0 && !loading && (
+                                        <div className="flex items-center gap-2">
+                                            <button className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-colors" onClick={selectAllVisible}>Select All</button>
+                                            <button className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-colors" onClick={unselectAllVisible}>Clear Selection</button>
+                                            <div className="w-px h-3 bg-white/10 mx-1" />
+                                            <button className="text-[10px] font-black uppercase tracking-widest text-red-500/80 hover:text-red-500 transition-colors" onClick={handleClear}>Reset Search</button>
                                         </div>
-                                    </>
+                                    )}
+                                </div>
+
+                                {discoveryPlan && !loading && (
+                                    <div className="flex gap-6 items-center">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Scanned</span>
+                                            <span className="text-xs font-bold text-white tabular-nums">{discoveryPlan.scannedCount}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">High Signal</span>
+                                            <span className="text-xs font-bold text-[#FF8717] tabular-nums">{discoveryPlan.totalFound}</span>
+                                        </div>
+                                    </div>
                                 )}
-                            </div>
-                        )}
 
-                        <div className="flex flex-wrap gap-3 items-center justify-end z-10 order-2 xl:order-none ml-auto">
-                            {status && <div className="text-xs font-black uppercase tracking-widest text-[#FF4500] animate-pulse mr-2">{status}</div>}
-                            <button
-                                className={`dw-icon-btn flex items-center gap-2.5 ${showSelectedOnly ? 'active-focus' : ''}`}
-                                onClick={() => setShowSelectedOnly(!showSelectedOnly)}
-                                title="Show Selected Only"
-                                aria-pressed={showSelectedOnly}
-                            >
-                                <div className={`w-2 h-2 rounded-full transition-all duration-500 focus-dot ${!showSelectedOnly ? 'bg-slate-700' : ''}`}></div>
-                                Selected Only
-                            </button>
-                            <button
-                                className={`dw-icon-btn ${isSidebarOpen ? 'active-solid' : ''}`}
-                                style={{ width: '2.75rem', height: '2.75rem', padding: '0', justifyContent: 'center', borderRadius: '14px' }}
-                                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                                title="Toggle Research Workspace"
-                                aria-label="Toggle Research Workspace"
-                                aria-expanded={isSidebarOpen}
-                            >
-                                <SidebarIcon size={18} />
-                            </button>
-                        </div>
-                    </div>
+                                <div className="flex items-center gap-3">
+                                    {status && <div className="text-[9px] font-black uppercase tracking-[0.2em] text-[#FF4500] animate-pulse">{status}</div>}
+                                    
+                                    {results.length > 0 && !loading && (
+                                        <>
+                                            <div className="flex items-center gap-1 bg-white/5 p-0.5 rounded-lg border border-white/10">
+                                                {(['all', 'reddit', 'hn'] as const).map(p => (
+                                                    <button
+                                                        key={p}
+                                                        onClick={() => setPlatformFilter(p)}
+                                                        className={`px-3 py-1 rounded-md text-[9px] font-black uppercase tracking-widest transition-all ${
+                                                            platformFilter === p ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-slate-300'
+                                                        }`}
+                                                    >
+                                                        {p}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <select
+                                                className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-slate-400 outline-none focus:text-white focus:border-[#FF4500]/30 appearance-none cursor-pointer"
+                                                value={intentFilter}
+                                                onChange={(e) => setIntentFilter(e.target.value as any)}
+                                            >
+                                                <option value="all">All Intents</option>
+                                                <option value="frustration">Frustration</option>
+                                                <option value="alternative">Alternatives</option>
+                                                <option value="high_engagement">High Signal</option>
+                                            </select>
+                                            <div className="w-px h-4 bg-white/10" />
+                                        </>
+                                    )}
+                                    <button
+                                        className={`flex items-center gap-2.5 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${
+                                            showSelectedOnly ? 'bg-[#FF4500]/10 border-[#FF4500]/30 text-[#FF8717]' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white'
+                                        }`}
+                                        onClick={() => setShowSelectedOnly(!showSelectedOnly)}
+                                    >
+                                        <div className={`w-1.5 h-1.5 rounded-full ${showSelectedOnly ? 'bg-[#FF4500] shadow-[0_0_8px_rgba(255,69,0,0.5)]' : 'bg-slate-700'}`} />
+                                        Selected Only
+                                    </button>
+                                    <button
+                                        className={`p-2 rounded-xl border transition-all ${
+                                            isSidebarOpen ? 'bg-gradient-to-br from-[#FF4500] to-[#FF8717] border-transparent text-white shadow-lg' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white'
+                                        }`}
+                                        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                                        title="Toggle Research Workspace"
+                                    >
+                                        <SidebarIcon size={16} />
+                                    </button>
+                                </div>
 
-                    {detectedIntent && activeTab === 'idea' && !loading && (
-                        <div className="bg-[#FF4500]/10 border border-[#FF4500]/20 p-4 rounded-2xl mb-8 flex flex-col md:flex-row gap-4 items-center">
-                            <div className="flex items-center gap-2 text-sm font-bold text-[#FF4500]">
-                                <Lightbulb size={16} />
-                                <span>Idea Context:</span>
+                                <DiscoveryHistoryPopover
+                                    history={history}
+                                    isOpen={isHistoryOpen}
+                                    onClose={() => setIsHistoryOpen(false)}
+                                    onSelect={handleHistorySelect}
+                                    onDelete={deleteHistoryItem}
+                                    isLoading={historyLoading}
+                                />
                             </div>
-                            <div className="flex flex-wrap gap-2">
-                                <span className="bg-white/5 px-3 py-1.5 rounded-lg text-xs border border-white/5 text-slate-300"><b>Persona:</b> {detectedIntent.persona}</span>
-                                <span className="bg-white/5 px-3 py-1.5 rounded-lg text-xs border border-white/5 text-slate-300"><b>Pain:</b> {detectedIntent.pain}</span>
-                                <span className="bg-white/5 px-3 py-1.5 rounded-lg text-xs border border-white/5 text-slate-300"><b>Domain:</b> {detectedIntent.domain}</span>
-                            </div>
+
+                            {detectedIntent && activeTab === 'idea' && !loading && (
+                                <div className="bg-[#FF4500]/5 border border-[#FF4500]/10 p-6 rounded-[24px] mb-8 flex flex-col md:flex-row gap-6 items-center animate-in zoom-in-95 duration-500">
+                                    <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] text-[#FF4500]">
+                                        <Lightbulb size={16} />
+                                        <span>Idea Context</span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-4">
+                                        <span className="text-xs text-slate-400"><b>Persona:</b> {detectedIntent.persona}</span>
+                                        <span className="text-xs text-slate-400"><b>Pain:</b> {detectedIntent.pain}</span>
+                                        <span className="text-xs text-slate-400"><b>Domain:</b> {detectedIntent.domain}</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            <main className="mt-0 w-full mb-20">
+                                {lastSyncInfo ? (
+                                    <DiscoverySuccessView
+                                        {...lastSyncInfo}
+                                        onReset={() => setLastSyncInfo(null)}
+                                    />
+                                ) : (
+                                    <ResultGrid
+                                        results={results}
+                                        selectedIds={selectedIds}
+                                        onToggle={toggleSelection}
+                                        onEnrichResult={enrichResult}
+                                        isSidebarOpen={isSidebarOpen}
+                                    />
+                                )}
+                            </main>
                         </div>
                     )}
-
-                    <main className="mt-0 w-full mb-20">
-                        {lastSyncInfo ? (
-                            <DiscoverySuccessView
-                                {...lastSyncInfo}
-                                onReset={() => setLastSyncInfo(null)}
-                            />
-                        ) : (
-                            <ResultGrid
-                                results={results}
-                                selectedIds={selectedIds}
-                                onToggle={toggleSelection}
-                                onEnrichResult={enrichResult}
-                                isSidebarOpen={isSidebarOpen}
-                            />
-                        )}
-                    </main>
-
-                    <DiscoveryHistoryPopover
-                        history={history}
-                        isOpen={isHistoryOpen}
-                        onClose={() => setIsHistoryOpen(false)}
-                        onSelect={handleHistorySelect}
-                        onDelete={deleteHistoryItem}
-                        isLoading={historyLoading}
-                    />
                 </div>
 
-                {isSidebarOpen && (
+                {(isSearchingStarted || results.length > 0 || loading) && isSidebarOpen && (
                     <DiscoverySidebar
                         selectedResults={selectedResults}
                         onToggleSelection={toggleSelection}

@@ -41,24 +41,24 @@ export const DiscoverySidebar: React.FC<DiscoverySidebarProps> = ({
 
     if (selectedResults.length === 0) {
         return (
-            <aside className="w-[380px] h-[calc(100vh-110px)] sticky top-[70px] flex flex-col items-center justify-center text-center bg-slate-900/40 rounded-[30px] border border-dashed border-white/5 animate-in fade-in slide-in-from-right-4 duration-500 shadow-inner">
-                <div className="flex flex-col items-center justify-center -mt-20">
-                    <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mb-6 border border-white/5 shadow-inner">
-                        <Save size={32} className="text-slate-500 opacity-60" />
+            <aside className="w-[360px] h-[calc(100vh-140px)] sticky top-[100px] flex flex-col items-center justify-center text-center bg-white/[0.01] rounded-[32px] border border-dashed border-white/5 animate-in fade-in slide-in-from-right-4 duration-700">
+                <div className="flex flex-col items-center justify-center -mt-12 px-8">
+                    <div className="w-12 h-12 bg-white/[0.03] rounded-2xl flex items-center justify-center mb-5 border border-white/5">
+                        <Save size={20} className="text-slate-600 opacity-50" />
                     </div>
-                    <h3 className="text-white/70 text-lg font-black tracking-tight mb-2 uppercase text-[12px] tracking-[0.2em]">Research Bucket</h3>
-                    <p className="text-slate-600 text-sm font-medium leading-relaxed max-w-[240px]">Select intelligence cards to begin organizing your research workspace.</p>
+                    <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Research Bucket</h3>
+                    <p className="text-slate-600 text-[11px] font-medium leading-relaxed max-w-[200px]">Select intelligence cards to begin organizing your work.</p>
                 </div>
             </aside>
         );
     }
 
     return (
-        <aside className="w-[380px] h-[calc(100vh-110px)] sticky top-[70px] flex flex-col bg-slate-900/60 backdrop-blur-2xl rounded-[30px] border border-white/10 shadow-3xl animate-in fade-in slide-in-from-right-4 duration-500 overflow-hidden">
-            <div className="p-6 pb-4 flex justify-between items-center border-b border-white/5">
-                <div className="flex items-center gap-4">
-                    <h3 className="text-white/[0.85] font-black text-[10px] uppercase tracking-[0.2em]">Research Workspace</h3>
-                    <span className="bg-[#FF4500] text-white text-[10px] font-black px-2.5 py-0.5 rounded-full shadow-lg shadow-[#FF4500]/30">{selectedResults.length}</span>
+        <aside className="w-[360px] h-[calc(100vh-140px)] sticky top-[100px] flex flex-col bg-white/[0.02] backdrop-blur-3xl rounded-[32px] border border-white/10 shadow-2xl animate-in fade-in slide-in-from-right-8 duration-700 overflow-hidden group/sidebar">
+            <div className="p-5 pb-3 flex justify-between items-center border-b border-white/5">
+                <div className="flex items-center gap-3">
+                    <h3 className="text-slate-500 font-black text-[9px] uppercase tracking-[0.2em]">Workspace</h3>
+                    <span className="bg-[#FF4500]/10 text-[#FF8717] text-[9px] font-black px-2 py-0.5 rounded-md border border-[#FF4500]/20">{selectedResults.length}</span>
                 </div>
                 <button
                     className="p-2.5 rounded-xl bg-white/5 text-slate-500 hover:text-red-500 hover:bg-red-500/10 transition-all duration-300 border border-transparent hover:border-red-500/20"
@@ -70,26 +70,26 @@ export const DiscoverySidebar: React.FC<DiscoverySidebarProps> = ({
                 </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-6 py-6 scrollbar-hide">
-                <div className="flex flex-col gap-4">
+            <div className="flex-1 overflow-y-auto px-5 py-4 scrollbar-hide">
+                <div className="flex flex-col gap-3">
                     {selectedResults.map(item => (
-                        <div key={item.id} className="group relative bg-black/20 hover:bg-black/40 border border-white/5 rounded-[18px] p-5 transition-all duration-300 flex flex-col gap-3">
+                        <div key={item.id} className="group/item relative bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 rounded-2xl p-4 transition-all duration-300 flex flex-col gap-2">
                             <div className="flex justify-between items-start">
                                 <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.15em] opacity-60">r/{item.subreddit || 'hacker-news'}</span>
-                                <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                                    <a href={item.url} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-white/10 bg-white/5 transition-all" aria-label={`View r/${item.subreddit} thread in new tab`}>
-                                        <ExternalLink size={12} />
+                                <div className="flex items-center gap-1.5 opacity-0 group-hover/item:opacity-100 transition-all duration-300">
+                                    <a href={item.url} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/10 bg-white/5 transition-all" aria-label={`View r/${item.subreddit} thread in new tab`}>
+                                        <ExternalLink size={10} />
                                     </a>
                                     <button
-                                        className="p-2 rounded-lg text-slate-500 hover:text-red-500 hover:bg-red-500/10 bg-white/5 transition-all"
+                                        className="p-1.5 rounded-lg text-slate-500 hover:text-red-500 hover:bg-red-500/10 bg-white/5 transition-all"
                                         onClick={() => onToggleSelection(item.id)}
                                         aria-label={`Remove "${item.title}" from workspace`}
                                     >
-                                        <X size={12} />
+                                        <X size={10} />
                                     </button>
                                 </div>
                             </div>
-                            <p className="text-xs font-black leading-relaxed text-white/70 line-clamp-2 tracking-tight group-hover:text-white transition-colors uppercase">{item.title}</p>
+                            <p className="text-[10px] font-bold leading-relaxed text-slate-400 line-clamp-2 tracking-tight group-hover/item:text-white transition-colors uppercase">{item.title}</p>
                         </div>
                     ))}
                 </div>
