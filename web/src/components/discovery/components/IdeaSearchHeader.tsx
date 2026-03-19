@@ -44,6 +44,7 @@ export const IdeaSearchHeader: React.FC<IdeaSearchHeaderProps> = ({
                         rows={2}
                         value={idea}
                         onChange={(e) => setIdea(e.target.value)}
+                        aria-label="Describe your research idea"
                     />
                 </div>
 
@@ -55,6 +56,7 @@ export const IdeaSearchHeader: React.FC<IdeaSearchHeaderProps> = ({
                             placeholder="Comma separated competitors (optional)..."
                             value={competitors}
                             onChange={(e) => setCompetitors(e.target.value)}
+                            aria-label="List of competitors (comma separated)"
                         />
                     </div>
                 </div>
@@ -68,6 +70,7 @@ export const IdeaSearchHeader: React.FC<IdeaSearchHeaderProps> = ({
                                     <button
                                         className="bg-transparent border-none text-[#FF8717] cursor-pointer flex items-center opacity-60 hover:opacity-100 transition-opacity"
                                         onClick={() => removeCommunity(c)}
+                                        aria-label={`Remove r/${c}`}
                                     >
                                         <X size={12} />
                                     </button>
@@ -81,8 +84,13 @@ export const IdeaSearchHeader: React.FC<IdeaSearchHeaderProps> = ({
                                     value={newCommunityLocal}
                                     onChange={(e) => setNewCommunityLocal(e.target.value)}
                                     onKeyPress={(e) => e.key === 'Enter' && handleAddCommunity()}
+                                    aria-label="Enter subreddit name to add"
                                 />
-                                <button className="bg-transparent border-none text-slate-500 hover:text-white cursor-pointer flex items-center pr-1 transition-colors" onClick={handleAddCommunity}>
+                                <button 
+                                    className="bg-transparent border-none text-slate-500 hover:text-white cursor-pointer flex items-center pr-1 transition-colors" 
+                                    onClick={handleAddCommunity}
+                                    aria-label="Add subreddit"
+                                >
                                     <Plus size={14} />
                                 </button>
                             </div>
@@ -109,6 +117,7 @@ export const IdeaSearchHeader: React.FC<IdeaSearchHeaderProps> = ({
                                     key={p}
                                     className={`dw-filter-btn ${platformFilter === p ? 'active' : ''}`}
                                     onClick={() => setPlatformFilter(p)}
+                                    aria-pressed={platformFilter === p}
                                 >
                                     {p.toUpperCase()}
                                 </button>
@@ -125,6 +134,7 @@ export const IdeaSearchHeader: React.FC<IdeaSearchHeaderProps> = ({
                                     key={i}
                                     className={`dw-filter-btn ${intentFilter === i ? 'active' : ''}`}
                                     onClick={() => setIntentFilter(i)}
+                                    aria-pressed={intentFilter === i}
                                 >
                                     {i.replace('_', ' ').toUpperCase()}
                                 </button>

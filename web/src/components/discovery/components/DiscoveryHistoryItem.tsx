@@ -17,6 +17,10 @@ const DiscoveryHistoryItem: React.FC<DiscoveryHistoryItemProps> = ({ entry, onSe
         <div 
             className="discovery-history-item group"
             onClick={() => onSelect(entry)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onSelect(entry))}
+            aria-label={`Select history entry: ${entry.query}`}
         >
             <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -41,9 +45,10 @@ const DiscoveryHistoryItem: React.FC<DiscoveryHistoryItemProps> = ({ entry, onSe
                 </div>
                 
                 <button
-                    onClick={(e) => onDelete(entry.id, e)}
+                    onClick={(e) => { e.stopPropagation(); onDelete(entry.id, e); }}
                     className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-md opacity-0 group-hover:opacity-100 transition-all"
                     title="Delete history"
+                    aria-label={`Delete history entry for ${entry.query}`}
                 >
                     <Trash2 size={14} />
                 </button>

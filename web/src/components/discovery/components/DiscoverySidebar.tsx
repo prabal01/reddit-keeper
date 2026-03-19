@@ -64,6 +64,7 @@ export const DiscoverySidebar: React.FC<DiscoverySidebarProps> = ({
                     className="p-2.5 rounded-xl bg-white/5 text-slate-500 hover:text-red-500 hover:bg-red-500/10 transition-all duration-300 border border-transparent hover:border-red-500/20"
                     onClick={onClear}
                     title="Clear workspace"
+                    aria-label="Clear all items from research workspace"
                 >
                     <Trash2 size={16} />
                 </button>
@@ -76,12 +77,13 @@ export const DiscoverySidebar: React.FC<DiscoverySidebarProps> = ({
                             <div className="flex justify-between items-start">
                                 <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.15em] opacity-60">r/{item.subreddit || 'hacker-news'}</span>
                                 <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                                    <a href={item.url} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-white/10 bg-white/5 transition-all">
+                                    <a href={item.url} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-white/10 bg-white/5 transition-all" aria-label={`View r/${item.subreddit} thread in new tab`}>
                                         <ExternalLink size={12} />
                                     </a>
                                     <button
                                         className="p-2 rounded-lg text-slate-500 hover:text-red-500 hover:bg-red-500/10 bg-white/5 transition-all"
                                         onClick={() => onToggleSelection(item.id)}
+                                        aria-label={`Remove "${item.title}" from workspace`}
                                     >
                                         <X size={12} />
                                     </button>
@@ -101,6 +103,7 @@ export const DiscoverySidebar: React.FC<DiscoverySidebarProps> = ({
                                 className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-slate-300 text-xs font-black uppercase tracking-widest outline-none focus:border-[#FF4500]/50 focus:text-white transition-all appearance-none cursor-pointer"
                                 value={targetFolderId}
                                 onChange={(e) => setTargetFolderId(e.target.value)}
+                                aria-label="Select target research folder"
                             >
                                 <option value="" className="bg-slate-900">Select Target Folder</option>
                                 {folders.map((f: any) => (
@@ -115,6 +118,8 @@ export const DiscoverySidebar: React.FC<DiscoverySidebarProps> = ({
                             className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-all border-dashed"
                             onClick={() => setIsCreatingFolder(true)}
                             title="Create New Project Folder"
+                            aria-label="Create new project folder"
+                            aria-expanded={isCreatingFolder}
                         >
                             <FolderPlus size={18} />
                         </button>
@@ -130,6 +135,7 @@ export const DiscoverySidebar: React.FC<DiscoverySidebarProps> = ({
                             onChange={(e) => setNewFolderName(e.target.value)}
                             onKeyPress={(e) => e.key === 'Enter' && handleCreateFolder()}
                             autoFocus
+                            aria-label="New folder name"
                         />
                         <div className="flex justify-end gap-3 pt-2">
                             <button

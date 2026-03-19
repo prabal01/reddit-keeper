@@ -17,8 +17,10 @@ import { ResearchView } from "./components/ResearchView";
 import { DiscoveryLab } from "./components/discovery/LabDiscovery";
 import { UpgradeModal } from "./components/UpgradeModal";
 import { PricingPage } from "./components/PricingPage";
+import { Breadcrumbs } from "./components/common/Breadcrumbs";
 
 import { LoginView } from "./components/LoginView";
+import { Toaster } from "react-hot-toast";
 
 const AppSkeleton = () => (
   <div className="app" style={{ background: 'var(--bg-primary, #f8f9fb)', minHeight: '100vh' }}>
@@ -124,14 +126,16 @@ function AppContent() {
     <div className="app">
       {user && <Sidebar />}
 
-      <div className="app-main-wrapper">
-        <header className="app-header">
-          <div className="header-breadcrumbs">
-            {/* Future Breadcrumbs location */}
-          </div>
-          <div className="header-actions" style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-            <ThemeToggle />
-            {user && <AuthButton />}
+      <div className="app-main-wrapper" style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflowY: 'auto' }}>
+        <header className="app-header" style={{ height: '64px', minHeight: '64px', display: 'flex', alignItems: 'center', position: 'sticky', top: 0, zIndex: 1000, background: 'rgba(10, 10, 12, 0.8)', backdropFilter: 'blur(30px)', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 32px' }}>
+            <div className="header-breadcrumbs">
+              <Breadcrumbs />
+            </div>
+            <div className="header-actions" style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+              <ThemeToggle />
+              {user && <AuthButton />}
+            </div>
           </div>
         </header>
 
@@ -193,6 +197,13 @@ function AppContent() {
           isOpen={isUpgradeModalOpen}
           onClose={closeUpgradeModal}
         />
+        <Toaster position="bottom-right" toastOptions={{
+          style: {
+            background: 'var(--bg-secondary)',
+            color: 'var(--text-primary)',
+            border: '1px solid var(--border)',
+          },
+        }} />
       </div>
     </div>
   );

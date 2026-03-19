@@ -25,9 +25,18 @@ const FolderCard: React.FC<FolderCardProps> = ({ folder, onClick }) => {
 
     return (
         <div className="folder-card" onClick={() => onClick(folder)}>
-            <div className="folder-card-header">
-                <div className="folder-icon-wrapper">
-                    <FolderIcon size={20} />
+            <div className="folder-icon-wrapper">
+                <FolderIcon size={24} />
+            </div>
+            
+            <div className="folder-info">
+                <h3 className="folder-name">{folder.name}</h3>
+                {folder.description && <p className="folder-desc">{folder.description}</p>}
+            </div>
+
+            <div className="folder-card-meta">
+                <div className="thread-count-badge">
+                    {folder.threadCount} {folder.threadCount === 1 ? 'thread' : 'threads'}
                 </div>
                 <div className="folder-actions">
                     <button
@@ -38,15 +47,6 @@ const FolderCard: React.FC<FolderCardProps> = ({ folder, onClick }) => {
                     >
                         <Trash2 size={18} />
                     </button>
-                </div>
-            </div>
-            <div className="folder-info">
-                <h3 className="folder-name">{folder.name}</h3>
-                {folder.description && <p className="folder-desc">{folder.description}</p>}
-            </div>
-            <div className="folder-card-footer">
-                <div className="thread-count-badge">
-                    {folder.threadCount} {folder.threadCount === 1 ? 'thread' : 'threads'}
                 </div>
             </div>
         </div>
@@ -103,16 +103,13 @@ export const FolderList: React.FC<{ onSelect: (folder: Folder) => void }> = ({ o
                 <div className="folders-grid">
                     {[1, 2, 3].map(id => (
                         <div key={id} className="folder-card" style={{ pointerEvents: 'none' }}>
-                            <div className="folder-card-header">
-                                <Skeleton width="40px" height="40px" circle />
-                                <Skeleton width="32px" height="32px" style={{ borderRadius: '8px' }} />
-                            </div>
+                            <Skeleton width="48px" height="48px" style={{ borderRadius: '14px' }} />
                             <div className="folder-info">
                                 <Skeleton width="60%" height="20px" style={{ marginBottom: '8px' }} />
                                 <Skeleton width="90%" height="16px" />
                             </div>
-                            <div className="folder-card-footer">
-                                <Skeleton width="80px" height="24px" style={{ borderRadius: '8px' }} />
+                            <div className="folder-card-meta">
+                                <Skeleton width="80px" height="24px" style={{ borderRadius: '10px' }} />
                             </div>
                         </div>
                     ))}

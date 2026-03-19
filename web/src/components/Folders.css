@@ -347,80 +347,72 @@
 /* FOLDER LIST (Horizontal Layout) */
 .folders-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 0.75rem;
-    margin-top: 0.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
 }
 
 .folder-card {
     background: rgba(255, 255, 255, 0.02);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 10px;
-    padding: 0.75rem;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    padding: 1rem 1.25rem;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: 0.5rem;
+    flex-direction: row;
+    align-items: center;
+    gap: 1.15rem;
     position: relative;
     overflow: hidden;
-}
-
-.folder-card::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 100%;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 100%);
-    pointer-events: none;
+    min-height: 90px;
 }
 
 .folder-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-4px) scale(1.01);
+    border-color: rgba(255, 255, 255, 0.15);
     background: rgba(255, 255, 255, 0.04);
+    box-shadow: 
+        0 20px 40px rgba(0, 0, 0, 0.4),
+        0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 /* FOLDER CARD INTERNALS */
-.folder-card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-}
-
 .folder-icon-wrapper {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    background: rgba(var(--primary-rgb, 255, 69, 0), 0.1);
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: rgba(255, 69, 0, 0.1);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--primary-color);
-    transition: all 0.2s ease;
+    color: var(--bg-accent);
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 69, 0, 0.1);
+    flex-shrink: 0;
 }
 
 .folder-card:hover .folder-icon-wrapper {
-    background: var(--primary-color);
+    background: var(--bg-accent);
     color: white;
-    transform: scale(1.05);
+    transform: scale(1.1) rotate(-5deg);
+    box-shadow: 0 0 15px rgba(255, 69, 0, 0.4);
 }
 
 .folder-info {
     flex: 1;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .folder-name {
     font-size: 1rem;
     font-weight: 800;
-    color: var(--text-primary);
+    color: white;
     margin: 0;
     line-height: 1.2;
     letter-spacing: -0.01em;
@@ -428,45 +420,49 @@
 
 .folder-desc {
     font-size: 0.8rem;
-    color: var(--text-secondary);
-    margin: 4px 0 0 0;
-    line-height: 1.3;
+    color: var(--text-tertiary);
+    margin: 3px 0 0 0;
+    line-height: 1.4;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    opacity: 0.7;
 }
 
-.folder-card-footer {
+.folder-card-meta {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding-top: 0.75rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    gap: 0.75rem;
 }
 
 .thread-count-badge {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: var(--text-secondary);
-    background: rgba(255, 255, 255, 0.05);
+    gap: 0.35rem;
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: var(--text-tertiary);
+    background: rgba(255, 255, 255, 0.03);
     padding: 4px 10px;
     border-radius: 8px;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    white-space: nowrap;
+    opacity: 0.9;
 }
 
 .folder-card:hover .thread-count-badge {
     background: rgba(255, 69, 0, 0.1);
-    color: var(--primary-color);
+    color: var(--bg-accent);
+    border-color: rgba(255, 69, 0, 0.2);
+    opacity: 1;
 }
 
 .folder-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.4rem;
 }
 
 .btn-icon-v2 {
@@ -479,12 +475,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
 }
 
 .btn-icon-v2:hover {
     background: rgba(239, 68, 68, 0.1);
     color: #ef4444;
+    transform: scale(1.1);
 }
 
 @keyframes spin {

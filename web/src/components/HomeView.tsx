@@ -1,4 +1,3 @@
-
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useFolders } from "../contexts/FolderContext";
@@ -16,9 +15,11 @@ import { useNavigate } from "react-router-dom";
 import { PremiumLoader, ButtonLoader } from "./PremiumLoader";
 import { FolderList } from "./FolderList";
 import { ExtensionModal } from "./ExtensionModal";
-import { Skeleton } from "./Skeleton";
 import { BRANDING } from "../constants/branding";
 import { AlertTriangle, Check, X, Activity, FolderOpen, Clock, MessageSquare } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { MetricCard } from "./common/MetricCard";
+import "./Home.css";
 
 export function HomeView() {
     const { plan, user, userStats: stats } = useAuth();
@@ -50,8 +51,10 @@ export function HomeView() {
         setSaveStatus('saving');
         try {
             await saveThread(folderId, thread);
+            toast.success("Thread saved successfully");
             setSaveStatus('success');
         } catch (err) {
+            toast.error("Failed to save thread");
             setSaveStatus('error');
         }
     };
@@ -72,10 +75,12 @@ export function HomeView() {
         try {
             const folder = await createFolder(name);
             await saveThread(folder.id, thread);
+            toast.success(`Created folder "${name}" and saved thread`);
             setSaveStatus('success');
             setShowNewFolder(false);
             setNewFolderName('');
         } catch (err) {
+            toast.error("Failed to create folder or save thread");
             setSaveStatus('error');
         }
     };
@@ -130,18 +135,18 @@ export function HomeView() {
     const showUpgrade = metadata?.truncated === true && plan !== "pro";
 
     return (
-        <>
+        <div className="dashboard-home">
             <UrlInput onFetch={handleFetch} loading={loading} />
 
             {error && (
-                <div className="error-banner" role="alert">
+                <div className="error-banner mb-6" role="alert">
                     <span className="error-icon" aria-hidden="true"><AlertTriangle size={20} /></span>
                     <p>{error}</p>
                 </div>
             )}
 
             {loading && (
-                <PremiumLoader text="Fetching data from platform..." />
+                <PremiumLoader text="Fetching intelligence from platform..." />
             )}
 
             {filteredThread && !loading && (
@@ -196,8 +201,6 @@ export function HomeView() {
                                         </button>
                                     </div>
                                 )}
-                                {saveStatus === 'success' && <span className="save-indicator success"><Check size={14} /> Saved</span>}
-                                {saveStatus === 'error' && <span className="save-indicator error"><X size={14} /> Failed</span>}
                             </div>
                         </div>
                     </div>
@@ -214,112 +217,45 @@ export function HomeView() {
             )}
 
             {!thread && !loading && !error && (
-                <div className="dashboard-home">
-                    <header className="dashboard-header" style={{ marginBottom: '16px' }}>
-                        <h1 style={{ fontSize: '1.75rem', marginBottom: '4px' }}>Welcome to {BRANDING.NAME}</h1>
-                        <p className="subtitle" style={{ fontSize: '0.95rem' }}>Your Strategic Market Intelligence Hub</p>
+                <>
+                    <header className="dashboard-header">
+                        <h1>Welcome to {BRANDING.NAME}</h1>
+                        <p className="subtitle">Your Strategic Market Intelligence Hub</p>
                     </header>
 
-                    <div className="impact-metrics-grid" style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                        gap: '16px',
-                        margin: '24px 0',
-                        width: '100%'
-                    }}>
-                        {!stats ? (
-                            <>
-                                {[1, 2, 3, 4].map(id => (
-                                    <div key={id} className="metric-card" style={{
-                                        background: 'rgba(255, 255, 255, 0.04)',
-                                        backdropFilter: 'blur(12px)',
-                                        padding: '20px',
-                                        borderRadius: '16px',
-                                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: '8px'
-                                    }}>
-                                        <Skeleton width="120px" height="16px" />
-                                        <Skeleton width="100px" height="40px" style={{ marginTop: '8px' }} />
-                                    </div>
-                                ))}
-                            </>
-                        ) : (
-                            <>
-                                <div className="metric-card" style={{
-                                    background: 'linear-gradient(135deg, rgba(255, 69, 0, 0.1) 0%, rgba(255, 255, 255, 0.04) 100%)',
-                                    backdropFilter: 'blur(12px)',
-                                    padding: '20px',
-                                    borderRadius: '16px',
-                                    border: '1px solid rgba(255, 69, 0, 0.2)',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: '8px',
-                                    transition: 'all 0.3s ease',
-                                    boxShadow: '0 8px 32px rgba(255, 69, 0, 0.1)'
-                                }}>
-                                    <div className="label" style={{ fontSize: '0.75rem', color: 'rgba(255, 69, 0, 0.8)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '800', letterSpacing: '0.08em' }}>
-                                        <Activity size={16} /> Intelligence Scanned
-                                    </div>
-                                    <div className="value" style={{ fontSize: '2rem', fontWeight: '900', color: 'white' }}>{stats?.intelligenceScanned || 0}</div>
-                                </div>
-
-                                <div className="metric-card" style={{
-                                    background: 'linear-gradient(135deg, rgba(0, 209, 255, 0.1) 0%, rgba(255, 255, 255, 0.04) 100%)',
-                                    backdropFilter: 'blur(12px)',
-                                    padding: '20px',
-                                    borderRadius: '16px',
-                                    border: '1px solid rgba(0, 209, 255, 0.2)',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: '8px',
-                                    transition: 'all 0.3s ease',
-                                    boxShadow: '0 8px 32px rgba(0, 209, 255, 0.1)'
-                                }}>
-                                    <div className="label" style={{ fontSize: '0.75rem', color: 'rgba(0, 209, 255, 0.8)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '800', letterSpacing: '0.08em' }}>
-                                        <MessageSquare size={16} /> Insights Found
-                                    </div>
-                                    <div className="value" style={{ fontSize: '2rem', fontWeight: '900', color: 'white' }}>{stats?.commentsAnalyzed || 0}</div>
-                                </div>
-
-                                <div className="metric-card" style={{
-                                    background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(255, 255, 255, 0.04) 100%)',
-                                    backdropFilter: 'blur(12px)',
-                                    padding: '20px',
-                                    borderRadius: '16px',
-                                    border: '1px solid rgba(168, 85, 247, 0.2)',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: '8px',
-                                    transition: 'all 0.3s ease',
-                                    boxShadow: '0 8px 32px rgba(168, 85, 247, 0.1)'
-                                }}>
-                                    <div className="label" style={{ fontSize: '0.75rem', color: 'rgba(168, 85, 247, 0.8)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '800', letterSpacing: '0.08em' }}>
-                                        <FolderOpen size={16} /> Strategy Folders
-                                    </div>
-                                    <div className="value" style={{ fontSize: '2rem', fontWeight: '900', color: 'white' }}>{folders.length}</div>
-                                </div>
-
-                                <div className="metric-card" style={{
-                                    background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.1) 0%, rgba(255, 255, 255, 0.04) 100%)',
-                                    backdropFilter: 'blur(12px)',
-                                    padding: '20px',
-                                    borderRadius: '16px',
-                                    border: '1px solid rgba(234, 179, 8, 0.2)',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: '8px',
-                                    transition: 'all 0.3s ease',
-                                    boxShadow: '0 8px 32px rgba(234, 179, 8, 0.1)'
-                                }}>
-                                    <div className="label" style={{ fontSize: '0.75rem', color: 'rgba(234, 179, 8, 0.8)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '800', letterSpacing: '0.08em' }}>
-                                        <Clock size={16} /> Hours Saved
-                                    </div>
-                                    <div className="value" style={{ fontSize: '2rem', fontWeight: '900', color: 'white' }}>{(stats?.hoursSaved || 0).toFixed(1)} <span style={{ fontSize: '1rem', opacity: 0.5 }}>h</span></div>
-                                </div>
-                            </>
-                        )}
+                    <div className="impact-stats-bar">
+                        <MetricCard 
+                            label="Intelligence Scanned" 
+                            value={stats?.intelligenceScanned || 0} 
+                            icon={<Activity size={18} />} 
+                            color="#FF4500"
+                            loading={!stats}
+                            variant="minimal"
+                        />
+                        <MetricCard 
+                            label="Insights Found" 
+                            value={stats?.commentsAnalyzed || 0} 
+                            icon={<MessageSquare size={18} />} 
+                            color="#00D1FF"
+                            loading={!stats}
+                            variant="minimal"
+                        />
+                        <MetricCard 
+                            label="Strategy Folders" 
+                            value={folders.length} 
+                            icon={<FolderOpen size={18} />} 
+                            color="#A855F7"
+                            loading={!stats}
+                            variant="minimal"
+                        />
+                        <MetricCard 
+                            label="Hours Saved" 
+                            value={`${(stats?.hoursSaved || 0).toFixed(1)}h`} 
+                            icon={<Clock size={18} />} 
+                            color="#EAB308"
+                            loading={!stats}
+                            variant="minimal"
+                        />
                     </div>
 
                     <FolderList onSelect={(folder) => navigate(`/folders/${folder.id}`)} />
@@ -330,13 +266,13 @@ export function HomeView() {
                             <SEOContent />
                         </>
                     )}
-                </div>
+                </>
             )}
 
             <ExtensionModal
                 isOpen={isExtensionModalOpen}
                 onClose={() => setIsExtensionModalOpen(false)}
             />
-        </>
+        </div>
     );
 }

@@ -43,6 +43,8 @@ const DiscoveryHistoryPopover: React.FC<DiscoveryHistoryPopoverProps> = ({
         <div 
             ref={popoverRef}
             className="discovery-history-popover"
+            role="dialog"
+            aria-label="Search History"
         >
             <div className="p-4 border-b border-white/10 flex items-center justify-between bg-black/20">
                 <div className="flex items-center gap-2 text-white">
@@ -52,6 +54,7 @@ const DiscoveryHistoryPopover: React.FC<DiscoveryHistoryPopoverProps> = ({
                 <button 
                     onClick={onClose}
                     className="p-1 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors"
+                    aria-label="Close search history"
                 >
                     <X size={16} />
                 </button>

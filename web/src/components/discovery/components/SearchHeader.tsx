@@ -29,6 +29,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                         value={competitor}
                         onChange={(e) => setCompetitor(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && onSearch()}
+                        aria-label="Search for competitor or platform"
                     />
                     <button
                         className="dw-primary-btn"
@@ -50,6 +51,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                                     key={p}
                                     className={`dw-filter-btn ${platformFilter === p ? 'active' : ''}`}
                                     onClick={() => setPlatformFilter(p)}
+                                    aria-pressed={platformFilter === p}
                                 >
                                     <div className="flex items-center gap-2">
                                         {p.toUpperCase()}
@@ -68,6 +70,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                                     key={i}
                                     className={`dw-filter-btn ${intentFilter === i ? 'active' : ''}`}
                                     onClick={() => setIntentFilter(i)}
+                                    aria-pressed={intentFilter === i}
                                 >
                                     {i.replace('_', ' ').toUpperCase()}
                                 </button>

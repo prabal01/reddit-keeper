@@ -17,6 +17,11 @@ export const DiscoveryResultCard: React.FC<DiscoveryResultCardProps> = ({ thread
                 : 'border-white/5 bg-white/[0.03] hover:bg-white/[0.07] hover:border-white/20 hover:translate-y-[-4px] hover:shadow-2xl hover:shadow-black/40'
                 } ${thread.isBulk ? 'border-dashed' : ''}`}
             onClick={() => onToggle(thread.id)}
+            role="checkbox"
+            aria-checked={isSelected}
+            aria-label={`Select thread: ${thread.title}`}
+            tabIndex={0}
+            onKeyDown={(e) => (e.key === ' ' || e.key === 'Enter') && (e.preventDefault(), onToggle(thread.id))}
         >
             {/* Background Accent */}
             <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#FF4500]/10 to-transparent rounded-full -mr-16 -mt-16 blur-3xl transition-opacity duration-500 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
@@ -27,7 +32,7 @@ export const DiscoveryResultCard: React.FC<DiscoveryResultCardProps> = ({ thread
                     <div className="flex flex-col gap-2">
                         {thread.source === 'reddit' ? (
                             <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-black/40 border border-white/5 text-[9px] font-black text-slate-300 uppercase tracking-widest w-fit">
-                                <svg viewBox="0 0 24 24" className="w-3 h-3" xmlns="http://www.w3.org/2000/svg">
+                                <svg viewBox="0 0 24 24" className="w-3 h-3" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                                     <circle cx="12" cy="12" r="12" fill="#FF4500" />
                                     <path d="M18.9 12.1c0-.8-.7-1.5-1.5-1.5-.4 0-.7.1-1 .4-1.3-.9-3-1.5-4.9-1.6l1.1-5.1 3.5.8c0 .6.5 1.1 1.1 1.1.6 0 1.1-.5 1.1-1.1S17.7 4 17.1 4c-.5 0-.9.3-1.1.7l-3.9-.9c-.2 0-.4.1-.4.3l-1.2 5.5c-1.9 0-3.6.6-4.9 1.6-.3-.3-.6-.4-1-.4-.8 0-1.5.7-1.5 1.5 0 .6.3 1.1.8 1.4-.1.2-.1.5-.1.7 0 2.4 2.8 4.3 6.3 4.3s6.3-1.9 6.3-4.3c0-.2 0-.5-.1-.7.5-.3.8-.8.8-1.4zM9.5 13.5c.6 0 1.1.5 1.1 1.1 0 .6-.5 1.1-1.1 1.1-.6 0-1.1-.5-1.1-1.1 0-.6.5-1.1 1.1-1.1zm5.8 4.1c-1.1 1.1-3.1 1.2-4.1.2 0-.1-.1-.3 0-.4s.3-.1.4 0c.8.8 2.4.8 3.3 0 .1-.1.3-.1.4 0s.1.3 0 .4zm-.4-1.9c-.6 0-1.1-.5-1.1-1.1s.5-1.1 1.1-1.1 1.1.5 1.1 1.1-.5 1.1-1.1 1.1z" fill="white" />
                                 </svg>
@@ -35,7 +40,7 @@ export const DiscoveryResultCard: React.FC<DiscoveryResultCardProps> = ({ thread
                             </div>
                         ) : (
                             <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-black/40 border border-white/5 text-[9px] font-black text-slate-300 uppercase tracking-widest w-fit">
-                                <svg viewBox="0 0 24 24" className="w-3 h-3" xmlns="http://www.w3.org/2000/svg">
+                                <svg viewBox="0 0 24 24" className="w-3 h-3" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                                     <rect width="24" height="24" fill="#FF6600" rx="4" />
                                     <path d="M7 7h2l3 5 3-5h2l-4 7v6h-2v-6z" fill="white" />
                                 </svg>
@@ -53,6 +58,7 @@ export const DiscoveryResultCard: React.FC<DiscoveryResultCardProps> = ({ thread
                                     onEnrich?.(thread.id, thread.url, thread.source);
                                 }}
                                 title="Sync Metadata"
+                                aria-label="Sync metadata for this bulk thread"
                             >
                                 <RefreshCw size={12} />
                             </button>
@@ -104,6 +110,7 @@ export const DiscoveryResultCard: React.FC<DiscoveryResultCardProps> = ({ thread
                                 rel="noopener noreferrer"
                                 className="p-1.5 rounded-lg text-slate-400 hover:text-[#FF4500] hover:bg-[#FF4500]/10 transition-all duration-300"
                                 onClick={(e) => e.stopPropagation()}
+                                aria-label="Open original thread in new tab"
                             >
                                 <ExternalLink size={14} />
                             </a>

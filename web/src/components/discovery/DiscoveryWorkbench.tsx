@@ -198,6 +198,9 @@ export const DiscoveryWorkbench: React.FC = () => {
                                 <button
                                     className={`dw-tab-btn ${activeTab === 'competitor' ? 'active' : ''}`}
                                     onClick={() => handleTabChange('competitor')}
+                                    role="tab"
+                                    aria-selected={activeTab === 'competitor'}
+                                    aria-controls="competitor-panel"
                                 >
                                     <SearchIcon size={14} />
                                     Competitors
@@ -205,6 +208,9 @@ export const DiscoveryWorkbench: React.FC = () => {
                                 <button
                                     className={`dw-tab-btn ${activeTab === 'idea' ? 'active' : ''}`}
                                     onClick={() => handleTabChange('idea')}
+                                    role="tab"
+                                    aria-selected={activeTab === 'idea'}
+                                    aria-controls="idea-panel"
                                 >
                                     <Lightbulb size={14} />
                                     Idea Search
@@ -212,6 +218,9 @@ export const DiscoveryWorkbench: React.FC = () => {
                                 <button
                                     className={`dw-tab-btn ${activeTab === 'bulk' ? 'active' : ''}`}
                                     onClick={() => handleTabChange('bulk')}
+                                    role="tab"
+                                    aria-selected={activeTab === 'bulk'}
+                                    aria-controls="bulk-panel"
                                 >
                                     <Zap size={14} />
                                     Bulk Import
@@ -225,6 +234,8 @@ export const DiscoveryWorkbench: React.FC = () => {
                                         setIsHistoryOpen(!isHistoryOpen);
                                     }}
                                     title="Search History"
+                                    aria-label="View search history"
+                                    aria-expanded={isHistoryOpen}
                                 >
                                     <HistoryIcon size={14} />
                                     History
@@ -283,6 +294,7 @@ export const DiscoveryWorkbench: React.FC = () => {
                                 className={`dw-icon-btn flex items-center gap-2.5 ${showSelectedOnly ? 'active-focus' : ''}`}
                                 onClick={() => setShowSelectedOnly(!showSelectedOnly)}
                                 title="Show Selected Only"
+                                aria-pressed={showSelectedOnly}
                             >
                                 <div className={`w-2 h-2 rounded-full transition-all duration-500 focus-dot ${!showSelectedOnly ? 'bg-slate-700' : ''}`}></div>
                                 Selected Only
@@ -292,6 +304,8 @@ export const DiscoveryWorkbench: React.FC = () => {
                                 style={{ width: '2.75rem', height: '2.75rem', padding: '0', justifyContent: 'center', borderRadius: '14px' }}
                                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                                 title="Toggle Research Workspace"
+                                aria-label="Toggle Research Workspace"
+                                aria-expanded={isSidebarOpen}
                             >
                                 <SidebarIcon size={18} />
                             </button>
