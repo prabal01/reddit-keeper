@@ -1,19 +1,20 @@
-import React, { useState } from 'react';
-import { useFolders } from '../../contexts/FolderContext';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useDiscovery } from './hooks/useDiscovery';
+import { useDiscoveryContext } from './contexts/DiscoveryContext';
 import { DiscoveryInput } from './components/DiscoveryInput';
 import { ResultGrid } from './components/ResultGrid';
 import { DiscoverySidebar } from './components/DiscoverySidebar';
 import { DiscoverySuccessView } from './components/DiscoverySuccessView';
-import DiscoveryHistoryPopover from './components/DiscoveryHistoryPopover';
 import { UpgradeModal } from '../UpgradeModal';
-import { Lightbulb, Sidebar as SidebarIcon, History as HistoryIcon } from 'lucide-react';
+import { Lightbulb } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import type { DiscoveryHistoryEntry } from './hooks/useDiscovery';
 import './DiscoveryWorkbench.css';
 
 export const DiscoveryWorkbench: React.FC = () => {
-    const { syncThreads, folders } = useFolders();
     const { isUpgradeModalOpen, closeUpgradeModal } = useAuth();
+    const location = useLocation();
+    
     const {
         results,
         selectedResults,
@@ -33,14 +34,13 @@ export const DiscoveryWorkbench: React.FC = () => {
         unselectAllVisible,
         clearResults,
         status,
-        setSelectedIds,
         detectedIntent,
         showSelectedOnly,
         setShowSelectedOnly,
-        history,
-        historyLoading,
-        deleteHistoryItem
-    } = useDiscovery();
+        isSearchingStarted,
+        lastSyncInfo,
+        setLastSyncInfo
+    } = useDiscoveryContext();
 
     const [activeTab, setActiveTab] = useState<'competitor' | 'idea' | 'bulk'>('idea');
     const [competitor, setCompetitor] = useState('');
@@ -48,68 +48,48 @@ export const DiscoveryWorkbench: React.FC = () => {
     const [bulkUrls, setBulkUrls] = useState('');
     const [communities, setCommunities] = useState<string[]>([]);
     const [competitorsList, setCompetitorsList] = useState('');
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-    const [isSearchingStarted, setIsSearchingStarted] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
-    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-    const [lastSyncInfo, setLastSyncInfo] = useState<{ count: number, folderName: string, folderId: string } | null>(null);
+    const handleHistorySelect = useCallback(async (entry: DiscoveryHistoryEntry) => {
+        if (entry.type === 'competitor') {
+            setActiveTab('competitor');
+            setCompetitor(entry.query);
+            await search(entry.query);
+        } else if (entry.type === 'idea') {
+            setActiveTab('idea');
+            setIdea(entry.query);
+            setCommunities(entry.params.communities || []);
+            setCompetitorsList(entry.params.competitors?.join(', ') || '');
+            await ideaSearch(entry.query, entry.params.communities, entry.params.competitors);
+        }
+    }, [search, ideaSearch]);
+
+    // Handle history selection from sidebar navigation
+    useEffect(() => {
+        if (location.state?.historyEntry) {
+            const entry = location.state.historyEntry as DiscoveryHistoryEntry;
+            handleHistorySelect(entry);
+            // Clear state so it doesn't trigger on refresh
+            window.history.replaceState({}, document.title);
+        }
+    }, [location.state, handleHistorySelect]);
 
     const handleSearch = async () => {
         if (!competitor.trim()) return;
-        setIsSearchingStarted(true);
         await search(competitor);
     };
 
     const handleIdeaSearch = async () => {
         if (!idea.trim()) return;
-        setIsSearchingStarted(true);
         const competitors = competitorsList.split(',').map(c => c.trim()).filter(c => c !== '');
         await ideaSearch(idea, communities, competitors);
     };
 
     const handleBulkImport = async (urls: string[]) => {
-        setIsSearchingStarted(true);
         await importUrls(urls);
-    };
-
-    const handleSaveSelection = async (folderId: string) => {
-        const urls = selectedResults.map(r => r.url);
-        const items = selectedResults.map(r => ({
-            url: r.url,
-            title: r.title,
-            author: r.author || "unknown",
-            subreddit: r.subreddit,
-            num_comments: r.num_comments
-        }));
-        const folder = folders.find((f: any) => f.id === folderId);
-        const count = selectedResults.length;
-
-        setIsSaving(true);
-        try {
-            await syncThreads(folderId, urls, items);
-            setLastSyncInfo({
-                count,
-                folderId,
-                folderName: folder?.name || 'Selected Folder'
-            });
-            setSelectedIds(new Set());
-            clearResults();
-            setIsSearchingStarted(false);
-            setCompetitor('');
-            setIdea('');
-            setBulkUrls('');
-            setCompetitorsList('');
-        } catch (err) {
-            console.error("Failed to save selection:", err);
-        } finally {
-            setIsSaving(false);
-        }
     };
 
     const handleClear = () => {
         clearResults();
-        setIsSearchingStarted(false);
         setCompetitor('');
         setIdea('');
         setBulkUrls('');
@@ -117,35 +97,24 @@ export const DiscoveryWorkbench: React.FC = () => {
         setCommunities([]);
     };
 
-    const handleHistorySelect = async (entry: any) => {
-        if (entry.type === 'competitor') {
-            setActiveTab('competitor');
-            setCompetitor(entry.query);
-            setIsSearchingStarted(true);
-            await search(entry.query);
-        } else if (entry.type === 'idea') {
-            setActiveTab('idea');
-            setIdea(entry.query);
-            setCommunities(entry.params.communities || []);
-            setCompetitorsList(entry.params.competitors?.join(', ') || '');
-            setIsSearchingStarted(true);
-            await ideaSearch(entry.query, entry.params.communities, entry.params.competitors);
-        }
-        setIsHistoryOpen(false);
-    };
-
     return (
-        <div className={`w-full px-5 min-h-[calc(100vh-80px)] flex flex-col transition-all duration-700 ease-in-out ${isSearchingStarted || results.length > 0 ? 'active' : 'hero'} ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
-            <header className={`transition-all duration-700 ${isSearchingStarted || results.length > 0 ? 'h-0 opacity-0 overflow-hidden mb-0' : 'text-center mt-[8vh] mb-12'}`}>
-                <h1 className="text-4xl md:text-5xl lg:text-7xl font-extrabold mb-3 tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-white/20">
-                    Discovery Workbench
-                </h1>
-                <p className="text-sm font-medium text-slate-500 tracking-widest uppercase">Intelligent Research Engine</p>
-            </header>
+        <div className={`w-full h-full min-h-[calc(100vh-64px)] flex flex-col transition-all duration-700 ease-in-out ${isSearchingStarted || results.length > 0 ? 'active' : 'hero'}`}>
+            {/* Integrated Panel Toolbar - Simplified */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-white/2 backdrop-blur-md sticky top-0 z-40">
+                <div className="flex flex-col">
+                    <h2 className="text-sm font-black text-white tracking-tight uppercase leading-none mb-0.5">Discovery Workbench</h2>
+                    <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest leading-none">Intelligence Engine</span>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                    {status && <div className="text-[9px] font-black uppercase tracking-[0.2em] text-[#FF4500] animate-pulse">{status}</div>}
+                </div>
+            </div>
 
-            <div className="flex gap-8 w-full flex-1 relative min-w-0">
-                <div className="flex-1 min-w-0 flex flex-col">
-                    <div className="dw-container">
+            <div className="flex-1 flex flex-row overflow-hidden relative">
+                {/* Main Content Area */}
+                <div className="flex-1 overflow-y-auto px-12 py-10 custom-scrollbar">
+                    <div className="dw-container mt-[2vh]">
                         <DiscoveryInput
                             activeTab={activeTab}
                             setActiveTab={setActiveTab}
@@ -170,28 +139,15 @@ export const DiscoveryWorkbench: React.FC = () => {
                     {(isSearchingStarted || results.length > 0 || loading) && (
                         <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both">
                             {/* Unified Control Bar */}
-                            <div className="relative flex flex-wrap items-center justify-between gap-4 mt-6 mb-8 w-full px-4 py-3 bg-white/[0.02] border border-white/5 rounded-2xl backdrop-blur-xl">
-                                <div className="flex items-center gap-3">
-                                    <button 
-                                        className={`dw-tab-btn !px-4 !py-2 !rounded-xl !border-white/5 ${isHistoryOpen ? 'active' : ''}`}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setIsHistoryOpen(!isHistoryOpen);
-                                        }}
-                                    >
-                                        <HistoryIcon size={14} />
-                                        History
-                                    </button>
-                                    <div className="w-px h-4 bg-white/10 mx-1" />
-                                    {results.length > 0 && !loading && (
-                                        <div className="flex items-center gap-2">
-                                            <button className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-colors" onClick={selectAllVisible}>Select All</button>
-                                            <button className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-colors" onClick={unselectAllVisible}>Clear Selection</button>
-                                            <div className="w-px h-3 bg-white/10 mx-1" />
-                                            <button className="text-[10px] font-black uppercase tracking-widest text-red-500/80 hover:text-red-500 transition-colors" onClick={handleClear}>Reset Search</button>
-                                        </div>
-                                    )}
-                                </div>
+                            <div className="relative flex flex-wrap items-center justify-between gap-4 mt-6 mb-8 w-full px-6 py-4 bg-white/3 border border-white/10 rounded-2xl backdrop-blur-xl">
+                                {results.length > 0 && !loading && (
+                                    <div className="flex items-center gap-2">
+                                        <button className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-colors" onClick={selectAllVisible}>Select All</button>
+                                        <button className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-colors" onClick={unselectAllVisible}>Clear Selection</button>
+                                        <div className="w-px h-3 bg-white/10 mx-1" />
+                                        <button className="text-[10px] font-black uppercase tracking-widest text-red-500/80 hover:text-red-500 transition-colors" onClick={handleClear}>Reset Search</button>
+                                    </div>
+                                )}
 
                                 {discoveryPlan && !loading && (
                                     <div className="flex gap-6 items-center">
@@ -207,8 +163,6 @@ export const DiscoveryWorkbench: React.FC = () => {
                                 )}
 
                                 <div className="flex items-center gap-3">
-                                    {status && <div className="text-[9px] font-black uppercase tracking-[0.2em] text-[#FF4500] animate-pulse">{status}</div>}
-                                    
                                     {results.length > 0 && !loading && (
                                         <>
                                             <div className="flex items-center gap-1 bg-white/5 p-0.5 rounded-lg border border-white/10">
@@ -246,25 +200,7 @@ export const DiscoveryWorkbench: React.FC = () => {
                                         <div className={`w-1.5 h-1.5 rounded-full ${showSelectedOnly ? 'bg-[#FF4500] shadow-[0_0_8px_rgba(255,69,0,0.5)]' : 'bg-slate-700'}`} />
                                         Selected Only
                                     </button>
-                                    <button
-                                        className={`p-2 rounded-xl border transition-all ${
-                                            isSidebarOpen ? 'bg-gradient-to-br from-[#FF4500] to-[#FF8717] border-transparent text-white shadow-lg' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white'
-                                        }`}
-                                        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                                        title="Toggle Research Workspace"
-                                    >
-                                        <SidebarIcon size={16} />
-                                    </button>
                                 </div>
-
-                                <DiscoveryHistoryPopover
-                                    history={history}
-                                    isOpen={isHistoryOpen}
-                                    onClose={() => setIsHistoryOpen(false)}
-                                    onSelect={handleHistorySelect}
-                                    onDelete={deleteHistoryItem}
-                                    isLoading={historyLoading}
-                                />
                             </div>
 
                             {detectedIntent && activeTab === 'idea' && !loading && (
@@ -293,7 +229,7 @@ export const DiscoveryWorkbench: React.FC = () => {
                                         selectedIds={selectedIds}
                                         onToggle={toggleSelection}
                                         onEnrichResult={enrichResult}
-                                        isSidebarOpen={isSidebarOpen}
+                                        isSidebarOpen={selectedResults.length > 0}
                                     />
                                 )}
                             </main>
@@ -301,15 +237,8 @@ export const DiscoveryWorkbench: React.FC = () => {
                     )}
                 </div>
 
-                {(isSearchingStarted || results.length > 0 || loading) && isSidebarOpen && (
-                    <DiscoverySidebar
-                        selectedResults={selectedResults}
-                        onToggleSelection={toggleSelection}
-                        onSave={handleSaveSelection}
-                        onClear={() => setSelectedIds(new Set())}
-                        isSaving={isSaving}
-                    />
-                )}
+                {/* Local Side Panel (Cart) restored correctly in the horizontal flex */}
+                {selectedResults.length > 0 && <DiscoverySidebar />}
             </div>
 
             <UpgradeModal

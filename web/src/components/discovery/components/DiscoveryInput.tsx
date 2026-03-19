@@ -98,7 +98,7 @@ export const DiscoveryInput: React.FC<DiscoveryInputProps> = ({
     return (
         <div className="discovery-input-card group/input">
             {/* Segmented Mode Selector */}
-            <div className="flex p-1 bg-white/[0.03] rounded-2xl border border-white/5 mb-6 w-fit mx-auto sm:mx-0">
+            <div className="flex p-1 bg-white/[0.03] rounded-2xl border border-white/5 mb-6 w-fit mx-auto sm:mx-0 relative">
                 {(['competitor', 'idea', 'bulk'] as const).map(tab => (
                     <button
                         key={tab}

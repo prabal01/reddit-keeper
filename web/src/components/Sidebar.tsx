@@ -1,13 +1,23 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { BRANDING } from '../constants/branding';
-import { LayoutDashboard, RefreshCw, Settings, Globe, Search, Loader2, FlaskConical, Star } from 'lucide-react';
+import { LayoutDashboard, RefreshCw, Settings, Globe, Search, FlaskConical, Star, History, ChevronDown, ChevronRight, X, MessageSquare } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { UsageProgress } from './UsageProgress';
+import { useDiscoveryContext } from './discovery/contexts/DiscoveryContext';
+import { useFolders } from '../contexts/FolderContext';
 
 export const Sidebar: React.FC = () => {
     const navigate = useNavigate();
     const [extensionConnected, setExtensionConnected] = useState<boolean | null>(null);
+    const { folders } = useFolders();
+    const { 
+        history = [], 
+        deleteHistoryItem, 
+        historyLoading = false
+    } = useDiscoveryContext();
+    
+    const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
 
     const pingExtension = useCallback(() => {
         setExtensionConnected(null);
@@ -26,7 +36,6 @@ export const Sidebar: React.FC = () => {
             id: requestId
         }, window.location.origin);
 
-        // If no response in 2s, assume not connected
         const timeout = setTimeout(() => {
             setExtensionConnected(current => current === null ? false : current);
             window.removeEventListener('message', handlePingResponse);
@@ -47,9 +56,9 @@ export const Sidebar: React.FC = () => {
     };
 
     return (
-        <aside className="sidebar" style={{ width: '260px', height: '100vh', position: 'sticky', top: 0 }}>
+        <aside className="sidebar" style={{ width: '280px', height: '100vh', position: 'sticky', top: 0, display: 'flex', flexDirection: 'column' }}>
             <div className="sidebar-header" style={{ height: '64px', minHeight: '64px', display: 'flex', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                <div style={{ padding: '8px 32px', width: '100%', display: 'flex', alignItems: 'center' }}>
+                <div style={{ padding: '0 24px', width: '100%', display: 'flex', alignItems: 'center' }}>
                     <div 
                         className="sidebar-logo" 
                         onClick={handleLogoClick}
@@ -57,31 +66,100 @@ export const Sidebar: React.FC = () => {
                         role="button"
                         tabIndex={0}
                         onKeyDown={(e) => e.key === 'Enter' && handleLogoClick()}
-                        aria-label="Navigate to Home"
                     >
-                        <img src="/logo.svg" className="logo-icon" alt={`${BRANDING.NAME} Logo`} style={{ width: '36px', height: '36px' }} />
-                        <h1 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>{BRANDING.NAME}</h1>
+                        <img src="/logo.svg" className="logo-icon" alt={`${BRANDING.NAME} Logo`} style={{ width: '32px', height: '32px' }} />
+                        <h1 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>{BRANDING.NAME}</h1>
                     </div>
                 </div>
             </div>
 
-            <nav className="sidebar-nav" style={{ flex: 1, padding: '15px 0', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 32px', textDecoration: 'none' }}>
-                    <Search size={20} /> <span className="link-text">Research</span>
+            <nav className="sidebar-nav">
+                <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                    <Search size={18} /> <span className="link-text">Discovery</span>
                 </NavLink>
-                <NavLink to="/decks" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 32px', textDecoration: 'none' }}>
-                    <LayoutDashboard size={20} /> <span className="link-text">Decks & Threads</span>
+                
+                {/* Discovery History - ChatGPT Style (Only show if history exists) */}
+                {history.length > 0 && (
+                    <div className="sidebar-section" style={{ marginTop: '12px' }}>
+                        <button 
+                            onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
+                            style={{ 
+                                width: '100%', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'space-between',
+                                padding: '8px 32px',
+                                background: 'transparent',
+                                border: 'none',
+                                color: 'rgba(255,255,255,0.4)',
+                                cursor: 'pointer',
+                                fontSize: '0.7rem',
+                                fontWeight: 800,
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.1em'
+                            }}
+                        >
+                            <div className="flex items-center gap-2">
+                                <History size={12} />
+                                <span>Recent History</span>
+                            </div>
+                            {isHistoryExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                        </button>
+                        
+                        {isHistoryExpanded && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', marginTop: '4px' }}>
+                                {historyLoading ? (
+                                    <div style={{ padding: '12px 32px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.2)' }}>Loading history...</div>
+                                ) : (
+                                    history.slice(0, 8).map(entry => (
+                                        <div 
+                                            key={entry.id} 
+                                            className="history-item group"
+                                            style={{ 
+                                                padding: '8px 32px',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                transition: 'all 0.2s',
+                                                position: 'relative'
+                                            }}
+                                            onClick={() => navigate('/', { state: { historyEntry: entry } })}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+                                                <MessageSquare size={14} style={{ opacity: 0.4 }} />
+                                                <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    {entry.query}
+                                                </span>
+                                            </div>
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); deleteHistoryItem(entry.id); }}
+                                                className="group-hover:opacity-100 opacity-0 p-1 bg-transparent border-none text-white/30 hover:text-red-400 cursor-pointer transition-all"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                <div className="sidebar-divider" style={{ margin: '16px 0', height: '1px', background: 'rgba(255,255,255,0.05)' }} />
+
+                <NavLink to="/decks" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                    <LayoutDashboard size={18} /> <span className="link-text">Decks</span>
                 </NavLink>
-                <NavLink to="/reports" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 32px', textDecoration: 'none' }}>
-                    <RefreshCw size={20} /> <span className="link-text">Analytics</span>
+                <NavLink to="/reports" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                    <RefreshCw size={18} /> <span className="link-text">Analytics</span>
                 </NavLink>
-                <div className="sidebar-divider" />
 
                 <NavLink
                     to="/lab/discovery"
-                    className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
+                    className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
                 >
-                    <FlaskConical size={20} /> <span className="link-text">Discovery Lab</span>
+                    <FlaskConical size={18} /> <span className="link-text">Lab</span>
                 </NavLink>
 
                 <NavLink
@@ -92,35 +170,7 @@ export const Sidebar: React.FC = () => {
                 </NavLink>
             </nav>
 
-            <div className="sidebar-footer">
-                <div className="extension-info-card">
-                    <div className="info-header">
-                        <span className="info-label">Extension Status</span>
-                        <button
-                            onClick={(e) => { e.preventDefault(); pingExtension(); }}
-                            className="btn-icon-sm"
-                            title="Refresh connection status"
-                            aria-label="Refresh connection status"
-                        >
-                            <RefreshCw size={14} className={extensionConnected === null ? 'animate-spin' : ''} />
-                        </button>
-                    </div>
-                    <div className="info-value">
-                        {extensionConnected === null ? (
-                            <span className="status-checking">
-                                <Loader2 size={12} className="animate-spin" /> Checking...
-                            </span>
-                        ) : extensionConnected ? (
-                            <span className="status-connected">
-                                <div className="status-dot success"></div> Connected
-                            </span>
-                        ) : (
-                            <span className="status-disconnected">
-                                <div className="status-dot error"></div> Not Connected
-                            </span>
-                        )}
-                    </div>
-                </div>
+            <div className="sidebar-footer" style={{ marginTop: 'auto' }}>
                 <UsageProgress />
                 <NavLink to="/settings" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 32px', textDecoration: 'none' }}>
                     <Settings size={20} /> <span className="link-text">Settings</span>

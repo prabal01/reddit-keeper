@@ -21,41 +21,122 @@ import { Breadcrumbs } from "./components/common/Breadcrumbs";
 
 import { LoginView } from "./components/LoginView";
 import { Toaster } from "react-hot-toast";
+import { DiscoveryProvider } from "./components/discovery/contexts/DiscoveryContext";
 
 const AppSkeleton = () => (
-  <div className="app" style={{ background: 'var(--bg-primary, #f8f9fb)', minHeight: '100vh' }}>
-    <aside className="sidebar skeleton-sidebar" style={{ background: 'rgba(255,255,255,0.02)', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
-      <div style={{ padding: '30px' }}>
-        <Skeleton width="100%" height="40px" style={{ borderRadius: '12px', marginBottom: '40px' }} />
-        {[1, 2, 3].map(i => (
-          <Skeleton key={i} width="100%" height="48px" style={{ borderRadius: '12px', marginBottom: '12px' }} />
+  <div className="app" style={{ background: '#0a0a0c', minHeight: '100vh', display: 'flex' }}>
+    <aside className="sidebar skeleton-sidebar" style={{ 
+      width: '260px', 
+      minWidth: '260px',
+      background: 'rgba(10, 10, 12, 0.4)', 
+      borderRight: '1px solid rgba(255, 255, 255, 0.05)',
+      padding: '32px 24px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '32px'
+    }}>
+      <div className="sidebar-logo-skeleton">
+        <Skeleton width="120px" height="32px" style={{ borderRadius: '8px' }} />
+      </div>
+      
+      <div className="sidebar-nav-skeleton" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {[1, 2, 3, 4, 5].map(i => (
+          <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'center', padding: '12px' }}>
+            <Skeleton width="24px" height="24px" style={{ borderRadius: '6px' }} />
+            <Skeleton width={i % 2 === 0 ? "100px" : "80px"} height="16px" style={{ borderRadius: '4px' }} />
+          </div>
         ))}
       </div>
-      <div style={{ marginTop: 'auto', padding: '30px' }}>
-        <Skeleton width="100%" height="100px" style={{ borderRadius: '20px' }} />
+
+      <div style={{ marginTop: 'auto' }}>
+        <Skeleton width="100%" height="80px" style={{ borderRadius: '20px' }} />
       </div>
     </aside>
 
-    <div className="app-main-wrapper">
-      <header className="app-header">
-        <div style={{ display: 'flex', gap: '15px', alignItems: 'center', marginLeft: 'auto', paddingRight: '40px' }}>
-          <Skeleton width="40px" height="40px" circle />
-          <Skeleton width="100px" height="40px" style={{ borderRadius: '12px' }} />
+    <div className="app-main-wrapper" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <header className="app-header" style={{ height: '64px', display: 'flex', alignItems: 'center', padding: '0 40px', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '16px', alignItems: 'center' }}>
+          <Skeleton width="32px" height="32px" circle />
+          <Skeleton width="32px" height="32px" circle />
+          <Skeleton width="80px" height="36px" style={{ borderRadius: '18px' }} />
         </div>
       </header>
 
-      <main className="app-main">
+      <main className="app-main" style={{ padding: '40px 0' }}>
         <div className="content-container" style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 40px' }}>
-          <div style={{ marginTop: '40px' }}>
-            <Skeleton width="40%" height="48px" style={{ marginBottom: '12px' }} />
-            <Skeleton width="20%" height="24px" style={{ marginBottom: '40px' }} />
+          
+          {/* URL Input Skeleton */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '60px' }}>
+            <Skeleton width="100%" height="56px" style={{ maxWidth: '800px', borderRadius: '16px' }} />
+          </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', marginBottom: '40px' }}>
-              {[1, 2, 3, 4].map(i => (
-                <Skeleton key={i} width="100%" height="160px" style={{ borderRadius: '24px' }} />
+          {/* Welcome Header Skeleton */}
+          <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+            <div style={{ display: 'inline-block', width: '100%', maxWidth: '600px' }}>
+              <Skeleton width="80%" height="48px" style={{ margin: '0 auto 16px', borderRadius: '8px' }} />
+              <Skeleton width="50%" height="24px" style={{ margin: '0 auto', borderRadius: '4px' }} />
+            </div>
+          </div>
+
+          {/* Metrics Row Skeleton */}
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            gap: '24px', 
+            marginBottom: '64px',
+            flexWrap: 'wrap'
+          }}>
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} style={{ 
+                width: '240px', 
+                height: '72px', 
+                background: 'rgba(255,255,255,0.02)', 
+                borderRadius: '16px',
+                border: '1px solid rgba(255,255,255,0.05)',
+                display: 'flex',
+                alignItems: 'center',
+                padding: '0 20px',
+                gap: '16px'
+              }}>
+                <Skeleton width="24px" height="24px" circle />
+                <div style={{ flex: 1 }}>
+                  <Skeleton width="40%" height="16px" style={{ marginBottom: '4px' }} />
+                  <Skeleton width="60%" height="12px" />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Folder List Skeleton */}
+          <div className="folders-section">
+            <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <Skeleton width="200px" height="28px" />
+              <Skeleton width="120px" height="40px" style={{ borderRadius: '10px' }} />
+            </div>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', 
+              gap: '24px' 
+            }}>
+              {[1, 2, 3, 4, 5, 6].map(i => (
+                <div key={i} className="folder-card" style={{ 
+                  height: '100px', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  padding: '0 24px', 
+                  gap: '20px',
+                  pointerEvents: 'none'
+                }}>
+                  <Skeleton width="48px" height="48px" style={{ borderRadius: '14px' }} />
+                  <div style={{ flex: 1 }}>
+                    <Skeleton width="50%" height="20px" style={{ marginBottom: '8px' }} />
+                    <Skeleton width="30%" height="14px" />
+                  </div>
+                </div>
               ))}
             </div>
           </div>
+
         </div>
       </main>
     </div>
@@ -214,7 +295,9 @@ function App() {
   return (
     <AuthProvider>
       <FolderProvider>
-        <AppContent />
+        <DiscoveryProvider>
+          <AppContent />
+        </DiscoveryProvider>
       </FolderProvider>
     </AuthProvider>
   );

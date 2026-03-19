@@ -229,7 +229,6 @@ app.post("/api/payments/webhook", express.json(), async (req: express.Request, r
 app.get("/api/folders", async (req: express.Request, res: express.Response) => {
     console.log("GET /api/folders - Request received", { user: req.user?.uid });
     if (!req.user) {
-        console.warn("GET /api/folders - Unauthorized");
         res.status(401).json({ error: "Unauthorized" });
         return;
     }

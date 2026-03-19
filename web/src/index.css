@@ -60,9 +60,12 @@
     --error-text: #dc2626;
     --error-border: #fca5a5;
 
-    /* Added for components */
     --bg-card: #ffffff;
     --border-color: #e2e5ed;
+
+    /* Primary Brand Colors */
+    --primary-color: #ff4500;
+    --primary-rgb: 255, 69, 0;
 
     /* Gradients & Premium Glows */
     --primary-gradient: linear-gradient(135deg, #ff4500 0%, #ff8717 100%);
@@ -98,9 +101,12 @@
     --error-text: #fca5a5;
     --error-border: #7f1d1d;
 
-    /* Added for components */
     --bg-card: #1a1a2e;
     --border-color: #2a2a45;
+
+    /* Primary Brand Colors */
+    --primary-color: #ff4500;
+    --primary-rgb: 255, 69, 0;
 
     /* Gradients & Premium Glows */
     --primary-gradient: linear-gradient(135deg, #ff4500 0%, #ff5722 100%);

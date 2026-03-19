@@ -1078,7 +1078,9 @@ export async function getDiscoveryHistory(uid: string, limit: number = 50): Prom
             .limit(limit)
             .get();
 
-        return snapshot.docs.map(doc => doc.data() as DiscoveryHistoryEntry);
+        const results = snapshot.docs.map(doc => doc.data() as DiscoveryHistoryEntry);
+        console.log(`[FIRESTORE] getDiscoveryHistory for ${uid}: found ${results.length} items`);
+        return results;
     } catch (err) {
         console.error("[FIRESTORE] Failed to get discovery history:", err);
         return [];
