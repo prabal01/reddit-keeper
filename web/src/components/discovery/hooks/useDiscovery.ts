@@ -50,7 +50,7 @@ export type PlatformFilter = 'all' | 'reddit' | 'hn';
 export type IntentFilter = 'frustration' | 'alternative' | 'high_engagement' | 'all';
 
 export const useDiscovery = () => {
-    const { getIdToken } = useAuth();
+    const { getIdToken, loading: authLoading, user, refreshPlan } = useAuth();
     const { syncThreads } = useFolders();
     
     const [results, setResults] = useState<DiscoveryResult[]>([]);
@@ -58,6 +58,7 @@ export const useDiscovery = () => {
     const [loading, setLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isSearchingStarted, setIsSearchingStarted] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [discoveryPlan, setDiscoveryPlan] = useState<DiscoveryPlan | null>(null);
     const [platformFilter, setPlatformFilter] = useState<PlatformFilter>('all');
@@ -73,23 +74,38 @@ export const useDiscovery = () => {
         setHistoryLoading(true);
         try {
             const token = await getIdToken();
+            if (!token) {
+                console.log("[useDiscovery] No token available for history fetch");
+                setHistoryLoading(false);
+                return;
+            }
             const response = await fetch(`${API_BASE}/discovery/history`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (response.ok) {
                 const data = await response.json();
-                setHistory(data.history);
+                console.log("[useDiscovery] fetchHistory raw data:", data);
+                // The API returns the array directly
+                const historyData = Array.isArray(data) ? data : (data.history || []);
+                console.log("[useDiscovery] setHistory count:", historyData.length);
+                setHistory(historyData);
+            } else {
+                const data = await response.json().catch(() => ({}));
+                setError(data.error || 'Failed to fetch history');
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error("Failed to fetch history:", err);
+            setError(err.message);
         } finally {
             setHistoryLoading(false);
         }
     }, [getIdToken]);
 
     useEffect(() => {
-        fetchHistory();
-    }, [fetchHistory]);
+        if (!authLoading && user) {
+            fetchHistory();
+        }
+    }, [fetchHistory, authLoading, user]);
 
     const deleteHistoryItem = useCallback(async (id: string) => {
         try {
@@ -100,9 +116,59 @@ export const useDiscovery = () => {
             });
             if (response.ok) {
                 setHistory(prev => prev.filter(item => item.id !== id));
+            } else {
+                const data = await response.json().catch(() => ({}));
+                setError(data.error || 'Failed to delete history item');
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error("Failed to delete history item:", err);
+            setError(err.message);
+        }
+    }, [getIdToken]);
+
+    const loadHistory = useCallback(async (id: string) => {
+        setLoading(true);
+        setIsSearchingStarted(true);
+        setStatus('Loading past discovery...');
+        setError(null); // Clear previous errors
+        try {
+            const token = await getIdToken();
+            const response = await fetch(`${API_BASE}/discovery/history/${id}/results`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.error || 'Failed to load history details');
+            }
+            
+            const data = await response.json();
+            const { savedResults, discoveryPlan: plan } = data;
+
+            if (savedResults && savedResults.length > 0) {
+                setResults(savedResults);
+                setAllDiscoveredMap(prev => {
+                    const next = new Map(prev);
+                    savedResults.forEach((r: DiscoveryResult) => next.set(r.id, r));
+                    return next;
+                });
+                setDiscoveryPlan(plan || null);
+                // For 'idea' searches, we don't have intent stored in history easily right now,
+                // but we can just set it to null or try to preserve if needed.
+                setDetectedIntent(null); 
+                setError(null); // Clear error on success
+            } else {
+                // If it's an old history item without saved results, we'll need to re-run the search
+                // returning false signals the caller to fallback to search()
+                return false;
+            }
+            return true;
+        } catch (err: any) {
+            console.error(err);
+            setError(err.message); // Set error on failure
+            return false;
+        } finally {
+            setLoading(false);
+            setStatus(null);
         }
     }, [getIdToken]);
 
@@ -110,7 +176,8 @@ export const useDiscovery = () => {
         if (!query.trim()) return;
         setLoading(true);
         setIsSearchingStarted(true);
-        setStatus('Initializing search...');
+        setStatus('Searching...'); // Set status
+        setError(null); // Clear previous errors
         try {
             const token = await getIdToken();
             const response = await fetch(`${API_BASE}/discovery/search`, {
@@ -121,7 +188,12 @@ export const useDiscovery = () => {
                 },
                 body: JSON.stringify({ query, platform: 'all' })
             });
-            if (!response.ok) throw new Error('Discovery failed');
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.error || 'Discovery failed');
+            }
+
             const data = await response.json();
             setResults(data.results);
             setAllDiscoveredMap(prev => {
@@ -130,19 +202,23 @@ export const useDiscovery = () => {
                 return next;
             });
             setDiscoveryPlan(data.discoveryPlan);
+            setError(null); // Clear error on success
             fetchHistory();
-        } catch (err) {
+            refreshPlan(); // Call refreshPlan
+        } catch (err: any) {
             console.error(err);
+            setError(err.message); // Set error on failure
         } finally {
             setLoading(false);
             setStatus(null);
         }
-    }, [getIdToken, fetchHistory]);
+    }, [getIdToken, fetchHistory, refreshPlan]);
 
     const ideaSearch = useCallback(async (idea: string, communities?: string[], competitors?: string[]) => {
         setLoading(true);
         setIsSearchingStarted(true);
-        setStatus('Analyzing niche...');
+        setStatus('Searching for ideas...'); // Set status
+        setError(null); // Clear previous errors
         try {
             const token = await getIdToken();
             const response = await fetch(`${API_BASE}/discovery/idea`, {
@@ -153,7 +229,12 @@ export const useDiscovery = () => {
                 },
                 body: JSON.stringify({ idea, communities, competitors })
             });
-            if (!response.ok) throw new Error('Idea discovery failed');
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.error || 'Idea discovery failed');
+            }
+
             const data = await response.json();
             setResults(data.results);
             setAllDiscoveredMap(prev => {
@@ -163,19 +244,23 @@ export const useDiscovery = () => {
             });
             setDiscoveryPlan(data.discoveryPlan);
             setDetectedIntent(data.intent);
+            setError(null); // Clear error on success
             fetchHistory();
-        } catch (err) {
+            refreshPlan(); // Call refreshPlan
+        } catch (err: any) {
             console.error(err);
+            setError(err.message); // Set error on failure
         } finally {
             setLoading(false);
             setStatus(null);
         }
-    }, [getIdToken, fetchHistory]);
+    }, [getIdToken, fetchHistory, refreshPlan]);
 
     const importUrls = useCallback(async (urls: string[]) => {
         setLoading(true);
         setIsSearchingStarted(true);
         setStatus('Importing signals...');
+        setError(null); // Clear previous errors
         try {
             const token = await getIdToken();
             const response = await fetch(`${API_BASE}/discovery/metadata`, {
@@ -186,7 +271,10 @@ export const useDiscovery = () => {
                 },
                 body: JSON.stringify({ urls })
             });
-            if (!response.ok) throw new Error('Import failed');
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.error || 'Import failed');
+            }
             const data = await response.json();
             const imports = data.results.map((r: any) => ({ ...r, isBulk: true }));
             setResults(imports);
@@ -195,13 +283,17 @@ export const useDiscovery = () => {
                 imports.forEach((r: DiscoveryResult) => next.set(r.id, r));
                 return next;
             });
-        } catch (err) {
+            setError(null); // Clear error on success
+            fetchHistory();
+            refreshPlan(); // Call refreshPlan
+        } catch (err: any) {
             console.error(err);
+            setError(err.message); // Set error on failure
         } finally {
             setLoading(false);
             setStatus(null);
         }
-    }, [getIdToken]);
+    }, [getIdToken, fetchHistory]);
 
     const enrichResult = useCallback(async (_id: string, _url: string, _source: string) => {
         // Simple mock for now if needed, or implement full API
@@ -231,6 +323,7 @@ export const useDiscovery = () => {
         setDiscoveryPlan(null);
         setDetectedIntent(null);
         setIsSearchingStarted(false);
+        setError(null); // Clear error when results are cleared
     }, []);
 
     const saveSelection = useCallback(async (folderId: string, folderName: string) => {
@@ -251,13 +344,16 @@ export const useDiscovery = () => {
         const count = selectedResults.length;
 
         setIsSaving(true);
+        setError(null); // Clear previous errors
         try {
             await syncThreads(folderId, urls, items);
             setLastSyncInfo({ count, folderId, folderName });
             setSelectedIds(new Set());
             clearResults();
-        } catch (err) {
+            setError(null); // Clear error on success
+        } catch (err: any) {
             console.error("Failed to save:", err);
+            setError(err.message); // Set error on failure
             throw err;
         } finally {
             setIsSaving(false);
@@ -301,16 +397,19 @@ export const useDiscovery = () => {
         historyLoading,
         fetchHistory,
         deleteHistoryItem,
+        loadHistory,
         saveSelection,
         lastSyncInfo,
-        setLastSyncInfo
+        setLastSyncInfo,
+        error,
+        setError
     }), [
         results, allDiscoveredMap, selectedResults, loading, isSaving, 
         isSearchingStarted, selectedIds, discoveryPlan, platformFilter, 
         intentFilter, status, search, ideaSearch, importUrls, 
         enrichResult, toggleSelection, selectAllVisible, unselectAllVisible, 
         clearResults, detectedIntent, showSelectedOnly, history, 
-        historyLoading, fetchHistory, deleteHistoryItem, saveSelection, 
-        lastSyncInfo
+        historyLoading, fetchHistory, deleteHistoryItem, loadHistory, saveSelection, 
+        lastSyncInfo, error
     ]);
 };

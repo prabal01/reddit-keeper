@@ -33,14 +33,17 @@ interface DiscoveryContextType {
     historyLoading: boolean;
     fetchHistory: () => Promise<void>;
     deleteHistoryItem: (id: string) => Promise<void>;
+    loadHistory: (id: string) => Promise<boolean>;
     saveSelection: (folderId: string, folderName: string) => Promise<void>;
     lastSyncInfo: { count: number, folderName: string, folderId: string } | null;
     setLastSyncInfo: (info: { count: number, folderName: string, folderId: string } | null) => void;
+    error: string | null;
+    setError: (error: string | null) => void;
 }
 
 const DiscoveryContext = createContext<DiscoveryContextType | undefined>(undefined);
 
-// eslint-disable-next-line react-refresh/only-export-components
+ 
 export const DiscoveryProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const discovery = useImplementationHook();
     

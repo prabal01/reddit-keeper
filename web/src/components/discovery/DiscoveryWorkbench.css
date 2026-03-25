@@ -41,7 +41,7 @@
     box-shadow: none;
     overflow: visible;
     width: 100%;
-    max-width: 1200px;
+    max-width: 900px;
     margin: 0 auto;
     position: relative;
     transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
@@ -85,63 +85,93 @@
    ============================== */
 
 .discovery-input-card {
-    background: rgba(255, 255, 255, 0.04);
-    backdrop-filter: blur(32px) saturate(180%);
-    -webkit-backdrop-filter: blur(32px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-top: 1px solid rgba(255, 255, 255, 0.15); /* Top highlight */
-    border-radius: 32px;
-    padding: 2.5rem;
-    transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    background: rgba(255, 255, 255, 0.02);
+    backdrop-filter: blur(40px) saturate(200%);
+    -webkit-backdrop-filter: blur(40px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 9999px; /* Pill shape for bar feel */
+    padding: 0.75rem 1rem;
+    transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
     box-shadow: 
-        0 20px 50px rgba(0, 0, 0, 0.3), 
-        0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+        0 40px 100px -20px rgba(0, 0, 0, 0.5), 
+        0 0 0 1px rgba(255, 255, 255, 0.03) inset;
     position: relative;
     z-index: 10;
 }
 
 .discovery-input-card:hover {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.12);
     box-shadow: 
-        0 30px 70px rgba(0, 0, 0, 0.4),
-        0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+        0 50px 120px -20px rgba(0, 0, 0, 0.6),
+        0 0 0 1px rgba(255, 255, 255, 0.05) inset;
 }
 
 .discovery-input-card:focus-within {
-    border-color: rgba(255, 69, 0, 0.3);
-    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 69, 0, 0.4);
+    background: rgba(255, 255, 255, 0.05);
+    box-shadow: 
+        0 50px 120px -20px rgba(255, 69, 0, 0.15),
+        0 0 0 1px rgba(255, 69, 0, 0.1) inset;
 }
 
 .dw-primary-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.75rem;
+    gap: 1rem;
     background: linear-gradient(135deg, #FF4500 0%, #FF8717 100%);
     color: white;
     font-weight: 900;
-    font-size: 11px;
+    font-size: 13px;
     text-transform: uppercase;
-    letter-spacing: 0.25em;
-    padding: 1.25rem 2.75rem;
-    border-radius: 20px;
+    letter-spacing: 0.3em;
+    padding: 1.5rem 3.5rem;
+    border-radius: 24px;
     border: none;
     cursor: pointer;
-    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: 0 10px 30px -5px rgba(255, 69, 0, 0.4);
+    transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 
+        0 15px 40px -10px rgba(255, 69, 0, 0.5),
+        0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    position: relative;
+    overflow: hidden;
+}
+
+.dw-primary-btn::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.6s ease;
+}
+
+.dw-primary-btn:hover:not(:disabled)::after {
+    opacity: 1;
 }
 
 .dw-primary-btn:hover:not(:disabled) {
-    transform: translateY(-2px) scale(1.02);
-    box-shadow: 0 20px 40px -5px rgba(255, 69, 0, 0.5);
+    transform: translateY(-4px) scale(1.03);
+    box-shadow:
+        0 25px 60px -10px rgba(255, 69, 0, 0.6),
+        0 0 0 1px rgba(255, 255, 255, 0.2) inset;
     filter: brightness(1.1);
+}
+
+.dw-primary-btn:active:not(:disabled) {
+    transform: translateY(-2px) scale(0.98);
 }
 
 .dw-primary-btn:disabled {
     opacity: 0.4;
     cursor: not-allowed;
-    filter: grayscale(0.8);
+    background: linear-gradient(135deg, rgba(255, 69, 0, 0.5) 0%, rgba(255, 135, 23, 0.5) 100%);
+    box-shadow: none;
 }
 
 .mode-content-grid {
@@ -159,6 +189,14 @@
 }
 
 .dw-thread-card {
-    min-height: 190px !important;
-    border-radius: 24px !important;
+    height: 64px !important;
+    min-height: 64px !important;
+    border-radius: 12px !important;
+}
+
+/* List View Stability */
+.dw-container .grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
 }

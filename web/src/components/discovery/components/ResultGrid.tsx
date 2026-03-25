@@ -11,25 +11,22 @@ interface ResultGridProps {
     selectedIds: Set<string>;
     onToggle: (id: string) => void;
     onEnrichResult?: (id: string, url: string, source: string) => void;
-    isSidebarOpen: boolean;
 }
 
-export const ResultGrid: React.FC<ResultGridProps> = ({ results, selectedIds, onToggle, onEnrichResult, isSidebarOpen }) => {
+export const ResultGrid: React.FC<ResultGridProps> = ({ results, selectedIds, onToggle, onEnrichResult }) => {
     if (results.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-32 px-10 text-center bg-slate-900/40 rounded-[48px] border border-dashed border-white/5 animate-in fade-in zoom-in duration-700">
                 <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-6 border border-white/5 shadow-inner">
                     <MessageSquare size={32} className="text-slate-600" />
                 </div>
-                <h3 className="text-xl font-black text-white/50 tracking-tight mb-2">No intelligence discovered</h3>
-                <p className="text-slate-600 font-medium max-w-sm">Start a deep search or import URLs to begin your research phase.</p>
+                <h3 className="text-xl font-black text-white/50 tracking-tight mb-2">No results found</h3>
+                <p className="text-slate-600 font-medium max-w-sm">Start a search or add links to begin your research.</p>
             </div>
         );
     }
 
-    const gridCols = isSidebarOpen
-        ? "grid-cols-1 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-2"
-        : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5";
+    const gridCols = "grid-cols-1";
 
     const { plan } = useAuth();
     const isPro = plan === 'pro';

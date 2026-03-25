@@ -1,56 +1,44 @@
+import { Loader2, Sparkles, X, History as HistoryIcon, Zap } from 'lucide-react';
 import React, { useState } from 'react';
-import { Search, Lightbulb, Zap, Loader2, Sparkles, UploadCloud, AlertCircle, X, Plus } from 'lucide-react';
-
 
 interface DiscoveryInputProps {
     activeTab: 'competitor' | 'idea' | 'bulk';
-    setActiveTab: (tab: 'competitor' | 'idea' | 'bulk') => void;
-    
+    onBack: () => void;
+
     // Competitor State
     competitor: string;
     setCompetitor: (val: string) => void;
     onCompetitorSearch: () => void;
-    
-    // Idea State
-    idea: string;
-    setIdea: (val: string) => void;
-    communities: string[];
-    addCommunity: (comm: string) => void;
-    removeCommunity: (comm: string) => void;
-    competitorsList: string;
-    setCompetitorsList: (val: string) => void;
+
+    // Idea State (Now Problem/Audience Framework)
+    problem: string;
+    setProblem: (val: string) => void;
+    audience: string;
+    setAudience: (val: string) => void;
     onIdeaSearch: () => void;
-    
+
     // Bulk State
     bulkUrls: string;
     setBulkUrls: (val: string) => void;
     onBulkImport: (urls: string[]) => void;
-    
+
     // Global State
     loading: boolean;
 }
 
 export const DiscoveryInput: React.FC<DiscoveryInputProps> = ({
-    activeTab, setActiveTab,
+    activeTab, onBack,
     competitor, setCompetitor, onCompetitorSearch,
-    idea, setIdea, communities, addCommunity, removeCommunity, competitorsList, setCompetitorsList, onIdeaSearch,
+    problem, setProblem, audience, setAudience, onIdeaSearch,
     bulkUrls, setBulkUrls, onBulkImport,
     loading
 }) => {
-    const [newCommunityLocal, setNewCommunityLocal] = useState('');
     const [bulkError, setBulkError] = useState<string | null>(null);
-
-    const handleAddCommunity = () => {
-        if (newCommunityLocal.trim()) {
-            addCommunity(newCommunityLocal.trim());
-            setNewCommunityLocal('');
-        }
-    };
 
     const validateAndImportBulk = () => {
         setBulkError(null);
         const rawUrls = bulkUrls.split(/[\n,]+/).map(u => u.trim()).filter(u => u !== '');
-        
+
         if (rawUrls.length === 0) {
             setBulkError("Please enter at least one URL.");
             return;
@@ -86,7 +74,7 @@ export const DiscoveryInput: React.FC<DiscoveryInputProps> = ({
         });
 
         if (invalidUrls.length > 0) {
-            setBulkError(`Found ${invalidUrls.length} invalid URLs. Only Reddit/HN thread URLs are allowed.`);
+            setBulkError(`Found ${invalidUrls.length} invalid links. Please use only Reddit or HN thread links.`);
             return;
         }
 
@@ -96,149 +84,103 @@ export const DiscoveryInput: React.FC<DiscoveryInputProps> = ({
     const urlCount = bulkUrls.split('\n').map(l => l.trim()).filter(Boolean).length;
 
     return (
-        <div className="discovery-input-card group/input">
-            {/* Segmented Mode Selector */}
-            <div className="flex p-1 bg-white/[0.03] rounded-2xl border border-white/5 mb-6 w-fit mx-auto sm:mx-0 relative">
-                {(['competitor', 'idea', 'bulk'] as const).map(tab => (
-                    <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab)}
-                        className={`flex items-center gap-2 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${
-                            activeTab === tab 
-                            ? 'bg-gradient-to-br from-[#FF4500] to-[#FF8717] text-white shadow-lg shadow-[#FF4500]/20' 
-                            : 'text-slate-500 hover:text-slate-300'
-                        }`}
-                    >
-                        {tab === 'competitor' && <Search size={12} />}
-                        {tab === 'idea' && <Lightbulb size={12} />}
-                        {tab === 'bulk' && <Zap size={12} />}
-                        {tab === 'competitor' ? 'Competitors' : tab === 'idea' ? 'Idea Search' : 'Bulk Import'}
-                    </button>
-                ))}
+        <div className="discovery-input-bar group/input flex flex-col gap-8 max-w-4xl mx-auto w-full mt-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            {/* Step 2 Header */}
+            <div className="flex items-center justify-between px-6">
+                <div className="flex flex-col">
+                    <h2 className="text-2xl font-black text-white tracking-tight">
+                        {activeTab === 'competitor' ? 'Who are your rivals?' : activeTab === 'idea' ? 'Tell us your focus' : 'Paste your links'}
+                    </h2>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#FF4500]/60 mt-1">
+                        Step 2: Add specific details for the search
+                    </p>
+                </div>
             </div>
 
-            {/* Adaptive Input Area */}
-            <div className="relative flex flex-col transition-all duration-500">
-                {/* Competitor Mode */}
-                <div className={`mode-content-grid ${activeTab === 'competitor' ? 'active' : ''}`}>
-                    <div className="grid-inner">
-                        <div className="pt-2 pb-6">
+            {/* Main Integrated Bar */}
+            <div className="discovery-input-card relative flex items-center gap-4 bg-white/2 backdrop-blur-3xl border border-white/10 rounded-full px-8 py-4 shadow-2xl group-focus-within/input:border-[#FF4500]/40 transition-all duration-500">
+                <div className="flex-1 flex items-center min-w-0">
+                    <div className="w-full transition-all duration-500">
+                        {activeTab === 'competitor' && (
                             <input
-                                className="w-full bg-transparent border-none text-3xl font-bold text-white outline-none focus:outline-none focus:ring-0 placeholder:text-slate-800 tracking-tight"
+                                className="w-full bg-transparent border-none text-base font-bold text-white outline-none focus:outline-none focus:ring-0 placeholder:text-white/20 tracking-tight"
                                 type="text"
-                                placeholder="e.g. Notion, Linear, Slack..."
+                                placeholder="Enter names (e.g. Linear, Asana, Monday)"
                                 value={competitor}
                                 onChange={(e) => setCompetitor(e.target.value)}
                                 onKeyPress={(e) => e.key === 'Enter' && onCompetitorSearch()}
                                 autoFocus
-                                aria-label="Search for competitor or platform"
                             />
-                            <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mt-3">Deep Scanning reddit & hacker news for competitor intel</p>
-                        </div>
-                    </div>
-                </div>
+                        )}
 
-                {/* Idea Mode */}
-                <div className={`mode-content-grid ${activeTab === 'idea' ? 'active' : ''}`}>
-                    <div className="grid-inner">
-                        <div className="pt-2 pb-6 space-y-6">
-                            <textarea
-                                className="w-full bg-transparent border-none resize-none text-2xl font-bold text-white outline-none focus:outline-none focus:ring-0 placeholder:text-slate-800 tracking-tight"
-                                placeholder="Describe your idea... (e.g. A tool that helps developers find niche communities)"
-                                rows={2}
-                                value={idea}
-                                onChange={(e) => setIdea(e.target.value)}
-                                aria-label="Describe your research idea"
-                            />
-                            
-                            <div className="flex flex-wrap gap-3 items-center">
+                        {activeTab === 'idea' && (
+                            <div className="flex items-center gap-3 w-full text-base font-bold">
+                                <span className="text-slate-500 whitespace-nowrap hidden sm:inline">Solving</span>
                                 <input
-                                    className="flex-1 min-w-[240px] bg-white/5 border border-white/5 rounded-xl px-4 py-3 text-sm font-semibold text-white outline-none focus:outline-none focus:ring-0 placeholder:text-slate-700 transition-all focus:bg-white/[0.08]"
+                                    className="flex-1 bg-transparent border-none text-base font-bold text-white outline-none focus:outline-none focus:ring-0 placeholder:text-white/20 tracking-tight min-w-[150px]"
                                     type="text"
-                                    placeholder="Comma separated competitors (optional)..."
-                                    value={competitorsList}
-                                    onChange={(e) => setCompetitorsList(e.target.value)}
+                                    placeholder="specific problem..."
+                                    value={problem}
+                                    onChange={(e) => setProblem(e.target.value)}
+                                    onKeyPress={(e) => e.key === 'Enter' && onIdeaSearch()}
+                                    autoFocus
                                 />
-                                
-                                <div className="flex items-center bg-white/5 rounded-xl px-4 py-3 border border-white/5 transition-all focus-within:bg-white/[0.08]">
-                                    <input
-                                        className="bg-transparent border-none text-[10px] font-black uppercase tracking-widest outline-none focus:outline-none focus:ring-0 w-24 text-white placeholder:text-slate-700"
-                                        type="text"
-                                        placeholder="Add sub..."
-                                        value={newCommunityLocal}
-                                        onChange={(e) => setNewCommunityLocal(e.target.value)}
-                                        onKeyPress={(e) => e.key === 'Enter' && handleAddCommunity()}
-                                    />
-                                    <button className="ml-2 text-slate-500 hover:text-white" onClick={handleAddCommunity}>
-                                        <Plus size={14} />
-                                    </button>
-                                </div>
+                                <span className="text-slate-500 whitespace-nowrap hidden sm:inline">for</span>
+                                <input
+                                    className="w-64 bg-transparent border-none text-base font-bold text-[#FF4500] outline-none focus:outline-none focus:ring-0 placeholder:text-[#FF4500]/30 tracking-tight"
+                                    type="text"
+                                    placeholder="this specific audience"
+                                    value={audience}
+                                    onChange={(e) => setAudience(e.target.value)}
+                                    onKeyPress={(e) => e.key === 'Enter' && onIdeaSearch()}
+                                />
                             </div>
+                        )}
 
-                            {communities.length > 0 && (
-                                <div className="flex flex-wrap gap-2">
-                                    {communities.map(c => (
-                                        <span key={c} className="bg-[#FF4500]/10 text-[#FF8717] px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border border-[#FF4500]/10 flex items-center gap-2">
-                                            r/{c}
-                                            <button onClick={() => removeCommunity(c)} className="hover:text-white transition-colors"><X size={10} /></button>
-                                        </span>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Bulk Mode */}
-                <div className={`mode-content-grid ${activeTab === 'bulk' ? 'active' : ''}`}>
-                    <div className="grid-inner">
-                        <div className="pt-2 pb-6">
-                            <textarea
-                                className="w-full bg-transparent border-none resize-none text-xl font-bold text-white outline-none focus:outline-none focus:ring-0 placeholder:text-slate-800 tracking-tight"
-                                placeholder="Paste Reddit or Hacker News URLs... (one per line, up to 50)"
-                                rows={4}
-                                value={bulkUrls}
-                                onChange={(e) => setBulkUrls(e.target.value)}
-                            />
-                            {bulkError && (
-                                <div className="flex items-center gap-2 text-red-500/80 text-[10px] font-black uppercase tracking-widest mt-3 animate-in fade-in slide-in-from-left-2">
-                                    <AlertCircle size={12} />
-                                    {bulkError}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Footer Actions */}
-                <div className="mt-4 pt-6 border-t border-white/5 flex flex-wrap items-center justify-between gap-6">
-                    <div className="flex flex-wrap items-center gap-4">
                         {activeTab === 'bulk' && (
-                            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 flex items-center gap-2">
-                                <div className={`w-2 h-2 rounded-full ${urlCount > 0 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-800'}`} />
-                                {urlCount} URLs detected
+                            <div className="flex items-center gap-4 w-full">
+                                <input
+                                    className="w-full bg-transparent border-none text-base font-bold text-white outline-none focus:outline-none focus:ring-0 placeholder:text-white/20 tracking-tight"
+                                    placeholder="Paste Reddit or HN links here..."
+                                    value={bulkUrls}
+                                    onChange={(e) => setBulkUrls(e.target.value)}
+                                    autoFocus
+                                />
                             </div>
                         )}
                     </div>
+                </div>
 
+                <div className="flex flex-col items-center gap-2 group/btn">
                     <button
-                        className="dw-primary-btn min-w-[200px] group/btn !rounded-2xl !py-4"
+                        className="dw-primary-btn px-8 py-3.5 rounded-full flex items-center gap-3 transform hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-20 disabled:grayscale disabled:scale-100 shadow-[0_0_20px_rgba(255,69,0,0.2)]"
                         onClick={activeTab === 'competitor' ? onCompetitorSearch : activeTab === 'idea' ? onIdeaSearch : validateAndImportBulk}
-                        disabled={loading || (activeTab === 'competitor' && !competitor.trim()) || (activeTab === 'idea' && !idea.trim()) || (activeTab === 'bulk' && urlCount === 0)}
+                        disabled={loading || (activeTab === 'competitor' && !competitor.trim()) || (activeTab === 'idea' && !problem.trim()) || (activeTab === 'bulk' && urlCount === 0)}
                     >
-                        {loading ? (
-                            <Loader2 className="animate-spin" size={18} />
-                        ) : activeTab === 'competitor' ? (
-                            <Search size={18} />
-                        ) : activeTab === 'idea' ? (
-                            <Sparkles size={18} className="group-hover/btn:animate-pulse text-orange-400" />
-                        ) : (
-                            <UploadCloud size={18} />
-                        )}
-                        <span className="ml-2">
-                            {loading ? 'Processing...' : activeTab === 'competitor' ? 'Deep Search' : activeTab === 'idea' ? 'Discover Intel' : 'Import Threads'}
+                        {loading ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
+                        <span className="text-[12px] font-black uppercase tracking-widest leading-none pt-0.5 whitespace-nowrap">
+                            {loading ? 'Thinking...' : 'Start Search'}
                         </span>
                     </button>
+                    
+                    {!loading && (
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#FF4500]/5 border border-[#FF4500]/10 rounded-lg animate-in fade-in slide-in-from-top-1 duration-500 whitespace-nowrap">
+                            <Zap size={10} className="text-[#FF4500] fill-[#FF4500]" />
+                            <span className="text-[7.5px] font-black text-[#FF4500] uppercase tracking-widest">Costs 1 Discovery Credit</span>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Guided Interaction Row */}
+            <div className="flex flex-wrap items-center justify-between gap-4 px-8 pt-4">
+                {bulkError && <p className="text-[10px] font-bold text-[#FF4500] uppercase tracking-widest animate-pulse">{bulkError}</p>}
+                
+                <div className="flex-1" />
+                
+                <div className="flex items-center gap-2 text-[9px] font-black text-slate-700 uppercase tracking-wider">
+                    <HistoryIcon size={12} className="text-slate-500" />
+                    <span>Press Enter to start</span>
                 </div>
             </div>
         </div>

@@ -10,6 +10,9 @@ import {
 import {
     onAuthStateChanged,
     signInWithPopup,
+    signInWithEmailAndPassword,
+    signInWithCustomToken,
+    sendEmailVerification,
     signOut as firebaseSignOut,
     type User,
 } from "firebase/auth";
@@ -22,16 +25,21 @@ interface AuthUser {
     email: string | null;
     displayName: string | null;
     photoURL: string | null;
+    emailVerified: boolean;
 }
 
 interface AuthContextType {
     user: AuthUser | null;
-    plan: "free" | "pro" | "past_due" | null;
+    plan: "free" | "pro" | "beta" | "past_due" | null;
     config: PlanConfig | null;
     usage: UserUsage | null;
     loading: boolean;
     firebaseConfigured: boolean;
     signInWithGoogle: () => Promise<void>;
+    registerWithEmail: (email: string, password: string, inviteCode: string) => Promise<void>;
+    loginWithEmail: (email: string, password: string) => Promise<void>;
+    sendVerificationEmail: () => Promise<void>;
+    refreshUser: () => Promise<void>;
     signOut: () => Promise<void>;
     refreshPlan: () => Promise<void>;
     getIdToken: () => Promise<string | null>;
@@ -46,7 +54,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<AuthUser | null>(null);
-    const [plan, setPlan] = useState<"free" | "pro" | "past_due" | null>(null);
+    const [plan, setPlan] = useState<"free" | "pro" | "beta" | "past_due" | null>(null);
     const [config, setConfig] = useState<PlanConfig | null>(null);
     const [usage, setUsage] = useState<UserUsage | null>(null);
     const [loading, setLoading] = useState(!!auth); // only loading if Firebase is configured
@@ -117,6 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     email: fbUser.email,
                     displayName: fbUser.displayName,
                     photoURL: fbUser.photoURL,
+                    emailVerified: fbUser.emailVerified,
                 });
                 await fetchPlan(fbUser);
                 await fetchStats(fbUser);
@@ -188,6 +197,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     }, []);
 
+    const registerWithEmail = useCallback(async (email: string, password: string, inviteCode: string) => {
+        if (!auth) throw new Error("Firebase not initialized");
+        
+        const response = await fetch(`${API_BASE}/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password, inviteCode }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || "Registration failed");
+        }
+
+        if (data.customToken) {
+            const userCredential = await signInWithCustomToken(auth, data.customToken);
+            if (userCredential.user && !userCredential.user.emailVerified) {
+                await sendEmailVerification(userCredential.user);
+            }
+        }
+    }, [firebaseConfigured]);
+
+    const loginWithEmail = useCallback(async (email: string, password: string) => {
+        if (!auth) throw new Error("Firebase not initialized");
+        await signInWithEmailAndPassword(auth, email, password);
+    }, [firebaseConfigured]);
+
+    const sendVerificationEmail = useCallback(async () => {
+        if (!auth || !auth.currentUser) throw new Error("No user logged in or Firebase not initialized");
+        await sendEmailVerification(auth.currentUser);
+    }, []);
+
+    const refreshUser = useCallback(async () => {
+        if (!auth || !auth.currentUser) return;
+        console.log("[AUTH] Refreshing user... Current verified:", auth.currentUser.emailVerified);
+        await auth.currentUser.reload();
+        const fbUser = auth.currentUser;
+        console.log("[AUTH] Reloaded. New verified:", fbUser.emailVerified);
+        
+        const userData = {
+            uid: fbUser.uid,
+            email: fbUser.email,
+            displayName: fbUser.displayName,
+            photoURL: fbUser.photoURL,
+            emailVerified: fbUser.emailVerified,
+        };
+        
+        setFirebaseUser(fbUser);
+        setUser(userData);
+        return userData;
+    }, [auth]);
+
     const signOutUser = useCallback(async () => {
         if (auth) {
             await firebaseSignOut(auth);
@@ -220,6 +281,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         firebaseConfigured,
         signInWithGoogle,
+        registerWithEmail,
+        loginWithEmail,
+        sendVerificationEmail,
+        refreshUser,
         signOut: signOutUser,
         refreshPlan,
         getIdToken,
@@ -230,7 +295,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         closeUpgradeModal
     }), [
         user, plan, config, usage, loading, firebaseConfigured,
-        signInWithGoogle, signOutUser, refreshPlan, getIdToken,
+        signInWithGoogle, registerWithEmail, loginWithEmail, sendVerificationEmail, refreshUser, signOutUser, refreshPlan, getIdToken,
         userStats, refreshStats, isUpgradeModalOpen, openUpgradeModal, closeUpgradeModal
     ]);
 
