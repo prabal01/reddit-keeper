@@ -72,7 +72,8 @@ export function initFirebase(): void {
             storage = getStorage();
             initStatus.initialized = true;
             initStatus.error = null;
-            console.log("✅ Firebase initialized successfully with Storage.");
+            console.log(`✅ Firebase initialized successfully. Project: ${serviceAccount.project_id}`);
+            console.log("✅ Storage Bucket:", BUCKET);
         } catch (err: any) {
             initStatus.error = `Init Error: ${err.message}`;
             console.error("❌ Firebase initialization failed:", err.message);
@@ -121,7 +122,7 @@ export interface PlanConfig {
 export interface UserDoc {
     uid: string;
     email: string;
-    plan: "free" | "pro" | "past_due";
+    plan: "free" | "pro" | "beta" | "past_due";
     configOverrides: Partial<PlanConfig>;
     stripeCustomerId: string | null;
     stripeSubscriptionId: string | null;
@@ -212,6 +213,8 @@ export interface DiscoveryHistoryEntry {
         source: 'reddit' | 'hn' | 'google';
         score: number;
     }[];
+    savedResults?: any[];
+    discoveryPlan?: any;
 }
 
 // ── Default configs (used if Firestore not available) ──────────────
@@ -248,6 +251,22 @@ const DEFAULT_PRO_CONFIG: PlanConfig = {
     commentDepth: 500,
 };
 
+const DEFAULT_BETA_CONFIG: PlanConfig = {
+    commentLimit: 500,
+    rateLimit: 20,
+    rateLimitWindow: 60,
+    maxMoreCommentsBatches: 5,
+    bulkDownload: true,
+    apiAccess: false,
+    exportHistory: true,
+    exportHistoryDays: 7,
+    priorityQueue: false,
+    discoveryLimit: 15,
+    analysisLimit: 5,
+    savedThreadLimit: 30,
+    commentDepth: 100,
+};
+
 // ── Plan config cache (5-min TTL) ──────────────────────────────────
 
 const CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -266,7 +285,10 @@ export async function getPlanConfig(plan: string): Promise<PlanConfig> {
     try {
         const doc = await db.collection("plan_configs").doc(plan).get();
         if (doc.exists) {
-            const defaults = plan === "pro" ? DEFAULT_PRO_CONFIG : DEFAULT_FREE_CONFIG;
+            let defaults = DEFAULT_FREE_CONFIG;
+            if (plan === "pro") defaults = DEFAULT_PRO_CONFIG;
+            else if (plan === "beta") defaults = DEFAULT_BETA_CONFIG;
+            
             const config = { ...defaults, ...doc.data() } as PlanConfig;
             planConfigCache.set(plan, { config, cachedAt: Date.now() });
             return config;
@@ -276,7 +298,10 @@ export async function getPlanConfig(plan: string): Promise<PlanConfig> {
     }
 
     // Fallback to defaults
-    const fallback = plan === "pro" ? DEFAULT_PRO_CONFIG : DEFAULT_FREE_CONFIG;
+    let fallback = DEFAULT_FREE_CONFIG;
+    if (plan === "pro") fallback = DEFAULT_PRO_CONFIG;
+    else if (plan === "beta") fallback = DEFAULT_BETA_CONFIG;
+    
     planConfigCache.set(plan, { config: fallback, cachedAt: Date.now() });
     return fallback;
 }
@@ -381,7 +406,7 @@ export async function getOrCreateUser(
 
 export async function updateUserPlan(
     uid: string,
-    plan: UserDoc["plan"],
+    plan: "free" | "pro" | "beta" | "past_due",
     stripeData?: {
         stripeCustomerId?: string;
         stripeSubscriptionId?: string;
@@ -1069,17 +1094,26 @@ export async function saveDiscoveryHistory(uid: string, entry: Omit<DiscoveryHis
     }
 }
 
-export async function getDiscoveryHistory(uid: string, limit: number = 50): Promise<DiscoveryHistoryEntry[]> {
+export async function getDiscoveryHistory(uid: string, limit: number = 30): Promise<DiscoveryHistoryEntry[]> {
     if (!db) throw new Error("Firebase DB not initialized.");
     try {
+        console.log(`[FIRESTORE] getDiscoveryHistory for ${uid}...`);
         const snapshot = await db.collection("discovery_history")
             .where("uid", "==", uid)
-            .orderBy("createdAt", "desc")
+            .select("id", "uid", "type", "query", "params", "resultsCount", "createdAt", "topResults")
             .limit(limit)
             .get();
 
-        const results = snapshot.docs.map(doc => doc.data() as DiscoveryHistoryEntry);
-        console.log(`[FIRESTORE] getDiscoveryHistory for ${uid}: found ${results.length} items`);
+        const results = snapshot.docs.map(doc => {
+            const data = doc.data();
+            // id isn't naturally in data when using select if we use doc.id, but we saved it as a field.
+            return { id: doc.id, ...data } as DiscoveryHistoryEntry;
+        });
+        
+        // Sort in memory to avoid needing a composite index
+        results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        
+        console.log(`[FIRESTORE] getDiscoveryHistory for ${uid}: found ${results.length} items (Sorted manually)`);
         return results;
     } catch (err) {
         console.error("[FIRESTORE] Failed to get discovery history:", err);
@@ -1098,5 +1132,158 @@ export async function deleteDiscoveryHistory(uid: string, id: string): Promise<v
     } catch (err) {
         console.error("[FIRESTORE] Failed to delete discovery history:", err);
         throw err;
+    }
+}
+
+export async function getDiscoveryHistoryFull(uid: string, id: string): Promise<DiscoveryHistoryEntry | null> {
+    if (!db) throw new Error("Firebase DB not initialized.");
+    try {
+        const doc = await db.collection("discovery_history").doc(id).get();
+        if (doc.exists && doc.data()?.uid === uid) {
+            return doc.data() as DiscoveryHistoryEntry;
+        }
+        return null;
+    } catch (err) {
+        console.error("[FIRESTORE] Failed to get full discovery history:", err);
+        throw err;
+    }
+}
+
+// ── Invite Codes Management ─────────────────────────────────────────
+export interface InviteCode {
+    id: string;
+    maxUses: number;
+    currentUses: number;
+    usedBy: string[];
+}
+
+export async function verifyInviteCode(code: string): Promise<{ valid: boolean; error?: string; usesRemaining?: number }> {
+    if (!db) return { valid: false, error: "Database not initialized" };
+    
+    try {
+        const cleanCode = code.trim().toUpperCase();
+        if (!cleanCode) return { valid: false, error: "Please enter an invitation code." };
+
+        const ref = db.collection("invite_codes").doc(cleanCode);
+        const doc = await ref.get();
+        
+        if (!doc.exists) {
+            return { valid: false, error: "This code doesn't look quite right. Please check it again." };
+        }
+        
+        const data = doc.data() as InviteCode;
+        const usesRemaining = (data.maxUses || 1) - (data.currentUses || 0);
+        
+        if (usesRemaining <= 0) {
+            return { valid: false, error: "This code has already been claimed." };
+        }
+        
+        return { valid: true, usesRemaining };
+    } catch (err) {
+        console.error("Failed to verify invite code:", err);
+        return { valid: false, error: "Something went wrong. Give it another shot." };
+    }
+}
+
+export async function createInviteCode(code: string, maxUses: number): Promise<{ success: boolean; error?: string }> {
+    if (!db) return { success: false, error: "Database not initialized" };
+    
+    try {
+        const cleanCode = code.trim().toUpperCase();
+        if (!cleanCode) return { success: false, error: "Code cannot be empty" };
+
+        const ref = db.collection("invite_codes").doc(cleanCode);
+        
+        await ref.set({
+            id: cleanCode,
+            maxUses: maxUses || 1,
+            currentUses: 0,
+            usedBy: [],
+            createdAt: new Date().toISOString()
+        }, { merge: true });
+
+        return { success: true };
+    } catch (err) {
+        console.error("Failed to create invite code:", err);
+        return { success: false, error: "Database error" };
+    }
+}
+
+/**
+ * atomicRegistration is a helper to ensure invite code usage and user creation are synchronized.
+ */
+export async function registerUserWithInvite(email: string, password: string, inviteCode: string): Promise<{ success: boolean; customToken?: string; error?: string }> {
+    if (!db || !auth) return { success: false, error: "Firebase services not initialized." };
+
+    try {
+        const cleanCode = inviteCode.trim().toUpperCase();
+        const inviteRef = db.collection("invite_codes").doc(cleanCode);
+
+        // Run as a transaction to ensure atomic usage decrement
+        const result = await db.runTransaction(async (transaction) => {
+            const inviteDoc = await transaction.get(inviteRef);
+            
+            if (!inviteDoc.exists) {
+                return { success: false, error: "Invalid invitation code." };
+            }
+
+            const inviteData = inviteDoc.data() as InviteCode;
+            const currentUses = inviteData.currentUses || 0;
+            const maxUses = inviteData.maxUses || 1;
+
+            if (currentUses >= maxUses) {
+                return { success: false, error: "This invitation code has already been fully used." };
+            }
+
+            // 1. Create the Firebase User (Admin SDK)
+            let userRecord;
+            try {
+                userRecord = await auth.createUser({
+                    email,
+                    password,
+                    emailVerified: false,
+                    disabled: false,
+                });
+            } catch (err: any) {
+                if (err.code === 'auth/email-already-exists') {
+                    return { success: false, error: "An account with this email already exists." };
+                }
+                throw err; 
+            }
+
+            // 2. Initialize User Document in Firestore
+            const userRef = db.collection("users").doc(userRecord.uid);
+            const userDoc: UserDoc = {
+                uid: userRecord.uid,
+                email: email.toLowerCase(),
+                plan: "beta",
+                configOverrides: {},
+                stripeCustomerId: null,
+                stripeSubscriptionId: null,
+                createdAt: new Date().toISOString(),
+                fetchCount: 0,
+                discoveryCount: 0,
+                analysisCount: 0,
+                savedThreadCount: 0
+            };
+            
+            transaction.set(userRef, userDoc);
+
+            // 3. Update Invite Code Usage
+            transaction.update(inviteRef, {
+                currentUses: currentUses + 1,
+                usedBy: [...(inviteData.usedBy || []), userRecord.uid]
+            });
+
+            // 4. Generate Custom Token for immediate login
+            const customToken = await auth.createCustomToken(userRecord.uid);
+
+            return { success: true, customToken };
+        });
+
+        return result;
+    } catch (err: any) {
+        console.error("[FIRESTORE] Registration transaction failed:", err);
+        return { success: false, error: err.message || "An unexpected error occurred during registration." };
     }
 }

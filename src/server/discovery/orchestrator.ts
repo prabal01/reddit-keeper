@@ -13,7 +13,7 @@ export class DiscoveryOrchestrator {
     private googleService = new GoogleDiscoveryService();
     private brain = new DiscoveryBrain();
 
-    async search(uid: string, query: string, platforms: ('reddit' | 'hn')[] | 'all' = 'all', useAiBrain = false, skipCache = false, plan: 'free' | 'pro' = 'free'): Promise<DiscoveryResponse> {
+    async search(uid: string, query: string, platforms: ('reddit' | 'hn')[] | 'all' = 'all', useAiBrain = false, skipCache = false, plan: 'free' | 'pro' | 'beta' = 'free'): Promise<DiscoveryResponse> {
         logger.info({ action: 'SEARCH_START', uid, searchTerm: query, platforms, useAiBrain, skipCache }, `Searching for "${query}" (AI Brain: ${useAiBrain}, SkipCache: ${skipCache})`);
 
         const platformList: ('reddit' | 'hn')[] = platforms === 'all' ? ['reddit', 'hn'] : platforms;
@@ -91,7 +91,9 @@ export class DiscoveryOrchestrator {
                     url: r.url,
                     source: r.source,
                     score: r.score
-                }))
+                })),
+                savedResults: sortedResults,
+                discoveryPlan: discoveryPlan
             });
         } catch (err) {
             logger.error({ err }, "Failed to save search history");
@@ -100,7 +102,7 @@ export class DiscoveryOrchestrator {
         return response;
     }
 
-    async ideaDiscovery(uid: string, idea: string, communities?: string[], competitors?: string[], skipCache = false, plan: 'free' | 'pro' = 'free'): Promise<DiscoveryResponse> {
+    async ideaDiscovery(uid: string, idea: string, communities?: string[], competitors?: string[], skipCache = false, plan: 'free' | 'pro' | 'beta' = 'free'): Promise<DiscoveryResponse> {
         const cacheKey = `discovery:idea:${Buffer.from(idea.trim().toLowerCase()).toString('base64')}:v6`;
 
         if (!skipCache) {
@@ -125,7 +127,9 @@ export class DiscoveryOrchestrator {
                     url: r.url,
                     source: r.source,
                     score: r.score
-                }))
+                })),
+                savedResults: res.results,
+                discoveryPlan: res.discoveryPlan
             }).catch(err => logger.error({ err }, "Failed to save idea history on cache hit"));
 
             return res;
@@ -139,7 +143,7 @@ export class DiscoveryOrchestrator {
         const { expandIdeaToQueries } = await import('../ai.js');
 
         // Dynamic Query Density based on Plan
-        const queryCount = plan === 'pro' ? 3 : 1;
+        const queryCount = plan === 'free' ? 1 : 3;
         const { intent, queries } = await expandIdeaToQueries(idea, communities, competitors, queryCount);
 
         logger.info({ queries }, `Generated ${queries.length} queries for ${plan} plan`);
@@ -267,7 +271,9 @@ export class DiscoveryOrchestrator {
                     url: r.url,
                     source: r.source,
                     score: r.score
-                }))
+                })),
+                savedResults: finalResults,
+                discoveryPlan: discoveryPlan
             });
         } catch (err) {
             logger.error({ err }, "Failed to save idea history");

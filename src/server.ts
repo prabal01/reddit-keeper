@@ -21,7 +21,7 @@ import {
 } from "./server/firestore.js";
 import { authMiddleware, getEffectiveConfig } from "./server/middleware/auth.js";
 import { usageGuard } from "./server/middleware/usageGuard.js";
-import { rateLimiterMiddleware } from "./server/middleware/rateLimiter.js";
+import { rateLimiterMiddleware, authRateLimiter } from "./server/middleware/rateLimiter.js";
 import { createFoundingOrder, verifySignature } from "./server/payments/razorpay.js";
 import {
     getFolders,
@@ -40,7 +40,11 @@ import {
     updateThreadInsight,
     getDb,
     getDiscoveryHistory,
-    deleteDiscoveryHistory
+    deleteDiscoveryHistory,
+    saveDiscoveryHistory,
+    verifyInviteCode,
+    createInviteCode,
+    registerUserWithInvite
 } from "./server/firestore.js";
 import { analyzeThreads, analyzeThreadGranular } from "./server/ai.js";
 const app = express();
@@ -1316,38 +1320,79 @@ app.delete("/api/discovery/history/:id", authMiddleware, async (req: express.Req
     }
 });
 
-// Bulk Import Metadata Enrichment
-app.post("/api/discovery/metadata", authMiddleware, async (req: express.Request, res: express.Response) => {
-    const { url, source } = req.body;
+app.get("/api/discovery/history/:id/results", authMiddleware, async (req: express.Request, res: express.Response) => {
+    if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+    try {
+        const entry = await import("./server/firestore.js").then(m => m.getDiscoveryHistoryFull(req.user!.uid, req.params.id as string));
+        if (!entry) {
+            return res.status(404).json({ error: "History entry not found" });
+        }
+        res.json({ savedResults: entry.savedResults || [], discoveryPlan: entry.discoveryPlan || null });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
-    if (!url || !source) {
-        return res.status(400).json({ error: "URL and source are required" });
+// Bulk Import Metadata Enrichment
+app.post("/api/discovery/metadata", authMiddleware, usageGuard('DISCOVERY'), async (req: express.Request, res: express.Response) => {
+    const { url, source, urls } = req.body;
+
+    // Handle both single URL and bulk array as sent by frontend
+    const urlList = urls || (url ? [url] : []);
+    
+    if (urlList.length === 0) {
+        return res.status(400).json({ error: "URLs are required" });
     }
 
     try {
         const orchestrator = discoveryOrchestrator;
-        const fullData = await orchestrator.fetchFullThread(url, source);
+        
+        // Process in parallel with concurrency limit if needed, but for now just map
+        const results = await Promise.all(urlList.map(async (targetUrl: string) => {
+            const detectedSource = targetUrl.includes('news.ycombinator.com') ? 'hn' : 'reddit';
+            try {
+                const fullData = await orchestrator.fetchFullThread(targetUrl, detectedSource);
+                if (!fullData || !fullData.post) return null;
+                
+                return {
+                    id: Buffer.from(targetUrl).toString('base64'),
+                    title: fullData.post.title || "Unknown Title",
+                    author: fullData.post.author || "unknown",
+                    subreddit: fullData.post.subreddit || (detectedSource === 'hn' ? 'Hacker News' : 'unknown'),
+                    num_comments: fullData.post.num_comments || 0,
+                    created_utc: fullData.post.created_utc || Math.floor(Date.now() / 1000),
+                    url: targetUrl,
+                    source: detectedSource,
+                    score: 0,
+                    isCached: true
+                };
+            } catch (err) {
+                console.warn(`[Discovery] Failed to enrich metadata for ${targetUrl}:`, err);
+                return null;
+            }
+        }));
 
-        if (!fullData || !fullData.post) {
-            return res.status(404).json({ error: "Failed to fetch thread metadata" });
+        const validResults = results.filter(Boolean);
+
+        // Save to History for bulk imports too
+        if (validResults.length > 0) {
+            await saveDiscoveryHistory(req.user!.uid, {
+                type: 'bulk',
+                query: urlList.join('\n'),
+                params: { platforms: ['reddit', 'hn'] },
+                resultsCount: validResults.length,
+                topResults: validResults.slice(0, 5).map(r => ({
+                    title: r!.title,
+                    url: r!.url,
+                    source: r!.source as any,
+                    score: 0
+                }))
+            }).catch(err => console.error("Failed to save bulk history:", err));
         }
 
-        const result = {
-            id: Buffer.from(url).toString('base64'),
-            title: fullData.post.title || "Unknown Title",
-            author: fullData.post.author || "unknown",
-            subreddit: fullData.post.subreddit || (source === 'hn' ? 'Hacker News' : 'unknown'),
-            num_comments: fullData.post.num_comments || 0,
-            created_utc: fullData.post.created_utc || Math.floor(Date.now() / 1000),
-            url: url,
-            source: source,
-            score: 0,
-            isCached: true
-        };
-
-        res.json({ result });
+        res.json({ results: validResults });
     } catch (err: any) {
-        console.error(`[Discovery] Failed to enrich metadata for bulk import (URL: ${url}):`, err);
+        console.error(`[Discovery] Failed bulk enrichment:`, err);
         res.status(500).json({ error: "Failed to enrich metadata" });
     }
 });
@@ -1360,6 +1405,22 @@ app.get("/api/extractions", async (req: express.Request, res: express.Response) 
     try {
         const data = await listExtractions(req.user.uid);
         res.json(data);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ── Diagnostics ──────────────────────────────────────────────────
+app.get("/api/admin/invite-codes", async (req: express.Request, res: express.Response) => {
+    const { secret } = req.query;
+    if (secret !== (process.env.ADMIN_SECRET || "deck-dev-secret")) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+    try {
+        const db = getDb();
+        const snapshot = await db.collection("invite_codes").get();
+        const codes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        res.json(codes);
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }
@@ -1379,10 +1440,323 @@ app.get("/api/health", async (_req: express.Request, res: express.Response) => {
 });
 
 // ── Error Handler ─────────────────────────────────────────────────
+// ── Admin: Invite Generator ────────────────────────────────────────
+app.get("/api/admin/invite-gen", (req: express.Request, res: express.Response) => {
+    // Relax CSP just for this single page to allow inline scripts/styles for the tool
+    res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;");
+    res.send(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Invite Generator | Opinion Deck</title>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+        <style>
+            :root {
+                --bg: #0b0b12;
+                --card: #131320;
+                --input: rgba(255,255,255,0.04);
+                --primary: #ff4500;
+                --primary-glow: rgba(255,69,0,0.3);
+                --text: #ffffff;
+                --text-dim: #8e92a4;
+                --success: #22c55e;
+            }
+            body { 
+                font-family: 'Inter', sans-serif; 
+                background: var(--bg); 
+                background-image: radial-gradient(circle at 50% -20%, #1a1a2e 0%, var(--bg) 80%);
+                color: var(--text); 
+                display: flex; 
+                justify-content: center; 
+                align-items: center; 
+                height: 100vh; 
+                margin: 0; 
+                overflow: hidden;
+            }
+            .card { 
+                background: var(--card); 
+                padding: 48px; 
+                border-radius: 32px; 
+                box-shadow: 0 40px 100px rgba(0,0,0,0.6); 
+                width: 90%; 
+                max-width: 440px; 
+                border: 1px solid rgba(255,255,255,0.08);
+                position: relative;
+                backdrop-filter: blur(10px);
+            }
+            h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.03em; }
+            p { color: var(--text-dim); font-size: 1rem; margin-bottom: 40px; font-weight: 400; }
+            .form-group { margin-bottom: 24px; position: relative; }
+            label { display: block; font-size: 0.75rem; font-weight: 700; color: #6e6e88; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.08em; }
+            input { 
+                width: 100%; 
+                padding: 16px 20px; 
+                background: var(--input); 
+                border: 1.5px solid rgba(255,255,255,0.08); 
+                border-radius: 16px; 
+                color: white; 
+                font-size: 1rem; 
+                box-sizing: border-box;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                font-weight: 500;
+            }
+            input:focus { outline: none; border-color: var(--primary); background: rgba(255,255,255,0.06); box-shadow: 0 0 20px rgba(255,69,0,0.1); }
+            button.main-btn { 
+                width: 100%; 
+                padding: 18px; 
+                background: var(--primary); 
+                color: white; 
+                border: none; 
+                border-radius: 16px; 
+                font-weight: 800; 
+                cursor: pointer; 
+                font-size: 1.1rem;
+                margin-top: 16px;
+                transition: all 0.2s ease;
+                box-shadow: 0 8px 30px var(--primary-glow);
+            }
+            button.main-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 40px var(--primary-glow); filter: brightness(1.1); }
+            button.main-btn:active { transform: translateY(0); }
+            
+            /* Modal / Overlay */
+            #modal {
+                position: absolute;
+                inset: 0;
+                background: var(--card);
+                border-radius: 32px;
+                padding: 48px;
+                display: none;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                text-align: center;
+                z-index: 20;
+                animation: fadeIn 0.4s ease;
+            }
+            @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+            
+            .success-icon {
+                width: 64px;
+                height: 64px;
+                background: rgba(34, 197, 94, 0.15);
+                color: var(--success);
+                border-radius: 50%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                font-size: 2rem;
+                margin-bottom: 24px;
+            }
+            .code-display {
+                background: rgba(255,255,255,0.03);
+                padding: 20px;
+                border-radius: 16px;
+                border: 1px dashed rgba(255,255,255,0.2);
+                width: 100%;
+                margin: 24px 0;
+                font-family: monospace;
+                font-size: 1.2rem;
+                color: var(--primary);
+                font-weight: 800;
+                box-sizing: border-box;
+                word-break: break-all;
+            }
+            .secondary-btn {
+                background: transparent;
+                color: var(--text-dim);
+                border: 1px solid rgba(255,255,255,0.1);
+                padding: 12px 24px;
+                border-radius: 12px;
+                cursor: pointer;
+                font-weight: 600;
+                margin-top: 12px;
+                transition: all 0.2s;
+            }
+            .secondary-btn:hover { background: rgba(255,255,255,0.05); color: white; border-color: rgba(255,255,255,0.2); }
+            
+            #error-msg { 
+                margin-top: 20px; 
+                color: #ef4444; 
+                font-size: 0.9rem; 
+                text-align: center; 
+                font-weight: 500;
+                display: none;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <h1>Beta Access</h1>
+            <p>Generate invitation codes for new testers.</p>
+            
+            <div id="main-form">
+                <div class="form-group">
+                    <label>Admin Secret</label>
+                    <input type="password" id="secret" placeholder="Enter secret key..." autofocus>
+                </div>
+                <div class="form-group">
+                    <label>Invite Code</label>
+                    <input type="text" id="code" placeholder="ALPHA-2026-X">
+                </div>
+                <div class="form-group">
+                    <label>Usage Limit</label>
+                    <input type="number" id="maxUses" value="1">
+                </div>
+                
+                <button id="gen-btn" class="main-btn">Generate Link</button>
+                <div id="error-msg"></div>
+            </div>
 
-app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    console.error("GLOBAL ERROR HANDLER:", err);
-    res.status(500).json({ error: err.message || "Internal Server Error" });
+            <div id="modal">
+                <div class="success-icon">✓</div>
+                <h2 style="margin: 0; font-weight: 800;">Code Created!</h2>
+                <p style="margin: 8px 0 0 0; font-size: 0.9rem;">Copy the code or the direct signup link.</p>
+                
+                <div id="generated-link" class="code-display"></div>
+                
+                <button id="copy-btn" class="main-btn">Copy Direct Link</button>
+                <button id="reset-btn" class="secondary-btn">Create Another</button>
+            </div>
+        </div>
+
+        <script>
+            let currentCode = '';
+            
+            document.addEventListener('DOMContentLoaded', () => {
+                const btn = document.getElementById('gen-btn');
+                if (btn) btn.addEventListener('click', generate);
+                
+                const cBtn = document.getElementById('copy-btn');
+                if (cBtn) cBtn.addEventListener('click', copyLink);
+                
+                const rBtn = document.getElementById('reset-btn');
+                if (rBtn) rBtn.addEventListener('click', resetForm);
+            });
+
+            async function generate() {
+                const secret = document.getElementById('secret').value;
+                const codeNode = document.getElementById('code');
+                const code = codeNode.value.trim().toUpperCase() || 'BETA-' + Math.random().toString(36).substring(2, 9).toUpperCase();
+                const maxUses = parseInt(document.getElementById('maxUses').value);
+                const errorNode = document.getElementById('error-msg');
+                
+                if (errorNode) {
+                    errorNode.textContent = '';
+                    errorNode.style.display = 'none';
+                }
+                
+                try {
+                    const res = await fetch('/api/admin/create-invite', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ secret, code, maxUses })
+                    });
+                    
+                    const data = await res.json();
+                    if (res.ok && data.success) {
+                        currentCode = code;
+                        const link = window.location.origin + '/login?invite=' + code;
+                        document.getElementById('generated-link').textContent = code;
+                        document.getElementById('modal').style.display = 'flex';
+                    } else {
+                        if (errorNode) {
+                            errorNode.textContent = data.error || 'Invalid secret or code';
+                            errorNode.style.display = 'block';
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error generating code:', err);
+                    if (errorNode) {
+                        errorNode.textContent = 'Connection error. Check console.';
+                        errorNode.style.display = 'block';
+                    }
+                }
+            }
+
+            function copyLink() {
+                const link = window.location.origin + '/login?invite=' + currentCode;
+                navigator.clipboard.writeText(link).then(() => {
+                    const btn = document.getElementById('copy-btn');
+                    const originalText = btn.textContent;
+                    btn.textContent = '📋 Copied Link!';
+                    btn.style.background = '#22c55e';
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                        btn.style.background = '';
+                    }, 2000);
+                });
+            }
+
+            function resetForm() {
+                document.getElementById('modal').style.display = 'none';
+                document.getElementById('code').value = '';
+                const errorNode = document.getElementById('error-msg');
+                if (errorNode) errorNode.style.display = 'none';
+            }
+        </script>
+    </body>
+    </html>
+    `);
+});
+
+app.post("/api/admin/create-invite", async (req: express.Request, res: express.Response) => {
+    const { secret, code, maxUses } = req.body;
+    
+    // Simple secret check (Add ADMIN_SECRET to your .env)
+    const adminSecret = process.env.ADMIN_SECRET || "deck-dev-secret";
+    if (secret !== adminSecret) {
+        return res.status(401).json({ success: false, error: "Invalid admin secret" });
+    }
+    
+    if (!code) return res.status(400).json({ success: false, error: "Code is required" });
+    
+    try {
+        const { createInviteCode } = await import("./server/firestore.js");
+        const result = await createInviteCode(code, maxUses || 1);
+        res.json(result);
+    } catch (err: any) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.post("/api/auth/verify-invite", authRateLimiter, async (req: express.Request, res: express.Response) => {
+    const { code } = req.body;
+    if (!code) return res.status(400).json({ error: "Code is required" });
+    
+    try {
+        const result = await verifyInviteCode(code);
+        res.json(result);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post("/api/auth/register", authRateLimiter, async (req: express.Request, res: express.Response) => {
+    const { email, password, inviteCode } = req.body;
+    
+    if (!email || !password || !inviteCode) {
+        return res.status(400).json({ error: "Email, password, and invite code are required." });
+    }
+
+    try {
+        const result = await registerUserWithInvite(email, password, inviteCode);
+        if (result.success) {
+            res.json(result);
+        } else {
+            res.status(400).json(result);
+        }
+    } catch (err: any) {
+        console.error("[API] Registration error:", err);
+        res.status(500).json({ error: err.message || "Internal server error." });
+    }
+});
+
+// Final error handler
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error("Unhandled Error:", err);
+    res.status(500).json({ error: "Internal server error" });
 });
 
 // ── Start ──────────────────────────────────────────────────────────

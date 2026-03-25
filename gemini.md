@@ -52,8 +52,22 @@ Always adhere to these limits to prevent service interruption:
   - Logic/Utils: `camelCase.ts`
   - Constants: `SCREAMING_SNAKE_CASE`
 ## Features
-### Discovery History
-- **Persistence**: Saved to Firestore (`discovery_history` collection) keyed by `uid`.
-- **Logic**: Handled in `DiscoveryOrchestrator` (backend) and `useDiscovery` hook (frontend).
-- **Trigger**: Located in the Tab Bar of `DiscoveryWorkbench.tsx`.
-- **UI**: Displayed via `DiscoveryHistoryPopover.tsx` with high z-index and solid background for overlay reliability.
+### Discovery Workshop (Research Stepper 2.0)
+- **Architecture**: A progressive 3-stage 'True Stepper' flow managed via `currentStep` (0, 1, 2) in `DiscoveryWorkbench.tsx`.
+- **Stages**:
+    - **Step 0 (Selection)**: Forced horizontal 3-column grid (`ResearchModeCards.tsx`) for mode choice.
+    - **Step 1 (Context)**: Guided input framework (`DiscoveryInput.tsx`) with problem/audience focus.
+    - **Step 2 (Results)**: Intelligence summary (`DiscoverySuccessView`) and interactive thread grid (`ResultGrid`).
+- **Navigation Console**: Standardized top-right buttons ('Go Back' / 'New Research') providing a stable anchor across search stages.
+- **Empty States**: `DiscoveryWorkflowGuide.tsx` provides visual onboarding when history is empty.
+- **Loading UX**: `DiscoveryLoadingState.tsx` cycles through descriptive AI status messages to keep users engaged.
+
+### Folder Management
+- **Simplification**: Folder creation is restricted to 'Name Only' to reduce friction.
+- **Onboarding**: Empty folders feature direct CTAs to the Discovery Workshop.
+
+### Gated Registration & Verification
+- **Invite Gating**: All new accounts require a valid code from the `invite_codes` collection.
+- **Waitlist**: Users without a code can request access via a Formspark-integrated overlay in `LoginView.tsx`.
+- **Verification Gate**: New users are redirected to `VerificationGate.tsx` until `emailVerified` is true. Status is automatically polled or manually refreshed.
+- **Admin**: Invites are generated via `GET /api/admin/invite-gen?secret=ADMIN_SECRET`.
