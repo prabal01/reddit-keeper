@@ -19,7 +19,7 @@ export const BlurredCard: React.FC = () => {
                 <p>Unlock deep-scan results and AI insights</p>
                 <button className="upgrade-btn-small" onClick={openUpgradeModal}>
                     <Crown size={14} />
-                    Upgrade
+                    Beta Access
                 </button>
             </div>
         </div>

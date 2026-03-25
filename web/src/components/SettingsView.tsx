@@ -21,8 +21,17 @@ export const SettingsView: React.FC = () => {
                     </div>
                     <div>
                         <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '5px' }}>Current Plan</label>
-                        <div style={{ display: 'inline-block', padding: '4px 12px', background: plan === 'pro' ? 'rgba(var(--primary-rgb), 0.1)' : 'var(--bg-secondary)', color: plan === 'pro' ? 'var(--primary-color)' : 'var(--text-muted)', borderRadius: '20px', fontSize: '0.9rem', fontWeight: '600' }}>
-                            {plan === 'pro' ? 'OpinionDeck Pro' : 'Free Plan'}
+                        <div style={{ 
+                            display: 'inline-block', 
+                            padding: '4px 12px', 
+                            background: plan === 'pro' || plan === 'beta' ? 'rgba(255, 69, 0, 0.1)' : 'var(--bg-secondary)', 
+                            color: plan === 'pro' || plan === 'beta' ? '#ff4500' : 'var(--text-muted)', 
+                            borderRadius: '20px', 
+                            fontSize: '0.9rem', 
+                            fontWeight: '600',
+                            border: plan === 'pro' || plan === 'beta' ? '1px solid rgba(255, 69, 0, 0.2)' : 'none'
+                        }}>
+                            {plan === 'pro' ? 'Founding Member' : plan === 'beta' ? 'Beta Member' : 'Free Plan'}
                         </div>
                     </div>
                 </div>
@@ -30,7 +39,7 @@ export const SettingsView: React.FC = () => {
 
             {plan !== 'pro' && (
                 <div className="settings-section">
-                    <h3>Upgrade Plan</h3>
+                    <h3>Beta Program</h3>
                     <PricingPage />
                 </div>
             )}

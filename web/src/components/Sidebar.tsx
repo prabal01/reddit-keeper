@@ -1,55 +1,23 @@
-import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useLocation, NavLink, useNavigate } from 'react-router-dom';
 import { BRANDING } from '../constants/branding';
-import { LayoutDashboard, RefreshCw, Settings, Globe, Search, FlaskConical, Star, History, ChevronDown, ChevronRight, X, MessageSquare } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { LayoutDashboard, RefreshCw, Settings, Globe, Search, Star, History as HistoryIcon, ChevronDown, ChevronRight, X } from 'lucide-react';
 import { UsageProgress } from './UsageProgress';
 import { useDiscoveryContext } from './discovery/contexts/DiscoveryContext';
-import { useFolders } from '../contexts/FolderContext';
 
 export const Sidebar: React.FC = () => {
     const navigate = useNavigate();
-    const [extensionConnected, setExtensionConnected] = useState<boolean | null>(null);
-    const { folders } = useFolders();
+    const location = useLocation();
     const { 
         history = [], 
         deleteHistoryItem, 
         historyLoading = false
     } = useDiscoveryContext();
-    
-    const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
+    const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
 
-    const pingExtension = useCallback(() => {
-        setExtensionConnected(null);
-        const requestId = "sidebar-ping-" + Math.random().toString(36).substring(7);
+    const isDiscoveryPage = location.pathname === '/';
 
-        const handlePingResponse = (event: MessageEvent) => {
-            if (event.data.type === "OPINION_DECK_PING_RESPONSE" && event.data.id === requestId) {
-                setExtensionConnected(true);
-                window.removeEventListener('message', handlePingResponse);
-            }
-        };
-        window.addEventListener('message', handlePingResponse);
-
-        window.postMessage({
-            type: "OPINION_DECK_PING_REQUEST",
-            id: requestId
-        }, window.location.origin);
-
-        const timeout = setTimeout(() => {
-            setExtensionConnected(current => current === null ? false : current);
-            window.removeEventListener('message', handlePingResponse);
-        }, 2000);
-
-        return () => {
-            clearTimeout(timeout);
-            window.removeEventListener('message', handlePingResponse);
-        };
-    }, []);
-
-    useEffect(() => {
-        return pingExtension();
-    }, [pingExtension]);
+    // Remove extension ping for now as it's not being used in this view
 
     const handleLogoClick = () => {
         navigate('/');
@@ -78,8 +46,8 @@ export const Sidebar: React.FC = () => {
                     <Search size={18} /> <span className="link-text">Discovery</span>
                 </NavLink>
                 
-                {/* Discovery History - ChatGPT Style (Only show if history exists) */}
-                {history.length > 0 && (
+                {/* Discovery History - ChatGPT Style (Only show if history exists and on Discovery page) */}
+                {isDiscoveryPage && history.length > 0 && (
                     <div className="sidebar-section" style={{ marginTop: '12px' }}>
                         <button 
                             onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
@@ -100,41 +68,59 @@ export const Sidebar: React.FC = () => {
                             }}
                         >
                             <div className="flex items-center gap-2">
-                                <History size={12} />
+                                <HistoryIcon size={12} />
                                 <span>Recent History</span>
                             </div>
                             {isHistoryExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                         </button>
                         
                         {isHistoryExpanded && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', marginTop: '4px' }}>
+                            <div 
+                                className="custom-scrollbar"
+                                style={{ 
+                                    display: 'flex', 
+                                    flexDirection: 'column', 
+                                    gap: '1px', 
+                                    marginTop: '4px',
+                                    maxHeight: '130px',
+                                    overflowY: 'auto'
+                                }}
+                            >
                                 {historyLoading ? (
                                     <div style={{ padding: '12px 32px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.2)' }}>Loading history...</div>
                                 ) : (
-                                    history.slice(0, 8).map(entry => (
+                                    history.map(entry => (
                                         <div 
                                             key={entry.id} 
                                             className="history-item group"
                                             style={{ 
-                                                padding: '8px 32px',
+                                                padding: '10px 32px',
                                                 cursor: 'pointer',
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'space-between',
-                                                transition: 'all 0.2s',
+                                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                                 position: 'relative'
                                             }}
                                             onClick={() => navigate('/', { state: { historyEntry: entry } })}
                                         >
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
-                                                <MessageSquare size={14} style={{ opacity: 0.4 }} />
-                                                <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
+                                                <div className="w-1.5 h-1.5 rounded-full bg-[#FF4500]/40 group-hover:bg-[#FF4500] transition-colors shadow-[0_0_8px_rgba(255,69,0,0)] group-hover:shadow-[0_0_8px_rgba(255,69,0,0.6)]" />
+                                                <span style={{ 
+                                                    fontSize: '0.8rem', 
+                                                    fontWeight: 600,
+                                                    color: 'rgba(255,255,255,0.5)', 
+                                                    whiteSpace: 'nowrap', 
+                                                    overflow: 'hidden', 
+                                                    textOverflow: 'ellipsis',
+                                                    transition: 'color 0.3s'
+                                                }} className="group-hover:text-white">
                                                     {entry.query}
                                                 </span>
                                             </div>
                                             <button 
                                                 onClick={(e) => { e.stopPropagation(); deleteHistoryItem(entry.id); }}
-                                                className="group-hover:opacity-100 opacity-0 p-1 bg-transparent border-none text-white/30 hover:text-red-400 cursor-pointer transition-all"
+                                                className="group-hover:opacity-100 opacity-0 p-1.5 bg-white/5 hover:bg-red-500/10 border border-white/10 rounded-lg text-white/30 hover:text-red-400 cursor-pointer transition-all scale-75 group-hover:scale-100"
                                             >
                                                 <X size={12} />
                                             </button>
@@ -155,18 +141,13 @@ export const Sidebar: React.FC = () => {
                     <RefreshCw size={18} /> <span className="link-text">Analytics</span>
                 </NavLink>
 
-                <NavLink
-                    to="/lab/discovery"
-                    className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-                >
-                    <FlaskConical size={18} /> <span className="link-text">Lab</span>
-                </NavLink>
+
 
                 <NavLink
                     to="/pricing"
                     className={({ isActive }) => isActive ? 'nav-link active premium-link' : 'nav-link premium-link'}
                 >
-                    <Star size={20} className="premium-star" /> <span className="link-text">Upgrade to Pro</span>
+                    <Star size={20} className="premium-star" /> <span className="link-text">Beta Program</span>
                 </NavLink>
             </nav>
 

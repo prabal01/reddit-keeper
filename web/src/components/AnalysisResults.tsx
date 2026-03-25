@@ -176,7 +176,7 @@ export const AnalysisResults: React.FC<{ data: AnalysisData; onCitationClick?: (
                                                 <td className="col-rank">#?</td>
                                                 <td colSpan={3} className="blurred-cell">
                                                     <div className="lock-content">
-                                                        <Lock size={14} /> <span>Upgrade to unlock priority #{i + 1}</span>
+                                                        <Lock size={14} /> <span>Contact for Beta Access to unlock priority #{i + 1}</span>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -223,7 +223,7 @@ export const AnalysisResults: React.FC<{ data: AnalysisData; onCitationClick?: (
                                 if (!isPro && i >= 2) {
                                     return (
                                         <div key={i} className="dense-list-item blurred-item" onClick={openUpgradeModal} style={{ cursor: 'pointer' }}>
-                                            <Lock size={12} /> <span>Upgrade to unlock pain point #{i + 1}</span>
+                                            <Lock size={12} /> <span>Contact for Beta Access to unlock pain point #{i + 1}</span>
                                         </div>
                                     );
                                 }
@@ -258,7 +258,7 @@ export const AnalysisResults: React.FC<{ data: AnalysisData; onCitationClick?: (
                                 if (!isPro && i >= 2) {
                                     return (
                                         <div key={i} className="dense-list-item blurred-item" onClick={openUpgradeModal} style={{ cursor: 'pointer' }}>
-                                            <Lock size={12} /> <span>Upgrade to unlock switch trigger #{i + 1}</span>
+                                            <Lock size={12} /> <span>Contact for Beta Access to unlock switch trigger #{i + 1}</span>
                                         </div>
                                     );
                                 }
@@ -293,7 +293,7 @@ export const AnalysisResults: React.FC<{ data: AnalysisData; onCitationClick?: (
                                 if (!isPro && i >= 2) {
                                     return (
                                         <div key={i} className="dense-list-item blurred-item" onClick={openUpgradeModal} style={{ cursor: 'pointer' }}>
-                                            <Lock size={12} /> <span>Upgrade to unlock outcome #{i + 1}</span>
+                                            <Lock size={12} /> <span>Contact for Beta Access to unlock outcome #{i + 1}</span>
                                         </div>
                                     );
                                 }

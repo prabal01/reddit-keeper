@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useAuth } from "../contexts/AuthContext";
 
 interface UpgradePromptProps {
     totalComments: number;
@@ -7,13 +6,12 @@ interface UpgradePromptProps {
 }
 
 export function UpgradePrompt({ totalComments, commentsShown }: UpgradePromptProps) {
-    const { openUpgradeModal } = useAuth();
     const [dismissed, setDismissed] = useState(false);
 
     if (dismissed) return null;
 
     const handleUpgrade = () => {
-        openUpgradeModal();
+        window.location.href = "mailto:hello@opiniondeck.com?subject=Full Thread Access Request&body=Hi, I would like to request full thread access for the following research: [Paste URL or Title here]";
     };
 
     const hiddenCount = totalComments - commentsShown;
@@ -28,16 +26,16 @@ export function UpgradePrompt({ totalComments, commentsShown }: UpgradePromptPro
                     </p>
                     <p className="upgrade-prompt-desc">
                         {hiddenCount.toLocaleString()} more comments available.
-                        {" "}Get Founding Access to see the full thread.
+                        {" "}Contact us for Founding Access during Beta.
                     </p>
                 </div>
                 <div className="upgrade-prompt-actions">
                     <button
                         className="upgrade-prompt-cta"
                         onClick={handleUpgrade}
-                        aria-label="Get Founding Access to see all comments"
+                        aria-label="Contact for Founding Access"
                     >
-                        Unlock Deep Thread
+                        Unlock Full Thread (Email)
                     </button>
                     <button
                         className="upgrade-prompt-dismiss"

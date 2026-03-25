@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import './UsageProgress.css';
 
 export const UsageProgress: React.FC = () => {
-    const { usage, config, plan, openUpgradeModal } = useAuth();
+    const { usage, config, plan } = useAuth();
 
     if (!usage || !config) return null;
 
@@ -33,7 +33,9 @@ export const UsageProgress: React.FC = () => {
             <div className="usage-header">
                 <span className="plan-badge">{plan?.toUpperCase() || 'FREE'} PLAN</span>
                 {plan !== 'pro' && (
-                    <button onClick={openUpgradeModal} className="upgrade-link-btn">Upgrade</button>
+                    <a href="mailto:hello@opiniondeck.com" className="upgrade-link-btn" style={{ textDecoration: 'none' }}>
+                        Get More Credits
+                    </a>
                 )}
             </div>
 

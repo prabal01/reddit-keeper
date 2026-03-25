@@ -12,12 +12,7 @@ const FEATURES = [
 ];
 
 export function PricingPage() {
-    const { plan, openUpgradeModal } = useAuth();
-
-    const handleUpgrade = async () => {
-        openUpgradeModal();
-    };
-
+    const { plan } = useAuth();
     const isPro = plan === "pro";
 
     return (
@@ -56,14 +51,14 @@ export function PricingPage() {
                     <div className="pricing-card-badge">Founding Access</div>
                     <div className="pricing-card-header">
                         <span className="plan-emoji" aria-hidden="true">🚀</span>
-                        <h3 className="plan-name">Lifetime Founding</h3>
+                        <h3 className="plan-name">Beta Program</h3>
 
                         <div className="plan-price">
-                            <span className="price-amount">$19</span>
-                            <span className="price-period">/ one-time</span>
+                            <span className="price-amount">BETA</span>
+                            <span className="price-period">/ program</span>
                         </div>
                         <div className="billing-msg">
-                            Early access lifetime pricing. Pay once, own forever.
+                            Early access for founding users. Talk to us to shape the future.
                         </div>
                     </div>
                     <ul className="plan-features" aria-label="Pro plan features">
@@ -80,16 +75,16 @@ export function PricingPage() {
 
                     {isPro ? (
                         <button className="plan-cta pro-cta active" disabled aria-label="Currently on Founding plan">
-                            ✓ Founding Member
+                            ✓ Beta Member
                         </button>
                     ) : (
-                        <button
-                            className="plan-cta pro-cta"
-                            onClick={handleUpgrade}
+                        <a
+                            href="mailto:hello@opiniondeck.com?subject=Founding Access Request&body=Hi, I would like to request extra discovery credits for the Opinion Deck Beta!"
+                            className="plan-cta pro-cta text-center flex items-center justify-center no-underline"
                             aria-label="Unlock Founding Access"
                         >
-                            Unlock Founding Access →
-                        </button>
+                            Claim Founding Access →
+                        </a>
                     )}
                 </div>
             </div>

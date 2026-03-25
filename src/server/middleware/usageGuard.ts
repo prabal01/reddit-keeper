@@ -53,7 +53,7 @@ export const usageGuard = (feature: GuardedFeature) => {
                     code: errorCode,
                     limit,
                     current,
-                    hint: "Upgrade to Founding Access to unlock more."
+                    hint: "Contact hello@opiniondeck.com for extra credits during Beta."
                 });
             }
 

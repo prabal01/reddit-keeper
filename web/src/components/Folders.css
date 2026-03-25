@@ -507,6 +507,32 @@
    MODAL & FORMS
    ============================== */
 
+.modal-input-v2 {
+    width: 100%;
+    padding: 14px 18px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    color: white;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+.modal-input-v2:focus {
+    background: rgba(255,255,255,0.06);
+    border-color: var(--primary-color);
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(255, 69, 0, 0.1);
+}
+
+.input-hint {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 8px;
+    font-weight: 500;
+}
+
 .modal-overlay {
     position: fixed;
     top: 0;

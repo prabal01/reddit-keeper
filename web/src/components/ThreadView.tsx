@@ -140,8 +140,8 @@ export function ThreadView({ thread }: ThreadViewProps) {
                                     🔒 <strong>Analysis Limited</strong><br />
                                     Showing {displayComments.length} of {metadata.originalCommentCount} comments.
                                 </p>
-                                <a href="/settings" className="btn btn-primary btn-sm">
-                                    Upgrade to Pro to Analyze All
+                                <a href="mailto:hello@opiniondeck.com?subject=Full Thread Access Request&body=Hi, I would like to request full thread access for the following research: [Paste URL or Title here]" className="btn btn-primary btn-sm">
+                                    Contact for Beta Access to Analyze All
                                 </a>
                             </div>
                         )}

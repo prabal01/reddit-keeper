@@ -11,9 +11,8 @@ import './Folders.css';
 import './AnalysisResults.css';
 import './folder/Folder.css';
 import { fetchFolderAnalysis, aggregateInsights } from '../lib/api';
-import { Loader2, AlertCircle, X } from 'lucide-react';
+import { Loader2, AlertCircle, X, Search } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { IntelligenceScanner } from './IntelligenceScanner';
 import { BulkImportModal } from './BulkImportModal';
 
 interface SavedThread {
@@ -271,18 +270,31 @@ export const FolderDetail: React.FC = () => {
 
                 <FolderMetrics folder={realtimeFolder || folder} />
 
-                <IntelligenceScanner isAnalyzing={isAnalyzing || (realtimeFolder || folder).analysisStatus === 'analyzing'} />
+                {threads.length === 0 ? (
+                    <div className="empty-folder-cta fadeInUp">
+                        <div className="cta-icon-wrapper">
+                            <Search size={32} />
+                        </div>
+                        <h3>This folder needs some insights</h3>
+                        <p>Head over to the Discovery workbench to find competitors, pain points, or market gaps to analyze.</p>
+                        <button className="btn-primary px-8 py-3 mt-6" onClick={() => navigate('/')}>
+                            Find Your First Insight
+                        </button>
+                    </div>
+                ) : (
+                    <>
+                        <FolderAnalyses 
+                            analyses={analyses} 
+                            onCitationClick={handleCitationClick} 
+                        />
 
-                <FolderAnalyses 
-                    analyses={analyses} 
-                    onCitationClick={handleCitationClick} 
-                />
-
-                <ThreadTable 
-                    threads={threads} 
-                    isAnalyzing={isAnalyzing || (realtimeFolder || folder).analysisStatus === 'analyzing'}
-                    onSelectThread={handleSelectThread}
-                />
+                        <ThreadTable 
+                            threads={threads} 
+                            isAnalyzing={isAnalyzing || (realtimeFolder || folder).analysisStatus === 'analyzing'}
+                            onSelectThread={handleSelectThread}
+                        />
+                    </>
+                )}
             </div>
 
             {/* Thread Detail Modal */}

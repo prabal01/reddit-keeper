@@ -1,8 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { X, Crown, Zap, ShieldCheck, Star } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { createRazorpayOrder } from '../lib/api';
-import { loadRazorpay } from '../lib/razorpay';
 import './UpgradeModal.css';
 
 interface UpgradeModalProps {
@@ -11,57 +8,11 @@ interface UpgradeModalProps {
 }
 
 export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) => {
-    const { user, refreshPlan } = useAuth();
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
     if (!isOpen) return null;
 
-    const handleUpgrade = async () => {
-        setLoading(true);
-        setError(null);
-
-        try {
-            const res = await loadRazorpay();
-            if (!res) {
-                throw new Error("Failed to load Razorpay SDK");
-            }
-
-            const order = await createRazorpayOrder();
-
-            const options = {
-                key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-                amount: order.amount,
-                currency: order.currency,
-                name: "OpinionDeck",
-                description: "Founding Access - Lifetime Pro",
-                image: "/logo.svg",
-                order_id: order.id,
-                handler: async function (response: any) {
-                    console.log("Payment Success:", response);
-                    // Webhook will handle the plan upgrade, but we refresh anyway
-                    setTimeout(() => {
-                        refreshPlan();
-                        onClose();
-                    }, 2000);
-                },
-                prefill: {
-                    name: user?.displayName || "",
-                    email: user?.email || "",
-                },
-                theme: {
-                    color: "#FF4500",
-                },
-            };
-
-            const rzp = new (window as any).Razorpay(options);
-            rzp.open();
-        } catch (err: any) {
-            console.error("Upgrade failed:", err);
-            setError(err.message || "Something went wrong. Please try again.");
-        } finally {
-            setLoading(false);
-        }
+    const handleUpgrade = () => {
+        window.location.href = "mailto:hello@opiniondeck.com?subject=Founding Access Request&body=Hi, I would like to request extra discovery credits for the Opinion Deck Beta!";
+        onClose();
     };
 
     return (
@@ -73,54 +24,50 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) =
                     <div className="crown-icon-container">
                         <Crown size={32} className="crown-icon" />
                     </div>
-                    <h2>Scale Your Intelligence</h2>
-                    <p className="subtitle">Join the elite circle of Founding Users</p>
+                    <h2>Beta Access & Limits</h2>
+                    <p className="subtitle">Opinion Deck is currently in Private Beta</p>
                 </div>
 
                 <div className="upgrade-body">
                     <div className="pricing-card">
-                        <div className="badge-founding">LIMITED TIME OFFER</div>
+                        <div className="badge-founding">FREE EXTRA CREDITS</div>
                         <div className="price-container">
-                            <span className="currency">$</span>
-                            <span className="amount">19</span>
-                            <span className="term">/ one-time</span>
+                            <span className="amount">BETA</span>
+                            <span className="term">/ program</span>
                         </div>
-                        <p className="price-subtext">Lifetime Founding Access. Never pay monthly.</p>
+                        <p className="price-subtext">We are rewarding early adopters with extra discovery credits.</p>
 
                         <div className="features-list">
                             <div className="feature-item">
                                 <Zap size={18} className="feature-icon" />
                                 <div>
                                     <strong>Deep-Scan Discovery</strong>
-                                    <p>Scan 3x more angles for every search idea.</p>
+                                    <p>Get more scans to find deeper niche insights.</p>
                                 </div>
                             </div>
                             <div className="feature-item">
                                 <ShieldCheck size={18} className="feature-icon" />
                                 <div>
                                     <strong>Unrestricted Analysis</strong>
-                                    <p>Unlock all 50+ clusters and PDF exports.</p>
+                                    <p>Test all AI report clusters during the beta phase.</p>
                                 </div>
                             </div>
                             <div className="feature-item">
                                 <Star size={18} className="feature-icon" />
                                 <div>
-                                    <strong>Priority AI Queue</strong>
-                                    <p>Get results 5x faster with dedicated capacity.</p>
+                                    <strong>Priority Feedback</strong>
+                                    <p>Talk directly to the founders and shape the product.</p>
                                 </div>
                             </div>
                         </div>
 
-                        {error && <div className="error-message">{error}</div>}
-
                         <button
-                            className={`upgrade-submit-btn ${loading ? 'loading' : ''}`}
+                            className={`upgrade-submit-btn`}
                             onClick={handleUpgrade}
-                            disabled={loading}
                         >
-                            {loading ? 'Initializing Checkout...' : 'Claim Founding Access'}
+                            Claim Extra Credits (Email)
                         </button>
-                        <p className="secure-text">Secure payment via Razorpay</p>
+                        <p className="secure-text text-slate-400 mt-4">Contact: hello@opiniondeck.com</p>
                     </div>
                 </div>
             </div>

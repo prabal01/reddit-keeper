@@ -1,6 +1,6 @@
 
 import React, { useEffect } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { FolderProvider } from "./contexts/FolderContext";
 import { setTokenGetter } from "./lib/api";
@@ -20,6 +20,7 @@ import { PricingPage } from "./components/PricingPage";
 import { Breadcrumbs } from "./components/common/Breadcrumbs";
 
 import { LoginView } from "./components/LoginView";
+import { VerificationGate } from "./components/VerificationGate";
 import { Toaster } from "react-hot-toast";
 import { DiscoveryProvider } from "./components/discovery/contexts/DiscoveryContext";
 
@@ -145,11 +146,24 @@ const AppSkeleton = () => (
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) return <AppSkeleton />;
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  console.log(`[RequireAuth] Path: ${location.pathname}, Verified: ${user.emailVerified}`);
+
+  if (!user.emailVerified && location.pathname !== "/verify-email") {
+    console.log("[RequireAuth] Redirecting to /verify-email");
+    return <Navigate to="/verify-email" replace />;
+  }
+
+  if (user.emailVerified && location.pathname === "/verify-email") {
+    console.log("[RequireAuth] Redirecting to / (Verified!)");
+    return <Navigate to="/" replace />;
   }
 
   return children;
@@ -157,6 +171,8 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 
 function AppContent() {
   const { getIdToken, loading, user, isUpgradeModalOpen, closeUpgradeModal } = useAuth();
+  const location = useLocation();
+  const isLoginPage = location.pathname === "/login";
 
   // Wire up the token getter for API calls
   useEffect(() => {
@@ -205,25 +221,32 @@ function AppContent() {
 
   return (
     <div className="app">
-      {user && <Sidebar />}
+      {user && !isLoginPage && <Sidebar />}
 
       <div className="app-main-wrapper" style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflowY: 'auto' }}>
-        <header className="app-header" style={{ height: '64px', minHeight: '64px', display: 'flex', alignItems: 'center', position: 'sticky', top: 0, zIndex: 1000, background: 'rgba(10, 10, 12, 0.8)', backdropFilter: 'blur(30px)', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 32px' }}>
-            <div className="header-breadcrumbs">
-              <Breadcrumbs />
+        {!isLoginPage && (
+          <header className="app-header" style={{ height: '56px', minHeight: '56px', display: 'flex', alignItems: 'center', position: 'sticky', top: 0, zIndex: 1000, background: 'rgba(10, 10, 12, 0.4)', backdropFilter: 'blur(40px)', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '0 32px' }}>
+              <div className="header-breadcrumbs">
+                <Breadcrumbs />
+              </div>
+              <div className="header-actions" style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+                <ThemeToggle />
+                {user && <AuthButton />}
+              </div>
             </div>
-            <div className="header-actions" style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-              <ThemeToggle />
-              {user && <AuthButton />}
-            </div>
-          </div>
-        </header>
+          </header>
+        )}
 
         <main className="app-main">
           <div className="content-container" style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 40px' }}>
             <Routes>
               <Route path="/login" element={<LoginView />} />
+              <Route path="/verify-email" element={
+                <RequireAuth>
+                  <VerificationGate />
+                </RequireAuth>
+              } />
 
               <Route path="/" element={
                 <RequireAuth>
@@ -272,7 +295,7 @@ function AppContent() {
           </div>
         </main>
 
-        {!user && <Footer />}
+        {!user && !isLoginPage && <Footer />}
 
         <UpgradeModal
           isOpen={isUpgradeModalOpen}
