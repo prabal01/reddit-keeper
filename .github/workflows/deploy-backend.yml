@@ -35,6 +35,13 @@ jobs:
           SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
           AXIOM_TOKEN: ${{ secrets.AXIOM_TOKEN }}
           AXIOM_DATASET: ${{ secrets.AXIOM_DATASET }}
+          GOOGLE_SEARCH_CX: ${{ secrets.GOOGLE_SEARCH_CX }}
+          GOOGLE_SEARCH_API_KEY: ${{ secrets.GOOGLE_SEARCH_API_KEY }}
+          JUST_SERP_KEY: ${{ secrets.JUST_SERP_KEY }}
+          RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
+          RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
+          RAZORPAY_WEBHOOK_SECRET: ${{ secrets.RAZORPAY_WEBHOOK_SECRET }}
+          ADMIN_SECRET: ${{ secrets.ADMIN_SECRET }}
         run: |-
           node -e '
             const fs = require("fs");
@@ -47,7 +54,14 @@ jobs:
               FIREBASE_STORAGE_BUCKET: "redditkeeperprod.firebasestorage.app",
               SERPER_API_KEY: process.env.SERPER_API_KEY,
               AXIOM_TOKEN: process.env.AXIOM_TOKEN,
-              AXIOM_DATASET: process.env.AXIOM_DATASET
+              AXIOM_DATASET: process.env.AXIOM_DATASET,
+              GOOGLE_SEARCH_CX: process.env.GOOGLE_SEARCH_CX,
+              GOOGLE_SEARCH_API_KEY: process.env.GOOGLE_SEARCH_API_KEY,
+              JUST_SERP_KEY: process.env.JUST_SERP_KEY,
+              RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID,
+              RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET,
+              RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET,
+              ADMIN_SECRET: process.env.ADMIN_SECRET
             };
             fs.writeFileSync("env.json", JSON.stringify(env));
           '
