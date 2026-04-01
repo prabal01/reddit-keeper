@@ -39,7 +39,7 @@ interface AuthContextType {
     registerWithEmail: (email: string, password: string, inviteCode: string) => Promise<void>;
     loginWithEmail: (email: string, password: string) => Promise<void>;
     sendVerificationEmail: () => Promise<void>;
-    refreshUser: () => Promise<void>;
+    refreshUser: () => Promise<AuthUser | undefined>;
     signOut: () => Promise<void>;
     refreshPlan: () => Promise<void>;
     getIdToken: () => Promise<string | null>;

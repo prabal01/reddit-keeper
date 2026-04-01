@@ -8,7 +8,7 @@ interface DiscoveryResultCardProps {
     onEnrich?: (id: string, url: string, source: string) => void;
 }
 
-export const DiscoveryResultCard: React.FC<DiscoveryResultCardProps> = ({ thread, isSelected, onToggle, onEnrich }) => {
+export const DiscoveryResultCard: React.FC<DiscoveryResultCardProps> = ({ thread, isSelected, onToggle }) => {
     return (
         <div
             className={`group relative flex items-center h-16 overflow-hidden rounded-2xl border transition-all duration-300 cursor-pointer backdrop-blur-xl px-6 ${isSelected

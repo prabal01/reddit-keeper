@@ -1,4 +1,4 @@
-import { Loader2, Sparkles, X, History as HistoryIcon, Zap } from 'lucide-react';
+import { Loader2, Sparkles, History as HistoryIcon, Zap } from 'lucide-react';
 import React, { useState } from 'react';
 
 interface DiscoveryInputProps {
@@ -27,7 +27,7 @@ interface DiscoveryInputProps {
 }
 
 export const DiscoveryInput: React.FC<DiscoveryInputProps> = ({
-    activeTab, onBack,
+    activeTab,
     competitor, setCompetitor, onCompetitorSearch,
     problem, setProblem, audience, setAudience, onIdeaSearch,
     bulkUrls, setBulkUrls, onBulkImport,
