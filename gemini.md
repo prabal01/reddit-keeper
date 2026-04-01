@@ -16,6 +16,8 @@
 ## Tech Stack
 - **Backend**: Node.js, Express, TypeScript, BullMQ (Queueing), ioredis (Redis Client).
 - **Frontend**: React, Vite, TypeScript, Tailwind CSS, Lucide Icons.
+- **Marketing Site**: Astro, Tailwind CSS (in `marketing/`).
+- **Analytics**: PostHog (Cloud).
 - **Database/Auth**: Firebase (Firestore, Admin Auth, Storage).
 - **AI**: Google Vertex AI / AI Studio (Gemini 2.0 Flash).
 
@@ -71,3 +73,11 @@ Always adhere to these limits to prevent service interruption:
 - **Waitlist**: Users without a code can request access via a Formspark-integrated overlay in `LoginView.tsx`.
 - **Verification Gate**: New users are redirected to `VerificationGate.tsx` until `emailVerified` is true. Status is automatically polled or manually refreshed.
 - **Admin**: Invites are generated via `GET /api/admin/invite-gen?secret=ADMIN_SECRET`.
+
+### Analytics (PostHog)
+- **React App** (`web/`): Initialized in `web/src/lib/posthog.ts`, imported in `main.tsx`. SPA pageviews tracked via `useEffect` on `location.pathname` in `App.tsx`. Users identified by Firebase UID on login.
+- **Marketing Site** (`marketing/`): Initialized via inline `<script>` in `Layout.astro` with auto pageview capture.
+- **Env Vars**:
+  - Web app: `VITE_POSTHOG_KEY`, `VITE_POSTHOG_HOST` (in `web/.env`)
+  - Marketing: `PUBLIC_POSTHOG_KEY`, `PUBLIC_POSTHOG_HOST` (in `marketing/.env`)
+  - Both projects share the same PostHog project key. Host defaults to `https://us.i.posthog.com`.

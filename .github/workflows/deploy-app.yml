@@ -24,6 +24,12 @@ jobs:
       - name: Install Dependencies
         run: cd web && npm ci
 
+      - name: Load Analytics Env
+        run: |
+          source analytics.env
+          echo "VITE_POSTHOG_KEY=$POSTHOG_KEY" >> $GITHUB_ENV
+          echo "VITE_POSTHOG_HOST=$POSTHOG_HOST" >> $GITHUB_ENV
+
       - name: Build Web App
         run: cd web && npm run build
         env:
@@ -32,6 +38,8 @@ jobs:
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
           VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
           VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_POSTHOG_KEY: ${{ env.VITE_POSTHOG_KEY }}
+          VITE_POSTHOG_HOST: ${{ env.VITE_POSTHOG_HOST }}
 
       - name: Deploy to Firebase (App)
         uses: w9jds/firebase-action@master

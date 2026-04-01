@@ -24,10 +24,18 @@ jobs:
       - name: Install Dependencies
         run: cd marketing && npm ci
 
+      - name: Load Analytics Env
+        run: |
+          source analytics.env
+          echo "PUBLIC_POSTHOG_KEY=$POSTHOG_KEY" >> $GITHUB_ENV
+          echo "PUBLIC_POSTHOG_HOST=$POSTHOG_HOST" >> $GITHUB_ENV
+
       - name: Build Astro Site
         run: cd marketing && npm run build
         env:
           PUBLIC_DASHBOARD_URL: https://app.opiniondeck.com
+          PUBLIC_POSTHOG_KEY: ${{ env.PUBLIC_POSTHOG_KEY }}
+          PUBLIC_POSTHOG_HOST: ${{ env.PUBLIC_POSTHOG_HOST }}
 
       - name: Deploy to Firebase
         uses: w9jds/firebase-action@master

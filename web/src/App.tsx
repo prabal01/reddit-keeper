@@ -4,6 +4,7 @@ import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { FolderProvider } from "./contexts/FolderContext";
 import { setTokenGetter } from "./lib/api";
+import { posthog } from "./lib/posthog";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { AuthButton } from "./components/AuthButton";
 import { Footer } from "./components/Footer";
@@ -173,6 +174,20 @@ function AppContent() {
   const { getIdToken, loading, user, isUpgradeModalOpen, closeUpgradeModal } = useAuth();
   const location = useLocation();
   const isLoginPage = location.pathname === "/login";
+
+  // PostHog: capture pageview on route change
+  useEffect(() => {
+    posthog.capture('$pageview');
+  }, [location.pathname]);
+
+  // PostHog: identify user on login, reset on logout
+  useEffect(() => {
+    if (user) {
+      posthog.identify(user.uid, { email: user.email });
+    } else {
+      posthog.reset();
+    }
+  }, [user]);
 
   // Wire up the token getter for API calls
   useEffect(() => {
