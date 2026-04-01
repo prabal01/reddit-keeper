@@ -72,7 +72,7 @@ export function initFirebase(): void {
             storage = getStorage();
             initStatus.initialized = true;
             initStatus.error = null;
-            console.log(`✅ Firebase initialized successfully. Project: ${serviceAccount.project_id}`);
+            console.log(`✅ Firebase initialized successfully. Project: ${serviceAccount.projectId}`);
             console.log("✅ Storage Bucket:", BUCKET);
         } catch (err: any) {
             initStatus.error = `Init Error: ${err.message}`;

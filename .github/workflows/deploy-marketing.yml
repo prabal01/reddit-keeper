@@ -22,7 +22,7 @@ jobs:
           node-version: '20'
 
       - name: Install Dependencies
-        run: cd marketing && npm ci
+        run: cd marketing && npm install
 
       - name: Load Analytics Env
         run: |
