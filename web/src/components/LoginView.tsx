@@ -117,6 +117,17 @@ export function LoginView() {
                 }),
             });
 
+            // Mirror to Firestore waitlist
+            try {
+                await fetch(`${API_BASE}/waitlist`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: requestEmail })
+                });
+            } catch (err) {
+                console.error("Failed to mirror waitlist entry to firestore:", err);
+            }
+
             if (response.ok) {
                 setRequestSuccess(true);
             } else {

@@ -22,6 +22,7 @@ import { Breadcrumbs } from "./components/common/Breadcrumbs";
 
 import { LoginView } from "./components/LoginView";
 import { VerificationGate } from "./components/VerificationGate";
+import { AdminPortal } from "./components/admin/AdminPortal";
 import { Toaster } from "react-hot-toast";
 import { DiscoveryProvider } from "./components/discovery/contexts/DiscoveryContext";
 
@@ -299,6 +300,11 @@ function AppContent() {
               <Route path="/lab/discovery" element={
                 <RequireAuth>
                   <DiscoveryLab />
+                </RequireAuth>
+              } />
+              <Route path="/admin" element={
+                <RequireAuth>
+                  <AdminPortal />
                 </RequireAuth>
               } />
               <Route path="/pricing" element={

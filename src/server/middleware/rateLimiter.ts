@@ -59,6 +59,17 @@ export const rateLimiterMiddleware = async (req: Request, res: Response, next: N
         // @ts-ignore - req.user added by auth middleware
         const key = req.user ? `rate_limit:user:${req.user.uid}` : `rate_limit:ip:${req.ip}`;
 
+        // Admin bypass
+        // @ts-ignore
+        if (req.user && req.user.email) {
+            const adminEmailsStr = process.env.ADMIN_EMAILS || "";
+            const adminEmails = adminEmailsStr.split(",").map((e: string) => e.trim().toLowerCase());
+            // @ts-ignore
+            if (adminEmails.includes(req.user.email.toLowerCase())) {
+                return next();
+            }
+        }
+
         // Simple Fixed Window Counter
         const currentCount = await redis.incr(key);
 

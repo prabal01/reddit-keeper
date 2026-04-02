@@ -37,6 +37,10 @@ export function setTokenGetter(fn: () => Promise<string | null>) {
     getToken = fn;
 }
 
+export async function getAuthToken(): Promise<string | null> {
+    return getToken ? getToken() : null;
+}
+
 async function getAuthHeaders(): Promise<Record<string, string>> {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (getToken) {

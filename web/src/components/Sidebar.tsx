@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import { useLocation, NavLink, useNavigate } from 'react-router-dom';
 import { BRANDING } from '../constants/branding';
-import { LayoutDashboard, RefreshCw, Settings, Globe, Search, Star, History as HistoryIcon, ChevronDown, ChevronRight, X } from 'lucide-react';
+import { LayoutDashboard, RefreshCw, Settings, Globe, Search, Star, History as HistoryIcon, ChevronDown, ChevronRight, X, Shield } from 'lucide-react';
 import { UsageProgress } from './UsageProgress';
 import { useDiscoveryContext } from './discovery/contexts/DiscoveryContext';
+
+import { useAuth } from '../contexts/AuthContext';
 
 export const Sidebar: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { user } = useAuth();
     const { 
         history = [], 
         deleteHistoryItem, 
@@ -149,6 +152,12 @@ export const Sidebar: React.FC = () => {
                 >
                     <Star size={20} className="premium-star" /> <span className="link-text">Beta Program</span>
                 </NavLink>
+
+                {user && user.email && import.meta.env.VITE_ADMIN_EMAILS?.includes(user.email) && (
+                    <NavLink to="/admin" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} style={{ marginTop: 'auto' }}>
+                        <Shield size={18} color="#ff4500" /> <span className="link-text" style={{ color: '#ff4500', fontWeight: 'bold' }}>Admin</span>
+                    </NavLink>
+                )}
             </nav>
 
             <div className="sidebar-footer" style={{ marginTop: 'auto' }}>

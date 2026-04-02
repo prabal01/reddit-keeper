@@ -22,6 +22,8 @@ import {
 import { authMiddleware, getEffectiveConfig } from "./server/middleware/auth.js";
 import { usageGuard } from "./server/middleware/usageGuard.js";
 import { rateLimiterMiddleware, authRateLimiter } from "./server/middleware/rateLimiter.js";
+import { adminMiddleware } from "./server/middleware/admin.js";
+import { getAllUsers, getGlobalStats, getBetaTokens, getWaitlist, addWaitlistEntry, updateWaitlistStatus, getDailyStats } from "./server/admin.js";
 import { createFoundingOrder, verifySignature } from "./server/payments/razorpay.js";
 import {
     getFolders,
@@ -1701,25 +1703,118 @@ app.get("/api/admin/invite-gen", (req: express.Request, res: express.Response) =
     `);
 });
 
-app.post("/api/admin/create-invite", async (req: express.Request, res: express.Response) => {
-    const { secret, code, maxUses } = req.body;
-    
-    // Simple secret check (Add ADMIN_SECRET to your .env)
-    const adminSecret = process.env.ADMIN_SECRET || "deck-dev-secret";
-    if (secret !== adminSecret) {
-        return res.status(401).json({ success: false, error: "Invalid admin secret" });
-    }
-    
-    if (!code) return res.status(400).json({ success: false, error: "Code is required" });
-    
+// ── Admin Routes ───────────────────────────────────────────────────
+
+app.get("/api/admin/metrics", adminMiddleware, async (req: express.Request, res: express.Response) => {
     try {
-        const { createInviteCode } = await import("./server/firestore.js");
-        const result = await createInviteCode(code, maxUses || 1);
-        res.json(result);
+        const stats = await getGlobalStats();
+        const daily = await getDailyStats();
+        res.json({ counts: stats, daily });
     } catch (err: any) {
-        res.status(500).json({ success: false, error: err.message });
+        res.status(500).json({ error: err.message });
     }
 });
+
+app.get("/api/admin/users", adminMiddleware, async (req: express.Request, res: express.Response) => {
+    try {
+        const lastDocId = req.query.lastDocId as string | undefined;
+        const users = await getAllUsers(50, lastDocId);
+        res.json(users);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post("/api/admin/users/:uid/plan", adminMiddleware, async (req: express.Request, res: express.Response) => {
+    try {
+        const { plan } = req.body;
+        const { updateUserPlan } = await import("./server/firestore.js");
+        await updateUserPlan(req.params.uid as string, plan as any);
+        res.json({ success: true });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get("/api/admin/tokens", adminMiddleware, async (req: express.Request, res: express.Response) => {
+    try {
+        const tokens = await getBetaTokens();
+        res.json(tokens);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post("/api/admin/tokens", adminMiddleware, async (req: express.Request, res: express.Response) => {
+    try {
+        const { code, maxUses } = req.body;
+        await createInviteCode(code, maxUses || 1);
+        res.json({ success: true });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get("/api/admin/waitlist", adminMiddleware, async (req: express.Request, res: express.Response) => {
+    try {
+        const wlist = await getWaitlist();
+        res.json(wlist);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post("/api/admin/waitlist/:id/status", adminMiddleware, async (req: express.Request, res: express.Response) => {
+    try {
+        await updateWaitlistStatus(req.params.id as string, req.body.status);
+        res.json({ success: true });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post("/api/waitlist", async (req: express.Request, res: express.Response) => {
+    // Public endpoint for beta access requests
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ error: "Email is required" });
+        await addWaitlistEntry(email);
+        res.json({ success: true });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get("/api/admin/bullmq-stats", adminMiddleware, async (req: express.Request, res: express.Response) => {
+    try {
+        const getStats = async (q: Queue) => {
+            const counts = await q.getJobCounts();
+            return counts;
+        };
+
+        const db = await import("./server/firestore.js").then(m => m.getDb());
+        const activeAnalysesCount = (await db.collection("folders").where("analysisStatus", "==", "processing").count().get()).data().count;
+        const failedAnalysesCount = (await db.collection("folders").where("analysisStatus", "==", "failed").count().get()).data().count;
+        const completedAnalysesCount = (await db.collection("folders").where("analysisStatus", "==", "complete").count().get()).data().count;
+
+        const stats = {
+            sync: await getStats(syncQueue),
+            granular: await getStats(granularAnalysisQueue),
+            analysis: {
+                active: activeAnalysesCount,
+                waiting: 0,
+                completed: completedAnalysesCount,
+                failed: failedAnalysesCount,
+                delayed: 0,
+                paused: 0
+            }
+        };
+        res.json(stats);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 
 app.post("/api/auth/verify-invite", authRateLimiter, async (req: express.Request, res: express.Response) => {
     const { code } = req.body;
