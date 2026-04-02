@@ -185,76 +185,50 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
             <p class="section-subtitle">One avoided mistake pays for the tool.</p>
             
             <div class="pricing-grid">
-                <!-- Free Plan -->
-                <div class="pricing-card">
-                    <div class="pricing-header">
-                        <div class="plan-icon"><Search size={32} /></div>
-                        <h3>Free Exploration</h3>
-                        <div class="price">$0</div>
-                        <p class="billing-msg">Validate before you commit.</p>
-                    </div>
-                    <ul class="features-list">
-                        <li><strong>3</strong> Competitor Discoveries</li>
-                        <li>Save up to <strong>5 threads total</strong></li>
-                        <li>Create up to <strong>2 decks</strong></li>
-                        <li>Up to <strong>50 comments per thread</strong></li>
-                        <li>1 <strong>Limited-Depth Blueprint</strong></li>
-                    </ul>
-                    <div class="sub-features">
-                        <p>Limited-depth reports show top 2 pain points and insights. Discover 10 results per search.</p>
-                    </div>
-                    <div class="cta-group">
-                        <a href={dashboardUrl} class="btn btn-secondary btn-block">Start Free</a>
-                        <p class="cta-note">Upgrade for full-depth analysis and advanced signal extraction.</p>
-                    </div>
-                </div>
-
                 <!-- Beta Plan -->
                 <div class="pricing-card active">
                     <div class="badge">Founding Access (Beta)</div>
                     <div class="pricing-header">
                         <div class="plan-icon text-accent"><Zap size={32} /></div>
-                        <h3>Founding Access</h3>
-                        <div class="price">$19 <span class="period">one-time</span></div>
-                        <p class="billing-msg">Early access pricing. Built for founders preparing to ship.</p>
+                        <h3>Founding Beta</h3>
+                        <div class="price">$0</div>
+                        <p class="billing-msg">Free access while we're in early development.</p>
                     </div>
                     <ul class="features-list">
-                        <li><strong>Deep-Scan Discovery</strong> (3x resolution)</li>
-                        <li>Up to <strong>30 Discoveries / month</strong></li>
-                        <li>Save up to <strong>500 threads</strong></li>
-                        <li>Up to <strong>5,000 comments per thread</strong></li>
-                        <li><strong>10 Full Competitive Blueprints</strong></li>
-                        <li>Unrestricted Pain Point & Trigger Detection</li>
-                        <li>Unrestricted Ranked Build Priorities</li>
-                        <li>Feature Gap Analysis & Messaging Angles</li>
-                        <li>Exportable Report (PDF/JSON/MD)</li>
-                        <li>Direct feedback channel</li>
+                        <li><strong>15</strong> Discovery Searches / month</li>
+                        <li><strong>5</strong> AI analysis reports / month</li>
+                        <li>Save up to <strong>30 threads</strong></li>
+                        <li><strong>Unlimited</strong> Research Folders</li>
+                        <li>Deep-Scan extraction (Reddit + HN)</li>
+                        <li>Full PDF & Markdown Exports</li>
+                        <li>Direct feedback channel to founders</li>
                     </ul>
                     <div class="cta-group">
-                        <a href={`${dashboardUrl}?plan=beta`} class="btn btn-primary btn-block">Unlock Founding Access</a>
-                        <p class="cta-note">One-time payment. No subscription. Limited early pricing.</p>
+                        <a href={dashboardUrl} class="btn btn-primary btn-block">Join the Beta</a>
+                        <p class="cta-note">No credit card required. Limited early spots.</p>
                     </div>
-                    <p class="card-footer-note">This is discounted beta pricing. Future plans will expand in scope and price.</p>
+                    <p class="card-footer-note">Help us shape the product by providing feedback on AI insights.</p>
                 </div>
 
-                <!-- Standard Plan -->
-                <div class="pricing-card disabled">
+                <!-- Pro Plan (Coming Soon) -->
+                <div class="pricing-card upcoming">
                     <div class="pricing-header">
-                        <div class="plan-icon"><BarChart3 size={32} /></div>
-                        <h3>Standard Plan</h3>
-                        <div class="price">$39+ <span class="period">/ month</span></div>
-                        <p class="billing-msg">Coming Soon — Launching after beta.</p>
+                        <div class="plan-icon"><Rocket size={32} /></div>
+                        <h3>OpinionDeck Pro</h3>
+                        <div class="price text-muted">TBA</div>
+                        <p class="billing-msg">Coming Soon — Advanced signals for teams.</p>
                     </div>
-                    <ul class="features-list">
-                        <li><strong>Unlimited Discoveries</strong></li>
-                        <li><strong>Signal Radar</strong> (Weekly automated scans)</li>
+                    <ul class="features-list opacity-50">
+                        <li><strong>Signal Radar</strong> (24/7 automated scans)</li>
                         <li><strong>Multi-Platform Support</strong> (G2, Capterra)</li>
-                        <li><strong>Team Collaboration</strong> (Shared Decks)</li>
+                        <li><strong>Team Workspaces</strong> (Shared Decks)</li>
+                        <li><strong>Custom AI Training</strong> (Industry vertical focus)</li>
+                        <li><strong>Smart Alerts</strong> (Instant gap detection)</li>
                         <li>Advanced opportunity scoring</li>
-                        <li>Ongoing competitive tracking</li>
+                        <li>API Access for product workflows</li>
                     </ul>
                     <div class="cta-group">
-                        <a href="#" class="btn btn-secondary btn-block disabled">Available after beta</a>
+                        <button class="btn btn-secondary btn-block" disabled>Coming after Beta</button>
                     </div>
                 </div>
             </div>
@@ -674,7 +648,8 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
 
     .pricing-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(320px, 440px));
+        justify-content: center;
         gap: 32px;
         margin-top: 80px;
         align-items: stretch;
@@ -689,6 +664,29 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
         display: flex;
         flex-direction: column;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+    }
+
+    .pricing-card.upcoming {
+        background: var(--bg-tertiary);
+        border-style: dashed;
+        opacity: 0.9;
+        overflow: hidden;
+    }
+
+    .pricing-card.upcoming::after {
+        content: "COMING SOON";
+        position: absolute;
+        top: 24px;
+        right: -35px;
+        background: var(--text-tertiary);
+        color: var(--bg-primary);
+        padding: 6px 40px;
+        font-size: 0.7rem;
+        font-weight: 800;
+        transform: rotate(45deg);
+        box-shadow: var(--shadow-sm);
+        letter-spacing: 0.05em;
     }
 
     .pricing-card.active {
@@ -838,20 +836,19 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
         border-top: 1px dashed var(--border);
     }
 
-    .pricing-card.disabled {
-        opacity: 0.8;
-        background: var(--bg-tertiary);
-        border-style: dashed;
+    .btn.disabled, .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+        filter: grayscale(1);
     }
 
-    .pricing-card.disabled .features-list li {
+    .text-muted {
         color: var(--text-tertiary);
     }
 
-    .btn.disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-        pointer-events: none;
+    .opacity-50 {
+        opacity: 0.5;
     }
 
     /* Public Reports */
