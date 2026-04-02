@@ -40,6 +40,7 @@ jobs:
           VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
           VITE_POSTHOG_KEY: ${{ env.VITE_POSTHOG_KEY }}
           VITE_POSTHOG_HOST: ${{ env.VITE_POSTHOG_HOST }}
+          VITE_ADMIN_EMAILS: ${{ secrets.VITE_ADMIN_EMAILS }}
 
       - name: Deploy to Firebase (App)
         uses: w9jds/firebase-action@master

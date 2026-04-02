@@ -72,7 +72,12 @@ Always adhere to these limits to prevent service interruption:
 - **Invite Gating**: All new accounts require a valid code from the `invite_codes` collection.
 - **Waitlist**: Users without a code can request access via a Formspark-integrated overlay in `LoginView.tsx`.
 - **Verification Gate**: New users are redirected to `VerificationGate.tsx` until `emailVerified` is true. Status is automatically polled or manually refreshed.
-- **Admin**: Invites are generated via `GET /api/admin/invite-gen?secret=ADMIN_SECRET`.
+- **Admin Portal**: A secure dashboard at `/admin` for authorized users (configured via `ADMIN_EMAILS`).
+    - **Overview**: Real-time platform metrics and daily activity trends.
+    - **User Management**: Tier management and usage tracking for all registered users.
+    - **Beta Tokens**: UI-driven generation and tracking of multi-use invite codes.
+    - **Waitlist**: Centralized management of Beta access requests.
+    - **System Queues**: Real-time monitoring of BullMQ background workers (Sync, Granular, Analysis).
 
 ### Analytics (PostHog)
 - **React App** (`web/`): Initialized in `web/src/lib/posthog.ts`, imported in `main.tsx`. SPA pageviews tracked via `useEffect` on `location.pathname` in `App.tsx`. Users identified by Firebase UID on login.
