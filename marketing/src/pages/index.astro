@@ -1,22 +1,20 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { FetchDemo } from '../components/FetchDemo';
 import { 
     Search, 
     ArrowRight, 
-    Download, 
     Zap, 
     ShieldCheck, 
     Users, 
-    Layers, 
     Briefcase, 
     CheckCircle2, 
     XCircle,
-    FileText,
+    BarChart3,
     TrendingUp,
     MessageSquare,
-    MousePointer2,
-    BarChart3
+    Globe,
+    LineChart,
+    Rocket
 } from 'lucide-react';
 
 const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
@@ -26,23 +24,15 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
 	<section class="hero-section">
 		<div class="container">
 			<div class="hero-content">
-				<h1 class="hero-title">Stop Guessing What to Build. <br />See Why Your Competitor’s Users Are Frustrated — Before You Ship.</h1>
+                <div class="beta-badge">Now in Open Beta</div>
+				<h1 class="hero-title">See why users are switching from your competitors. <br />Before you write any code.</h1>
 				<p class="hero-subtitle">
-					OpinionDeck turns real public customer conversations into a clear product & positioning blueprint.
+					OpinionDeck analyzes Reddit and Hacker News to find real pain points and product gaps. Build what people actually want.
 				</p>
-                <div class="hero-bullets">
-                    <span><CheckCircle2 size={18} class="text-accent" /> No surveys.</span>
-                    <span><CheckCircle2 size={18} class="text-accent" /> No assumptions.</span>
-                    <span><CheckCircle2 size={18} class="text-accent" /> No tab chaos.</span>
-                </div>
 				
-                <div class="interactive-demo">
-                    <div class="demo-label">
-                        <Search size={20} />
-                        <strong>Search a competitor to start (free)</strong>
-                    </div>
-                    <FetchDemo client:load />
-                    <p class="demo-subtext">Search is free. Unlock full blueprint when you save threads.</p>
+                <div class="hero-cta-group">
+                    <a href={dashboardUrl} class="btn btn-primary btn-xl">Get Early Access (Beta)</a>
+                    <p class="hero-subtext">No credit card required. Free discovery included.</p>
                 </div>
 			</div>
 		</div>
@@ -88,20 +78,20 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
                 <div class="gap-card leverage">
                     <div class="card-header">
                         <Zap size={32} class="text-accent mb-4" />
-                        <h3>The OpinionDeck Leverage</h3>
+                        <h3>The OpinionDeck Advantage</h3>
                     </div>
                     <div class="card-body">
                         <div class="gap-item">
                             <span class="step-label">Input</span>
-                            <p>Automated signal capture via browser extension.</p>
+                            <p>Deep-scan Reddit and Hacker News threads automatically.</p>
                         </div>
                         <div class="gap-item">
                             <span class="step-label">Process</span>
-                            <p>Cross-thread pattern & switching trigger detection.</p>
+                            <p>AI-driven extraction of real-world pain points & gaps.</p>
                         </div>
                         <div class="gap-item">
                             <span class="step-label">Outcome</span>
-                            <p>Ranked product blueprint & positioning leverage.</p>
+                            <p>A clear roadmap of what to build and how to position it.</p>
                         </div>
                     </div>
                 </div>
@@ -113,43 +103,36 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
     <section class="workflow-section" id="how-it-works">
         <div class="container">
             <div class="section-header">
-                <h2 class="section-title">From scrolling to strategic clarity — <span class="text-gradient">in minutes</span></h2>
-                <p class="section-subtitle">A clear path from public signal to product leverage.</p>
+                <div class="platforms-supported">
+                    <span class="platform-chip active">Reddit</span>
+                    <span class="platform-chip active">Hacker News</span>
+                    <span class="platform-chip">G2 (Soon)</span>
+                    <span class="platform-chip">Capterra (Soon)</span>
+                    <span class="platform-chip">Trustpilot (Soon)</span>
+                </div>
+                <h2 class="section-title">From noise to clarity — <span class="text-gradient">in minutes</span></h2>
+                <p class="section-subtitle">A simple path from public discussion to product confidence.</p>
             </div>
             <div class="workflow-steps">
                 <div class="step-item">
-                    <div class="step-num"><Download size={24} /></div>
+                    <div class="step-num"><Globe size={24} /></div>
                     <div class="step-content">
-                        <h3>Install the Extension</h3>
-                        <p>OpinionDeck runs in your browser. When you’re researching competitors, it’s already there — ready to capture signal. No scripts, no scraping tools.</p>
+                        <h3>1. Select Your Market</h3>
+                        <p>Choose a competitor you want to beat or a problem space you want to solve. We'll find where the most relevant discussions are happening.</p>
                     </div>
                 </div>
                 <div class="step-item">
-                    <div class="step-num"><Search size={24} /></div>
+                    <div class="step-num"><Zap size={24} /></div>
                     <div class="step-content">
-                        <h3>Search & Research (Free)</h3>
-                        <p>Search a competitor from the homepage — or browse public discussions naturally. OpinionDeck surfaces high-signal threads so you don’t waste time on noise.</p>
+                        <h3>2. Extract Real Signals</h3>
+                        <p>Our AI scans thousands of comments across Reddit and Hacker News. It filters out the noise to find honest feedback, complaints, and missed opportunities.</p>
                     </div>
                 </div>
                 <div class="step-item">
-                    <div class="step-num"><Layers size={24} /></div>
+                    <div class="step-num"><LineChart size={24} /></div>
                     <div class="step-content">
-                        <h3>Save High-Signal Threads</h3>
-                        <p>Found something valuable? Click <strong>“Save to Deck.”</strong> Build your own competitive war room for deeper signal extraction.</p>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <div class="step-num"><FileText size={24} /></div>
-                    <div class="step-content">
-                        <h3>Generate Your Competitive Blueprint</h3>
-                        <p>Extract intense pain points, switching triggers, feature gaps, and ranked build priorities. You don’t get fluff. You get direction.</p>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <div class="step-num"><TrendingUp size={24} /></div>
-                    <div class="step-content">
-                        <h3>Ship With Leverage</h3>
-                        <p>Avoid building low-impact features. Sharpen your landing page copy. Improve pricing strategy. One avoided mistake pays for the tool.</p>
+                        <h3>3. Build with Confidence</h3>
+                        <p>Get a prioritized list of what people actually hate about current solutions and exactly what they're looking for in a new product.</p>
                     </div>
                 </div>
             </div>
@@ -205,7 +188,7 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
                 <!-- Free Plan -->
                 <div class="pricing-card">
                     <div class="pricing-header">
-                        <div class="plan-icon"><MousePointer2 size={32} /></div>
+                        <div class="plan-icon"><Search size={32} /></div>
                         <h3>Free Exploration</h3>
                         <div class="price">$0</div>
                         <p class="billing-msg">Validate before you commit.</p>
@@ -318,10 +301,11 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
     <section class="cta-section">
         <div class="container">
             <div class="cta-content">
-                <h2 class="section-title">Before you write another line of code…</h2>
-                <p class="section-subtitle">See what users already hate about your competitors. You don’t need more ideas. You need sharper insight.</p>
+                <Rocket size={48} class="mb-6 text-accent animate-bounce" />
+                <h2 class="section-title">Stop guessing. Start building.</h2>
+                <p class="section-subtitle">See what users already hate about your competitors. Join the beta and get the data you need to ship with confidence.</p>
                 <div class="mt-8 cta-button-container-bottom">
-                    <a href={dashboardUrl} class="btn btn-primary btn-xl">Analyze a Competitor for Free</a>
+                    <a href={dashboardUrl} class="btn btn-primary btn-xl">Join the Beta for Free</a>
                 </div>
             </div>
         </div>
@@ -379,68 +363,51 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
         line-height: 1.5;
     }
 
-    .interactive-demo {
-        max-width: 700px;
-        margin: 40px auto 0;
-    }
-
-    .demo-label {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        margin-bottom: 20px;
-        font-size: 1.1rem;
-        color: var(--text-primary);
-    }
-
-    .demo-subtext {
-        margin-top: 20px;
+    .beta-badge {
+        display: inline-block;
+        padding: 6px 16px;
+        background: rgba(255, 69, 0, 0.1);
+        color: var(--bg-accent);
+        border: 1px solid rgba(255, 69, 0, 0.2);
+        border-radius: var(--radius-full);
         font-size: 0.9rem;
-        color: var(--text-tertiary);
-    }
-
-    /* Demo Component Styles */
-    :global(.input-group) {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        background: var(--bg-primary);
-        padding: 6px;
-        border-radius: var(--radius-xl);
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        border: 1px solid var(--border);
-        max-width: 600px;
-        margin: 0 auto;
-    }
-
-    :global(.demo-input) {
-        flex: 1;
-        border: none;
-        background: transparent;
-        padding: 12px 16px;
-        font-size: 1.1rem;
-        color: var(--text-primary);
-        outline: none;
-        width: 100%;
-    }
-    
-    :global(.demo-input:focus) {
-        outline: none;
-    }
-
-    :global(.btn.demo-btn) {
-        padding: 12px 24px;
         font-weight: 700;
-        border-radius: var(--radius-lg);
-        white-space: nowrap;
-        flex-shrink: 0;
+        margin-bottom: 24px;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
     }
 
-    :global(.demo-hint) {
-        margin-top: 12px;
-        font-size: 0.85rem;
+    .hero-cta-group {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+    }
+
+    /* Platform Chips */
+    .platforms-supported {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+        margin-bottom: 32px;
+    }
+
+    .platform-chip {
+        padding: 6px 14px;
+        background: var(--bg-tertiary);
         color: var(--text-tertiary);
+        font-size: 0.8rem;
+        font-weight: 700;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+        transition: all 0.2s;
+    }
+
+    .platform-chip.active {
+        background: rgba(255, 69, 0, 0.05);
+        color: var(--bg-accent);
+        border-color: rgba(255, 69, 0, 0.2);
     }
 
     /* Signal Gap Section (Redesigned) */

@@ -1,5 +1,6 @@
 ---
 import '../styles/theme.css';
+import { Sun, Moon } from 'lucide-react';
 const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
 ---
 
@@ -13,11 +14,18 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
 		<meta name="generator" content={Astro.generator} />
 		<title>OpinionDeck — Strategic Market Intelligence</title>
 		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-		<script>
+		<script is:inline>
+            // Immediate theme setting to prevent flash
+            const savedTheme = localStorage.getItem('reddit-dl-theme');
+            const theme = savedTheme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+            if (theme === 'dark') document.documentElement.classList.add('dark');
+        </script>
+        <script>
 			import posthog from 'posthog-js';
 
 			const key = import.meta.env.PUBLIC_POSTHOG_KEY;
-			const host = import.meta.env.PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
+			const host = import.meta.env.PUBLIC_POSTHOG_HOST || 'https://us.i.i.posthog.com';
 
 			if (key) {
 				posthog.init(key, {
@@ -36,6 +44,10 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
 					<span class="logo-tagline">Strategic Market Intelligence</span>
 				</a>
 				<div class="header-actions">
+                    <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle theme">
+                        <div class="sun-icon"><Sun size={20} /></div>
+                        <div class="moon-icon"><Moon size={20} /></div>
+                    </button>
                     <a href={dashboardUrl} class="btn btn-secondary">Go to App</a>
 					<a href={dashboardUrl} class="btn btn-primary">Sign In</a>
 				</div>
@@ -61,6 +73,20 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
 			</div>
 		</footer>
 	</body>
+    <script>
+        const themeToggle = document.getElementById('theme-toggle');
+        
+        const toggleTheme = () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            document.documentElement.classList.toggle('dark', newTheme === 'dark');
+            localStorage.setItem('reddit-dl-theme', newTheme);
+        };
+
+        themeToggle?.addEventListener('click', toggleTheme);
+    </script>
 </html>
 
 <style>
@@ -132,7 +158,56 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
 
     .header-actions {
         display: flex;
-        gap: 12px;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .theme-toggle-btn {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+        width: 40px;
+        height: 40px;
+        border-radius: var(--radius-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        padding: 0;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .theme-toggle-btn:hover {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+        border-color: var(--text-tertiary);
+        transform: translateY(-1px);
+    }
+
+    .sun-icon, .moon-icon {
+        position: absolute;
+        transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
+    }
+
+    :global([data-theme="light"]) .sun-icon {
+        opacity: 0;
+        transform: translateY(20px) rotate(90deg);
+    }
+    :global([data-theme="light"]) .moon-icon {
+        opacity: 1;
+        transform: translateY(0) rotate(0);
+    }
+
+    :global([data-theme="dark"]) .sun-icon {
+        opacity: 1;
+        transform: translateY(0) rotate(0);
+        color: #ffb800;
+    }
+    :global([data-theme="dark"]) .moon-icon {
+        opacity: 0;
+        transform: translateY(-20px) rotate(-90deg);
     }
 
     /* Footer Styles */
