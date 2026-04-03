@@ -14,7 +14,7 @@ export function VerificationGate() {
         // Auto-refresh every 5 seconds to check if they verified
         const interval = setInterval(() => {
             refreshUser();
-        }, 5000);
+        }, 15000); // Increased from 5s to 15s to stay well within rate limits
         return () => clearInterval(interval);
     }, [refreshUser]);
 

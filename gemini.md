@@ -31,9 +31,9 @@
 
 ## Rate Limiting (CRITICAL)
 Always adhere to these limits to prevent service interruption:
-- **Global API**: Managed via `rateLimiter.ts`. Anonymous users are capped at 5 req/min. Logged-in users have dynamic limits based on their plan (found in `req.user.config.rateLimit`).
+- **Global API**: Managed via `rateLimiter.ts`. Anonymous users are capped at 15 req/min (increased from 5 to prevent false positives). Logged-in users have dynamic limits based on their plan (Free: 25, Beta: 40, Pro: 60).
 - **Reddit/HN Syncing**: Strictly limited to 1 thread per second (`concurrency: 1`) in workers to avoid IP bans.
-- **AI Analysis**: Gemini 2.0 Flash is sensitive to RPM limits. Ensure batching or sequential processing where necessary to stay within the 10-15 RPM free tier or designated Vertex quotas.
+- **Thread IDs**: All stored threads use an MD5 hash of their URL as the primary Firestore ID to ensure consistent replacement of placeholders.
 
 ## Conventions & Rules
 - **Queue Configuration**: BullMQ workers in `src/server.ts` use a `sharedConnectionConfig`.

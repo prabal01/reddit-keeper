@@ -8,25 +8,15 @@ import { MetricCard } from "./common/MetricCard";
 import "./Reports.css";
 
 export const ReportsView: React.FC = () => {
-    const { user } = useAuth();
-    const { folders, fetchFolders } = useFolders();
-    const [stats, setStats] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
+    const { user, userStats: stats } = useAuth();
+    const { folders } = useFolders();
+    const [loading, setLoading] = useState(!stats); // Only load if stats aren't in context yet
 
     useEffect(() => {
-        if (user) {
-            Promise.all([
-                fetchUserStats(),
-                fetchFolders()
-            ]).then(([statsData]) => {
-                setStats(statsData);
-                setLoading(false);
-            }).catch(err => {
-                console.error(err);
-                setLoading(false);
-            });
+        if (stats) {
+            setLoading(false);
         }
-    }, [user, fetchFolders]);
+    }, [stats]);
 
     if (loading) {
         return (

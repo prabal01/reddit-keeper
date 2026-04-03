@@ -73,6 +73,7 @@ export const DiscoverySidebar: React.FC = () => {
                         selectedFolderId={selectedFolderId}
                         onSelect={setSelectedFolderId}
                         disabled={isSaving}
+                        direction="up"
                     />
                 </div>
 
