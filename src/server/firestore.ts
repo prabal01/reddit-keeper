@@ -221,7 +221,7 @@ export interface DiscoveryHistoryEntry {
 
 const DEFAULT_FREE_CONFIG: PlanConfig = {
     commentLimit: 50,
-    rateLimit: 10,
+    rateLimit: 25, // Increased from 10 to allow dashboard load + some navigation
     rateLimitWindow: 60,
     maxMoreCommentsBatches: 3,
     bulkDownload: false,
@@ -237,7 +237,7 @@ const DEFAULT_FREE_CONFIG: PlanConfig = {
 
 const DEFAULT_PRO_CONFIG: PlanConfig = {
     commentLimit: 5000,
-    rateLimit: 30,
+    rateLimit: 60, // Increased from 30
     rateLimitWindow: 60,
     maxMoreCommentsBatches: -1,
     bulkDownload: true,
@@ -253,7 +253,7 @@ const DEFAULT_PRO_CONFIG: PlanConfig = {
 
 const DEFAULT_BETA_CONFIG: PlanConfig = {
     commentLimit: 500,
-    rateLimit: 20,
+    rateLimit: 40, // Increased from 20
     rateLimitWindow: 60,
     maxMoreCommentsBatches: 5,
     bulkDownload: true,
@@ -723,9 +723,14 @@ export async function saveThreadToFolder(uid: string, folderId: string, threadDa
     }
 
     // threadData might be the direct object or a stub with storageUrl
-    const threadId = threadData.id || threadData.post?.id;
-    if (!threadId) throw new Error("Invalid thread data: missing ID");
-
+    // We use a unique hash of the URL as the document ID to ensure placeholders 
+    // and real threads share the same identity.
+    const url = threadData.source || threadData.post?.url || threadData.url;
+    if (!url) throw new Error("Invalid thread data: missing URL for ID generation");
+    
+    // Lazy import crypto if needed
+    const { createHash } = require('crypto');
+    const threadId = createHash('md5').update(url).digest('hex').substring(0, 16);
     const threadRef = db.collection("saved_threads").doc(`${folderId}_${threadId}`);
 
     const snapshot: SavedThread = {
@@ -767,8 +772,9 @@ export async function saveThreadToFolder(uid: string, folderId: string, threadDa
 export async function createPlaceholderThread(uid: string, folderId: string, url: string, meta?: any): Promise<void> {
     if (!db) return;
 
-    // Use a clean hash or simplified URL as the ID until the worker resolves it
-    const tempId = `pending_${Buffer.from(url).toString('base64').substring(0, 15)}`;
+    // Use a unique hash of the URL as the ID
+    const { createHash } = await import('crypto');
+    const tempId = createHash('md5').update(url).digest('hex').substring(0, 16);
     const threadRef = db.collection("saved_threads").doc(`${folderId}_${tempId}`);
 
     const snapshot: SavedThread = {

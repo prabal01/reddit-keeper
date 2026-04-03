@@ -22,7 +22,7 @@ redis.on("connect", () => {
 });
 
 const WINDOW_SIZE_IN_SECONDS = 60;
-const FALLBACK_ANON_LIMIT = 5; // Aggressive throttling for unauthenticated IPs to stop abuse
+const FALLBACK_ANON_LIMIT = 15; // Increased from 5 to stop accidental lockouts during normal browsing
 
 export const createRateLimiter = (limit: number, windowSeconds: number = 60) => {
     return async (req: Request, res: Response, next: NextFunction) => {
@@ -87,6 +87,12 @@ export const rateLimiterMiddleware = async (req: Request, res: Response, next: N
         }
 
         if (currentCount > dynamicLimit) {
+            // Safety Check: Ensure the key has a TTL. If it doesn't, it might be stuck indefinitely due to a race condition.
+            const ttl = await redis.ttl(key);
+            if (ttl === -1) {
+                await redis.expire(key, WINDOW_SIZE_IN_SECONDS);
+            }
+
             res.status(429).json({
                 error: "Too many requests",
                 message: req.user

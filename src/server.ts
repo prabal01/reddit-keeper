@@ -1,5 +1,6 @@
 
 import "dotenv/config";
+import crypto from "crypto";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -560,7 +561,7 @@ const syncWorker = new Worker("reddit-sync", async (job) => {
         const analysisRunId = folder?.currentAnalysisRunId || `auto_${Date.now()}`;
         await updateFolderAnalysisStatus(userUid, folderId, 'processing', analysisRunId);
 
-        const finalThreadId = fullData.id || fullData.post?.id;
+        const finalThreadId = crypto.createHash('md5').update(url).digest('hex').substring(0, 16);
         if (finalThreadId) {
             await granularAnalysisQueue.add("granular-analyze", {
                 threadId: finalThreadId,
@@ -598,12 +599,13 @@ syncWorker.on('failed', (job, err) => {
 
 const granularAnalysisWorker = new Worker("granular-analysis", async (job) => {
     const { threadId, url, folderId, userUid, title, subreddit } = job.data;
-    console.log(`[GranularWorker] Analyzing thread: ${threadId} for folder: ${folderId}`);
+    // Use the same URL hash ID to identify the correct document
+    const threadDocId = crypto.createHash('md5').update(url).digest('hex').substring(0, 16);
 
     try {
         // 0. Update thread status to processing
         await updateThreadInsight(userUid, folderId, {
-            id: threadId,
+            id: threadDocId,
             folderId,
             uid: userUid,
             threadLink: url,
@@ -612,7 +614,7 @@ const granularAnalysisWorker = new Worker("granular-analysis", async (job) => {
 
         // 1. Fetch thread from Firestore (SavedThread)
         const threads = await getThreadsInFolder(userUid, folderId);
-        const thread = threads.find(t => t.id === threadId);
+        const thread = threads.find(t => t.id === threadDocId);
 
         if (!thread) throw new Error(`Thread ${threadId} not found in folder ${folderId}`);
 
@@ -629,7 +631,7 @@ const granularAnalysisWorker = new Worker("granular-analysis", async (job) => {
 
         // 3. Call AI with Timeout protection (2 minutes)
         const analysisPromise = analyzeThreadGranular({
-            id: threadId,
+            id: threadDocId,
             title: thread.title,
             subreddit: thread.subreddit,
             comments: comments
@@ -642,24 +644,24 @@ const granularAnalysisWorker = new Worker("granular-analysis", async (job) => {
         const insights = await Promise.race([analysisPromise, timeoutPromise]) as any;
 
         // 4. Save to Firestore (Helper handles metric increments & thread deletion)
-        console.log(`[GranularWorker] Intelligence extracted for ${threadId}. Saving to Firestore...`);
+        console.log(`[GranularWorker] Intelligence extracted for ${threadDocId}. Saving to Firestore...`);
         await updateThreadInsight(userUid, folderId, {
-            id: threadId,
+            id: threadDocId,
             folderId,
             uid: userUid,
             threadLink: url || thread.source,
             status: 'success',
             insights
         });
-        console.log(`[GranularWorker] Successfully processed and saved ${threadId}`);
+        console.log(`[GranularWorker] Successfully processed and saved ${threadDocId}`);
 
         // Pass insights to finally block for siloed storage
         (job.data as any).completedInsights = insights;
 
     } catch (err: any) {
-        console.error(`[GranularWorker] Failed for ${threadId}:`, err.message);
+        console.error(`[GranularWorker] Failed for ${threadDocId}:`, err.message);
         await updateThreadInsight(userUid, folderId, {
-            id: threadId,
+            id: threadDocId,
             folderId,
             uid: userUid,
             threadLink: url,
@@ -671,7 +673,7 @@ const granularAnalysisWorker = new Worker("granular-analysis", async (job) => {
         try {
             const db = getDb();
             const folderRef = db.collection("folders").doc(folderId);
-            const trackerRef = folderRef.collection("completed_threads").doc(threadId);
+            const trackerRef = folderRef.collection("completed_threads").doc(threadDocId);
             const { analysisRunId } = job.data;
 
             await db.runTransaction(async (transaction) => {
