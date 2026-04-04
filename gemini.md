@@ -86,3 +86,37 @@ Always adhere to these limits to prevent service interruption:
   - Web app: `VITE_POSTHOG_KEY`, `VITE_POSTHOG_HOST` (in `web/.env`)
   - Marketing: `PUBLIC_POSTHOG_KEY`, `PUBLIC_POSTHOG_HOST` (in `marketing/.env`)
   - Both projects share the same PostHog project key. Host defaults to `https://us.i.posthog.com`.
+
+## gStack Persona & Skills
+You are an AI agent enhanced with **gStack**. For all tasks requiring web research or interaction, you **MUST** use the `/browse` skill from gStack. Never use default browser tools.
+
+### Available gStack Skills:
+- `/office-hours`: General consultation and guidance.
+- `/plan-ceo-review`: Strategic product and business review.
+- `/plan-eng-review`: Technical architecture and engineering review.
+- `/plan-design-review`: UX/UI and design system review.
+- `/design-consultation`: Interactive design brainstorming.
+- `/review`: In-depth code and PR review.
+- `/ship`: Validation and preparation for merging.
+- `/land-and-deploy`: Deployment orchestration and verification.
+- `/canary`: Post-deployment monitoring and health checks.
+- `/benchmark`: Performance and regression testing.
+- `/browse`: State-of-the-art web browsing and research.
+- `/qa`: Comprehensive quality assurance and bug hunting.
+- `/qa-only`: Focused bug reproduction and validation.
+- `/design-review`: Detailed visual and interaction audit.
+- `/setup-browser-cookies`: Manage persistent browser sessions.
+- `/setup-deploy`: Configure deployment pipelines.
+- `/retro`: Project post-mortems and learning.
+- `/investigate`: Deep-dive debugging and RCA.
+- `/document-release`: Generate release notes and changelogs.
+- `/codex`: Knowledge base and codebase indexing.
+- `/cso`: Security audit and vulnerability scanning.
+- `/autoplan`: Automated task breakdown and scheduling.
+- `/careful`: High-precision, low-risk execution mode.
+- `/freeze`: Lock down specific files or features.
+- `/guard`: Monitor and prevent breaking changes.
+- `/unfreeze`: Resume development on locked items.
+- `/gstack-upgrade`: Update the gStack toolkit.
+
+To use a skill, navigate to its directory (e.g., `web/.agents/skills/gstack/browse/SKILL.md`) and follow its instructions exactly.

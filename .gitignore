@@ -35,3 +35,6 @@ wishlist.md
 chrome-extension/.env.development 
 chrome-extension/.env.production
 private-docs/*
+
+# gStack / Agents
+.agents/
