@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from "../contexts/AuthContext";
 import { useFolders } from "../contexts/FolderContext";
 import { Activity, MessageSquare, FolderOpen, FileText, Clock, TrendingUp, BarChart3, PieChart } from 'lucide-react';
@@ -9,7 +9,7 @@ import "./Reports.css";
 export const ReportsView: React.FC = () => {
     const { userStats: stats } = useAuth();
     const { folders } = useFolders();
-    const [loading, setLoading] = useState(!stats); // Only load if stats aren't in context yet
+    const [loading, setLoading] = useState(!stats);
 
     useEffect(() => {
         if (stats) {

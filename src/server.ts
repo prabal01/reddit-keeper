@@ -1802,6 +1802,20 @@ app.post("/api/admin/waitlist/:id/status", adminMiddleware, async (req: express.
     }
 });
 
+// ── Test Alerting System ──────────────────────────────────────────
+app.get("/api/admin/test-alert", adminMiddleware, async (req: express.Request, res: express.Response) => {
+    try {
+        await sendAlert("SYSTEM", "Manual Trigger Test from Admin Terminal", { 
+            executedBy: req.user?.email,
+            ip: req.ip,
+            timestamp: new Date().toISOString()
+        });
+        res.json({ success: true, message: "Alert sent to Telegram" });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.post("/api/waitlist", async (req: express.Request, res: express.Response) => {
     // Public endpoint for beta access requests
     try {
