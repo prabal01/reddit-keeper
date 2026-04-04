@@ -13,8 +13,7 @@ export async function sendAlert(
   details?: any
 ): Promise<void> {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-    console.warn("[Alerts] Skipped: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID missing in .env");
-    return;
+    throw new Error("Telegram credentials (TOKEN/ID) missing in environment");
   }
 
   const icons = {
