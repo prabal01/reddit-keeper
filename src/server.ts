@@ -601,8 +601,12 @@ syncWorker.on('failed', (job, err) => {
     console.error(`[SyncWorker] Job ${job?.id} failed:`, err);
     sendAlert("REDDIT", `Sync Worker Failed! Job: ${job?.id}`, {
         error: err.message,
+        statusCode: (err as any).statusCode,
+        responseSnippet: (err as any).responseSnippet,
         url: job?.data?.url,
-        user: job?.data?.userUid
+        user: job?.data?.userUid,
+        attempt: job?.attemptsMade,
+        stack: err.stack?.split("\n").slice(0, 3).join("\n")
     });
 });
 
@@ -825,8 +829,10 @@ analysisWorker.on('failed', (job, err) => {
     console.error(`[AnalysisWorker] Job ${job?.id} failed:`, err);
     sendAlert("AI", `Main Analysis Report Failed! Job: ${job?.id}`, {
         error: err.message,
-        folder: job?.data?.folderId,
-        user: job?.data?.userUid
+        folderId: job?.data?.folderId,
+        userUid: job?.data?.userUid,
+        attempt: job?.attemptsMade,
+        stack: err.stack?.split("\n").slice(0, 3).join("\n")
     });
 });
 

@@ -57,7 +57,13 @@ async function fetchWithRetry(
 
             if (response.status === 429) {
                 // Rate limited — alert the admin then wait and retry
-                await sendAlert("REDDIT", `Rate Limit (429) detected! URL: ${url}`, { status: 429, attempt });
+                await sendAlert("REDDIT", `Rate Limit (429) detected!`, { 
+                    url, 
+                    status: 429, 
+                    attempt,
+                    userAgent: USER_AGENT,
+                    referer: "https://www.reddit.com/"
+                });
                 
                 const retryAfter = parseInt(response.headers.get("retry-after") || "5");
                 const waitMs = retryAfter * 1000;
@@ -66,9 +72,20 @@ async function fetchWithRetry(
             }
 
             if (response.status === 403) {
+                const bodySnippet = await response.text().then(t => t.substring(0, 300)).catch(() => "N/A");
                 // BLOCKED — immediate alert
-                await sendAlert("REDDIT", `Access Forbidden (403)! Likely a block. URL: ${url}`, { status: 403, attempt });
-                throw new Error(`HTTP 403: Access blocked by Reddit. Please check server IP reputation.`);
+                await sendAlert("REDDIT", `Access Forbidden (403)! Likely a block.`, { 
+                    url, 
+                    status: 403, 
+                    attempt,
+                    userAgent: USER_AGENT,
+                    responseSnippet: bodySnippet
+                });
+                const err: any = new Error(`HTTP 403: Access blocked by Reddit.`);
+                err.statusCode = 403;
+                err.responseSnippet = bodySnippet;
+                err.url = url;
+                throw err;
             }
 
             if (response.status === 503 || response.status === 500) {
@@ -79,7 +96,10 @@ async function fetchWithRetry(
             }
 
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                const err: any = new Error(`HTTP ${response.status}: ${response.statusText}`);
+                err.statusCode = response.status;
+                err.url = url;
+                throw err;
             }
 
             return await response.json();
