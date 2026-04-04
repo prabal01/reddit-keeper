@@ -34,7 +34,7 @@ router.get("/leads", adminMiddleware, async (req, res) => {
  * Updates the status of a lead (e.g., 'contacted').
  */
 router.post("/leads/:id/status", adminMiddleware, async (req, res) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   const status = req.body.status as string;
   
   if (!(['new', 'contacted', 'ignore'] as string[]).includes(status)) {
