@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { API_BASE, getAuthToken } from '../../lib/api';
 import { Loader2, User, Search } from 'lucide-react';
 import toast from 'react-hot-toast';

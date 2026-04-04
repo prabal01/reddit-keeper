@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { API_BASE, getAuthToken } from '../../lib/api';
 import { Loader2, Users, FolderOpen, Zap } from 'lucide-react';
 

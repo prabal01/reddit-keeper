@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Shield, Users, BarChart3, Ticket, Clock, Activity } from 'lucide-react';
 import { AdminOverview } from './AdminOverview';
 import { AdminUserTable } from './AdminUserTable';
