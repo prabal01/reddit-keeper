@@ -4,9 +4,10 @@ import { AdminOverview } from './AdminOverview';
 import { AdminUserTable } from './AdminUserTable';
 import { AdminTokenManager } from './AdminTokenManager';
 import { AdminWaitlist } from './AdminWaitlist';
-import { AdminQueues } from './AdminQueues'; // Future, or stub it for now
+import { AdminQueues } from './AdminQueues';
+import { AdminLeads } from './AdminLeads';
 
-type Tab = 'overview' | 'users' | 'tokens' | 'waitlist' | 'queues';
+type Tab = 'overview' | 'users' | 'tokens' | 'waitlist' | 'queues' | 'leads';
 
 export function AdminPortal() {
     const [activeTab, setActiveTab] = useState<Tab>('overview');
@@ -14,9 +15,10 @@ export function AdminPortal() {
     const tabs = [
         { id: 'overview', label: 'Overview', icon: BarChart3 },
         { id: 'users', label: 'Users', icon: Users },
+        { id: 'leads', label: 'Leads', icon: Activity },
         { id: 'tokens', label: 'Beta Tokens', icon: Ticket },
         { id: 'waitlist', label: 'Waitlist', icon: Clock },
-        { id: 'queues', label: 'Queues', icon: Activity },
+        { id: 'queues', label: 'Queues', icon: BarChart3 }, // Using BarChart3 instead of Activity to avoid duplication
     ];
 
     return (
@@ -70,6 +72,7 @@ export function AdminPortal() {
             <div className="admin-content-area" style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)', padding: '32px', minHeight: '500px' }}>
                 {activeTab === 'overview' && <AdminOverview />}
                 {activeTab === 'users' && <AdminUserTable />}
+                {activeTab === 'leads' && <AdminLeads />}
                 {activeTab === 'tokens' && <AdminTokenManager />}
                 {activeTab === 'waitlist' && <AdminWaitlist />}
                 {activeTab === 'queues' && <AdminQueues />}
