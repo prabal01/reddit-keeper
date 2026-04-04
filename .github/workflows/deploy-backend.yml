@@ -42,6 +42,7 @@ jobs:
           RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
           RAZORPAY_WEBHOOK_SECRET: ${{ secrets.RAZORPAY_WEBHOOK_SECRET }}
           ADMIN_SECRET: ${{ secrets.ADMIN_SECRET }}
+          ADMIN_EMAILS: ${{ secrets.ADMIN_EMAILS }}
         run: |-
           node -e '
             const fs = require("fs");
@@ -61,7 +62,8 @@ jobs:
               RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID,
               RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET,
               RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET,
-              ADMIN_SECRET: process.env.ADMIN_SECRET
+              ADMIN_SECRET: process.env.ADMIN_SECRET,
+              ADMIN_EMAILS: process.env.ADMIN_EMAILS
             };
             fs.writeFileSync("env.json", JSON.stringify(env));
           '
