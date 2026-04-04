@@ -17,8 +17,10 @@ import {
     countComments,
 } from "./tree-builder.js";
 
-const TOOL_VERSION = "1.0.0";
-const USER_AGENT = "reddit-dl/1.0.0";
+import { sendAlert } from "../server/alerts.js";
+
+const TOOL_VERSION = "1.0.1";
+const USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36";
 const RATE_LIMIT_DELAY = 1000; // 1 second between requests
 
 type ProgressCallback = (message: string) => void;
@@ -42,16 +44,31 @@ async function fetchWithRetry(
             const response = await fetch(url, {
                 headers: {
                     "User-Agent": USER_AGENT,
-                    Accept: "application/json",
+                    "Accept": "application/json",
+                    "Accept-Language": "en-US,en;q=0.9",
+                    "Referer": "https://www.reddit.com/",
+                    "Sec-Fetch-Dest": "empty",
+                    "Sec-Fetch-Mode": "cors",
+                    "Sec-Fetch-Site": "same-origin",
+                    "DNT": "1",
+                    "Upgrade-Insecure-Requests": "1"
                 },
             });
 
             if (response.status === 429) {
-                // Rate limited — wait and retry
+                // Rate limited — alert the admin then wait and retry
+                await sendAlert("REDDIT", `Rate Limit (429) detected! URL: ${url}`, { status: 429, attempt });
+                
                 const retryAfter = parseInt(response.headers.get("retry-after") || "5");
                 const waitMs = retryAfter * 1000;
                 await sleep(waitMs);
                 continue;
+            }
+
+            if (response.status === 403) {
+                // BLOCKED — immediate alert
+                await sendAlert("REDDIT", `Access Forbidden (403)! Likely a block. URL: ${url}`, { status: 403, attempt });
+                throw new Error(`HTTP 403: Access blocked by Reddit. Please check server IP reputation.`);
             }
 
             if (response.status === 503 || response.status === 500) {

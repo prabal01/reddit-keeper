@@ -1,5 +1,6 @@
 import { VertexAI, SchemaType } from "@google-cloud/vertexai";
 import { GoogleAuth } from "google-auth-library";
+import { sendAlert } from "./alerts.js";
 
 const project = process.env.GOOGLE_CLOUD_PROJECT || "redditkeeperprod";
 const location = process.env.GOOGLE_CLOUD_LOCATION || "us-central1";
@@ -34,6 +35,7 @@ async function withRetry<T>(fn: () => Promise<T>, maxRetries = 5, baseDelay = 50
             throw err;
         }
     }
+    await sendAlert("AI", `Vertex AI Failed after ${maxRetries} attempts!`, { error: lastError?.message || lastError });
     throw lastError;
 }
 
@@ -467,8 +469,9 @@ ${threadData.map(t => `--- THREAD START ---\nTitle: ${t.title}\nSubreddit: r/${t
             analysis: parsed,
             usage: response.usageMetadata
         };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Vertex AI Analysis Error:", error);
+        await sendAlert("AI", `Main Analysis Report Generation Failed!`, { error: error.message });
         throw error;
     }
 }
@@ -525,8 +528,13 @@ ${threadContent}
 
         if (!text) throw new Error("No response from Vertex AI");
         return JSON.parse(text);
-    } catch (error) {
+    } catch (error: any) {
         console.error(`[AI] [GRANULAR] Error analyzing thread ${thread.id}:`, error);
+        await sendAlert("AI", `Granular Thread Analysis Failed!`, { 
+            error: error.message,
+            threadId: thread.id,
+            title: thread.title 
+        });
         throw error;
     }
 }

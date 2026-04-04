@@ -54,6 +54,7 @@ const app = express();
 import { DiscoveryOrchestrator } from './server/discovery/orchestrator.js';
 
 const discoveryOrchestrator = new DiscoveryOrchestrator();
+import { sendAlert } from "./server/alerts.js";
 const PORT = parseInt(process.env.PORT || "3001", 10);
 const USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
 const TOOL_VERSION = "1.0.1";
@@ -133,6 +134,9 @@ app.use(authMiddleware);
 app.use(rateLimiterMiddleware); // Apply global rate limits to all routes based on auth config
 
 // ── Helpers ────────────────────────────────────────────────────────
+
+import marketingRouter from "./server/marketing/leads.js";
+app.use("/api/admin/marketing", marketingRouter);
 
 // ── Helpers ────────────────────────────────────────────────────────
 
@@ -595,6 +599,11 @@ const syncWorker = new Worker("reddit-sync", async (job) => {
 
 syncWorker.on('failed', (job, err) => {
     console.error(`[SyncWorker] Job ${job?.id} failed:`, err);
+    sendAlert("REDDIT", `Sync Worker Failed! Job: ${job?.id}`, {
+        error: err.message,
+        url: job?.data?.url,
+        user: job?.data?.userUid
+    });
 });
 
 const granularAnalysisWorker = new Worker("granular-analysis", async (job) => {
@@ -723,6 +732,15 @@ const granularAnalysisWorker = new Worker("granular-analysis", async (job) => {
     stalledInterval: 30000 // Normal stalled job polling
 });
 
+granularAnalysisWorker.on('failed', (job, err) => {
+    console.error(`[GranularWorker] Job ${job?.id} failed:`, err);
+    sendAlert("AI", `Granular Analysis Failed! Job: ${job?.id}`, {
+        error: err.message,
+        thread: job?.data?.title || job?.data?.threadId,
+        user: job?.data?.userUid
+    });
+});
+
 // Worker Processor (Analysis)
 const analysisWorker = new Worker("analysis", async (job) => {
     console.log(">>>>>>>>>>>>>>>>>>>> WORKER PICKED UP JOB:", job.id);
@@ -798,9 +816,18 @@ const analysisWorker = new Worker("analysis", async (job) => {
     }
 }, {
     connection: sharedConnectionConfig,
-    concurrency: 5, // Process 5 AI jobs concurrently
-    drainDelay: 5, // Optimal speed
-    stalledInterval: 30000 // Normal stalled job polling
+    concurrency: 2, // Analysis is more resource heavy
+    drainDelay: 5,
+    stalledInterval: 30000
+});
+
+analysisWorker.on('failed', (job, err) => {
+    console.error(`[AnalysisWorker] Job ${job?.id} failed:`, err);
+    sendAlert("AI", `Main Analysis Report Failed! Job: ${job?.id}`, {
+        error: err.message,
+        folder: job?.data?.folderId,
+        user: job?.data?.userUid
+    });
 });
 
 analysisWorker.on('completed', (job, returnvalue) => {
