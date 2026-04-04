@@ -26,6 +26,20 @@ export function AdminOverview() {
         fetchStats();
     }, []);
 
+    const testAlert = async () => {
+        try {
+            const token = await getAuthToken();
+            const res = await fetch(`${API_BASE}/admin/test-alert`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error("Failed to trigger alert");
+            await res.json();
+            alert("✅ Alert sent to Telegram!");
+        } catch (err: any) {
+            alert("❌ Error: " + err.message);
+        }
+    };
+
     if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}><Loader2 className="animate-spin" size={24} color="#8e92a4" /></div>;
     if (error) return <div style={{ color: '#ef4444', padding: '20px' }}>Error: {error}</div>;
 
@@ -33,12 +47,32 @@ export function AdminOverview() {
         { title: 'Total Users', value: stats?.counts?.totalUsers || 0, icon: Users, color: '#3b82f6' },
         { title: 'Total Folders', value: stats?.counts?.totalFolders || 0, icon: FolderOpen, color: '#eab308' },
         { title: 'Total Analyses', value: stats?.counts?.totalAnalyses || 0, icon: Zap, color: '#ff4500' },
-        // { title: 'Total Waitlist', value: stats?.counts?.totalWaitlist || 0, icon: Users, color: '#22c55e' },
     ];
 
     return (
         <div>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: '700', marginBottom: '24px' }}>Platform Metrics</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: '700', margin: 0 }}>Platform Metrics</h2>
+                <button 
+                    onClick={testAlert}
+                    style={{ 
+                        background: 'rgba(255,255,255,0.05)', 
+                        border: '1px solid rgba(255,255,255,0.1)', 
+                        color: '#8e92a4', 
+                        padding: '8px 16px', 
+                        borderRadius: '10px', 
+                        fontSize: '0.85rem', 
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                    onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                >
+                    <Zap size={14} /> Trigger Test Alert
+                </button>
+            </div>
             
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '20px', marginBottom: '40px' }}>
                 {cards.map((c, i) => (
