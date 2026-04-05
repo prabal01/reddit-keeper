@@ -551,20 +551,21 @@ const syncWorker = new Worker("reddit-sync", async (job) => {
 
     try {
         // Detect source platform
-        const source: 'reddit' | 'hn' = url.includes('news.ycombinator.com') ? 'hn' : 'reddit';
-        const fullData = await discoveryOrchestrator.fetchFullThread(url, source);
+        const sourceName: 'reddit' | 'hn' = url.includes('news.ycombinator.com') ? 'hn' : 'reddit';
+        const { data, isCached } = await discoveryOrchestrator.fetchFullThread(url, sourceName);
 
-        if (!fullData) throw new Error(`Failed to fetch thread data from ${source.toUpperCase()}`);
+        if (!data) throw new Error(`Failed to fetch thread data from ${sourceName.toUpperCase()}`);
 
-        const savedThread = await saveThreadToFolder(userUid, folderId, fullData);
-        console.log(`[SyncWorker] Successfully synced thread: ${url}`);
+        const savedThread = await saveThreadToFolder(userUid, folderId, data);
+        console.log(`[SyncWorker] Successfully synced thread: ${url} (Cached: ${isCached})`);
 
         // 4. Send Success Alert to Telegram
         await sendAlert("REDDIT", `✅ SUCCESS: Thread Synced`, {
-            title: fullData.title || fullData.post?.title,
-            subreddit: fullData.subreddit || fullData.post?.subreddit,
+            title: data.title || data.post?.title,
+            subreddit: data.subreddit || data.post?.subreddit,
             url: url,
-            comments: fullData.num_comments || 0,
+            comments: data.num_comments || data.post?.num_comments || 0,
+            source: isCached ? "☁️ Redis Cache" : "🏠 Home IP (Fetcher)",
             user: userUid
         });
 
@@ -581,8 +582,8 @@ const syncWorker = new Worker("reddit-sync", async (job) => {
                 url: url,
                 folderId,
                 userUid,
-                title: fullData.title || fullData.post?.title,
-                subreddit: fullData.subreddit || fullData.post?.subreddit,
+                title: data.title || data.post?.title,
+                subreddit: data.subreddit || data.post?.subreddit,
                 analysisRunId
             });
         } else {
@@ -1397,20 +1398,20 @@ app.post("/api/discovery/metadata", authMiddleware, usageGuard('DISCOVERY'), asy
         const results = await Promise.all(urlList.map(async (targetUrl: string) => {
             const detectedSource = targetUrl.includes('news.ycombinator.com') ? 'hn' : 'reddit';
             try {
-                const fullData = await orchestrator.fetchFullThread(targetUrl, detectedSource);
-                if (!fullData || !fullData.post) return null;
+                const { data, isCached } = await orchestrator.fetchFullThread(targetUrl, detectedSource);
+                if (!data || !data.post) return null;
                 
                 return {
                     id: Buffer.from(targetUrl).toString('base64'),
-                    title: fullData.post.title || "Unknown Title",
-                    author: fullData.post.author || "unknown",
-                    subreddit: fullData.post.subreddit || (detectedSource === 'hn' ? 'Hacker News' : 'unknown'),
-                    num_comments: fullData.post.num_comments || 0,
-                    created_utc: fullData.post.created_utc || Math.floor(Date.now() / 1000),
+                    title: data.post.title || "Unknown Title",
+                    author: data.post.author || "unknown",
+                    subreddit: data.post.subreddit || (detectedSource === 'hn' ? 'Hacker News' : 'unknown'),
+                    num_comments: data.post.num_comments || 0,
+                    created_utc: data.post.created_utc || Math.floor(Date.now() / 1000),
                     url: targetUrl,
                     source: detectedSource,
                     score: 0,
-                    isCached: true
+                    isCached: isCached
                 };
             } catch (err) {
                 console.warn(`[Discovery] Failed to enrich metadata for ${targetUrl}:`, err);

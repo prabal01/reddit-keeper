@@ -206,10 +206,10 @@ export class DiscoveryOrchestrator {
 
             await Promise.all(needsEnrichment.map(async (r) => {
                 try {
-                    const fullData = await this.fetchFullThread(r.url, r.source);
-                    if (fullData && fullData.post) {
-                        r.num_comments = fullData.post.num_comments || 0;
-                        r.isCached = true;
+                    const { data, isCached } = await this.fetchFullThread(r.url, r.source);
+                    if (data && data.post) {
+                        r.num_comments = data.post.num_comments || 0;
+                        r.isCached = isCached;
                     }
                 } catch (err) {
                     logger.warn({ url: r.url }, "Failed to enrich metadata for result");
@@ -369,15 +369,14 @@ export class DiscoveryOrchestrator {
             recommendedPath: []
         };
     }
-
-    async fetchFullThread(urlOrId: string, source: 'reddit' | 'hn'): Promise<any> {
+    async fetchFullThread(urlOrId: string, source: 'reddit' | 'hn'): Promise<{ data: any; isCached: boolean }> {
         const cacheKey = `thread_data:v1:${Buffer.from(urlOrId).toString('base64')}`;
 
         try {
             const cached = await redis.get(cacheKey);
             if (cached) {
                 logger.info({ action: 'THREAD_CACHE_HIT', urlOrId }, "Returning cached thread data");
-                return JSON.parse(cached);
+                return { data: JSON.parse(cached), isCached: true };
             }
         } catch (err) {
             logger.warn({ err }, "Thread cache read error");
@@ -413,6 +412,6 @@ export class DiscoveryOrchestrator {
             }
         }
 
-        return fullData;
+        return { data: fullData, isCached: false };
     }
 }
