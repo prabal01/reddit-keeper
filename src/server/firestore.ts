@@ -2,6 +2,7 @@ import { initializeApp, cert, type ServiceAccount } from "firebase-admin/app";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
 import { getAuth, type Auth } from "firebase-admin/auth";
 import { getStorage, type Storage } from "firebase-admin/storage";
+import { createHash } from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import { logger } from "./utils/logger.js";
@@ -728,8 +729,8 @@ export async function saveThreadToFolder(uid: string, folderId: string, threadDa
     const url = threadData.source || threadData.post?.url || threadData.url;
     if (!url) throw new Error("Invalid thread data: missing URL for ID generation");
     
-    // Lazy import crypto if needed
-    const { createHash } = require('crypto');
+    // Use a unique hash of the URL as the document ID to ensure placeholders 
+    // and real threads share the same identity.
     const threadId = createHash('md5').update(url).digest('hex').substring(0, 16);
     const threadRef = db.collection("saved_threads").doc(`${folderId}_${threadId}`);
 
@@ -773,7 +774,6 @@ export async function createPlaceholderThread(uid: string, folderId: string, url
     if (!db) return;
 
     // Use a unique hash of the URL as the ID
-    const { createHash } = await import('crypto');
     const tempId = createHash('md5').update(url).digest('hex').substring(0, 16);
     const threadRef = db.collection("saved_threads").doc(`${folderId}_${tempId}`);
 
