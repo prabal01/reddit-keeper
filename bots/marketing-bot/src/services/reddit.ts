@@ -13,10 +13,40 @@ const USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/
 
 /**
  * Robust fetcher with retry logic and stealth headers to bypass 403 blocks.
+ * Prioritizes the home-hosted fetcher bridge if REDDIT_SERVICE_URL is set.
  */
 async function fetchWithRetry(url: string, maxRetries = 3): Promise<any> {
+  const serviceUrl = process.env.REDDIT_SERVICE_URL;
+  const internalSecret = process.env.INTERNAL_FETCH_SECRET;
+
+  if (serviceUrl) {
+    const fetcherEndpoint = `${serviceUrl.replace(/\/$/, "")}/fetch`;
+    console.log(`[Reddit] Fetching via Bridge: ${url}`);
+    
+    try {
+      const response = await fetch(fetcherEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${internalSecret}`
+        },
+        body: JSON.stringify({ url })
+      });
+
+      if (!response.ok) {
+        throw new Error(`BRIDGE_ERROR: ${response.status} - ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      console.warn(`[Reddit] Bridge fetch failed, falling back to direct: ${error.message}`);
+    }
+  }
+
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
+      if (attempt > 1) console.log(`[Reddit] Retrying native fetch (Attempt ${attempt}/${maxRetries})...`);
+      
       const response = await fetch(url, {
         headers: {
           "User-Agent": USER_AGENT,

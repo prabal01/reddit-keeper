@@ -48,6 +48,14 @@ export const Sidebar: React.FC = () => {
                 <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                     <Search size={18} /> <span className="link-text">Discovery</span>
                 </NavLink>
+
+                <NavLink to="/monitoring" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                    <div style={{ position: 'relative' }}>
+                        <Globe size={18} />
+                        <div style={{ position: 'absolute', top: -4, right: -4, width: 8, height: 8, background: '#4f46e5', borderRadius: '50%', border: '2px solid #0f172a' }} />
+                    </div>
+                    <span className="link-text">Monitoring</span>
+                </NavLink>
                 
                 {/* Discovery History - ChatGPT Style (Only show if history exists and on Discovery page) */}
                 {isDiscoveryPage && history.length > 0 && (

@@ -259,6 +259,16 @@ const ideaModel = vertexAI.getGenerativeModel({
     }
 });
 
+const opportunitySchema: any = {
+    type: SchemaType.OBJECT,
+    properties: {
+        relevanceScore: { type: SchemaType.NUMBER },
+        matchReason: { type: SchemaType.STRING },
+        suggestedReply: { type: SchemaType.STRING, nullable: true }
+    },
+    required: ["relevanceScore", "matchReason"]
+};
+
 const arbitrationModel = vertexAI.getGenerativeModel({
     model: "gemini-2.0-flash",
     generationConfig: {
@@ -272,6 +282,14 @@ const arbitrationModel = vertexAI.getGenerativeModel({
             },
             required: ["areSame", "reasoning", "canonicalTitle"]
         }
+    }
+});
+
+const opportunityModel = vertexAI.getGenerativeModel({
+    model: "gemini-2.0-flash",
+    generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: opportunitySchema
     }
 });
 
@@ -709,4 +727,40 @@ export async function synthesizeReport(categories: { painPoints: any[], triggers
         parsedResult: JSON.parse(jsonString),
         usage: response.usageMetadata
     };
+}
+
+export async function scoreMarketingOpportunity(productContext: string, post: { title: string; selftext: string; subreddit: string }) {
+    const prompt = `
+    You are a growth marketing expert. Evaluate if the following Reddit post is a "Marketing Opportunity" for a specific product.
+    
+    PRODUCT CONTEXT:
+    "${productContext}"
+    
+    REDDIT POST:
+    Title: ${post.title}
+    Subreddit: r/${post.subreddit}
+    Content: ${post.selftext}
+    
+    YOUR TASK:
+    1. Relevance Score (0-100): How relevant is this post to the product? Is the user expressing a pain point the product solves? Are they asking for recommendations? 
+    - 0-30: No relevance.
+    - 31-70: Tangential or related domain but no immediate intent.
+    - 71-100: High relevance. Direct pain point or category search.
+    
+    2. Match Reason: A 1-sentence explanation of why this matches (e.g., "User is frustrated with manual research time - fits your automated solution").
+    
+    3. Suggested Reply: A SHORT (1-2 sentence) non-spammy, helpful reply that mentions the product naturally. If relevance is < 70, return null.
+    
+    Return JSON.
+    `;
+
+    try {
+        const result = await withRetry(() => opportunityModel.generateContent(prompt));
+        const text = result.response.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) throw new Error("No response from Opportunity Model");
+        return JSON.parse(text);
+    } catch (error) {
+        console.error("[AI] [OPPORTUNITY_SCORE] Error:", error);
+        return { relevanceScore: 0, matchReason: "Failed to analyze", suggestedReply: null };
+    }
 }

@@ -54,6 +54,7 @@ const app = express();
 import { DiscoveryOrchestrator } from './server/discovery/orchestrator.js';
 
 const discoveryOrchestrator = new DiscoveryOrchestrator();
+import { logger } from "./server/utils/logger.js";
 import { sendAlert } from "./server/alerts.js";
 const PORT = parseInt(process.env.PORT || "3001", 10);
 const USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
@@ -137,6 +138,9 @@ app.use(rateLimiterMiddleware); // Apply global rate limits to all routes based 
 
 import marketingRouter from "./server/marketing/leads.js";
 app.use("/api/admin/marketing", marketingRouter);
+
+import monitoringRouter from "./server/monitoring/router.js";
+app.use("/api/monitoring", monitoringRouter);
 
 // ── Helpers ────────────────────────────────────────────────────────
 
@@ -1943,6 +1947,10 @@ async function gracefulShutdown(signal: string) {
         process.exit(1);
     }
 }
+import { initMonitoring } from "./server/monitoring/worker.js";
+initMonitoring().catch(err => {
+    console.error(`[Monitoring] Failed to initialize: ${err.message}`);
+});
 
 process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));

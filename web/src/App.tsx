@@ -19,6 +19,7 @@ import { DiscoveryLab } from "./components/discovery/LabDiscovery";
 import { UpgradeModal } from "./components/UpgradeModal";
 import { PricingPage } from "./components/PricingPage";
 import { Breadcrumbs } from "./components/common/Breadcrumbs";
+import { MonitoringView } from "./components/monitoring/MonitoringView";
 
 import { LoginView } from "./components/LoginView";
 import { VerificationGate } from "./components/VerificationGate";
@@ -284,6 +285,11 @@ function AppContent() {
               <Route path="/settings" element={
                 <RequireAuth>
                   <SettingsView />
+                </RequireAuth>
+              } />
+              <Route path="/monitoring" element={
+                <RequireAuth>
+                  <MonitoringView />
                 </RequireAuth>
               } />
               {/* Research alias handled by Navigate above */}
