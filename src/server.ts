@@ -559,6 +559,15 @@ const syncWorker = new Worker("reddit-sync", async (job) => {
         const savedThread = await saveThreadToFolder(userUid, folderId, fullData);
         console.log(`[SyncWorker] Successfully synced thread: ${url}`);
 
+        // 4. Send Success Alert to Telegram
+        await sendAlert("REDDIT", `✅ SUCCESS: Thread Synced`, {
+            title: fullData.title || fullData.post?.title,
+            subreddit: fullData.subreddit || fullData.post?.subreddit,
+            url: url,
+            comments: fullData.num_comments || 0,
+            user: userUid
+        });
+
         // 4. Auto-trigger Granular Analysis
         // Ensure folder status is processing so UI shows metrics bar
         const folder = await getFolder(userUid, folderId);
