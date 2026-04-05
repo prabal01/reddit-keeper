@@ -33,12 +33,54 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Make an HTTP request with retry logic and rate limiting
+ * Make an HTTP request via the resilient-reddit-fetcher service if configured,
+ * otherwise fall back to direct fetch (legacy mode).
  */
 async function fetchWithRetry(
     url: string,
     maxRetries: number = 3
 ): Promise<any> {
+    const serviceUrl = process.env.REDDIT_SERVICE_URL;
+    const internalSecret = process.env.INTERNAL_FETCH_SECRET;
+
+    if (serviceUrl) {
+        // Delegate to the resilient-reddit-fetcher service
+        const fetcherEndpoint = `${serviceUrl.replace(/\/$/, '')}/fetch`;
+        
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                const response = await fetch(fetcherEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${internalSecret}`
+                    },
+                    body: JSON.stringify({ url })
+                });
+
+                if (response.status === 401) {
+                    throw new Error('INTERNAL_AUTH_FAILED: Invalid INTERNAL_FETCH_SECRET');
+                }
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: 'Unknown Error' }));
+                    const err: any = new Error(`FETCHER_SERVICE_ERROR: ${response.status} - ${errorData.error || response.statusText}`);
+                    err.statusCode = response.status;
+                    throw err;
+                }
+
+                return await response.json();
+            } catch (error: any) {
+                if (attempt === maxRetries) {
+                    throw new Error(`Fetcher Service failed after ${maxRetries} attempts: ${error.message}`);
+                }
+                const waitMs = Math.pow(2, attempt) * 1000;
+                await sleep(waitMs);
+            }
+        }
+    }
+
+    // LEGACY FALLBACK (Direct Fetch)
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             const response = await fetch(url, {
@@ -56,7 +98,6 @@ async function fetchWithRetry(
             });
 
             if (response.status === 429) {
-                // Rate limited — alert the admin then wait and retry
                 await sendAlert("REDDIT", `Rate Limit (429) detected!`, { 
                     url, 
                     status: 429, 
@@ -66,14 +107,12 @@ async function fetchWithRetry(
                 });
                 
                 const retryAfter = parseInt(response.headers.get("retry-after") || "5");
-                const waitMs = retryAfter * 1000;
-                await sleep(waitMs);
+                await sleep(retryAfter * 1000);
                 continue;
             }
 
             if (response.status === 403) {
                 const bodySnippet = await response.text().then(t => t.substring(0, 300)).catch(() => "N/A");
-                // BLOCKED — immediate alert
                 await sendAlert("REDDIT", `Access Forbidden (403)! Likely a block.`, { 
                     url, 
                     status: 403, 
@@ -83,32 +122,18 @@ async function fetchWithRetry(
                 });
                 const err: any = new Error(`HTTP 403: Access blocked by Reddit.`);
                 err.statusCode = 403;
-                err.responseSnippet = bodySnippet;
-                err.url = url;
                 throw err;
-            }
-
-            if (response.status === 503 || response.status === 500) {
-                // Server error — exponential backoff
-                const waitMs = Math.pow(2, attempt) * 1000;
-                await sleep(waitMs);
-                continue;
             }
 
             if (!response.ok) {
                 const err: any = new Error(`HTTP ${response.status}: ${response.statusText}`);
                 err.statusCode = response.status;
-                err.url = url;
                 throw err;
             }
 
             return await response.json();
         } catch (error: any) {
-            if (attempt === maxRetries) {
-                throw new Error(
-                    `Failed after ${maxRetries} attempts: ${error.message}`
-                );
-            }
+            if (attempt === maxRetries) throw error;
             const waitMs = Math.pow(2, attempt) * 1000;
             await sleep(waitMs);
         }
