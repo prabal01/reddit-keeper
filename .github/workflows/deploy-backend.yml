@@ -48,6 +48,9 @@ jobs:
           BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
           BUFFER_PROFILE_ID: ${{ secrets.BUFFER_PROFILE_ID }}
           SCHEDULER_SECRET: ${{ secrets.SCHEDULER_SECRET }}
+          REDDIT_SERVICE_URL: ${{ secrets.REDDIT_SERVICE_URL }}
+          INTERNAL_FETCH_SECRET: ${{ secrets.INTERNAL_FETCH_SECRET }}
+          REDDIT_USER_AGENT: ${{ secrets.REDDIT_USER_AGENT }}
         run: |-
           node -e '
             const fs = require("fs");
@@ -73,7 +76,10 @@ jobs:
               TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID,
               BUFFER_API_KEY: process.env.BUFFER_API_KEY,
               BUFFER_PROFILE_ID: process.env.BUFFER_PROFILE_ID,
-              SCHEDULER_SECRET: process.env.SCHEDULER_SECRET
+              SCHEDULER_SECRET: process.env.SCHEDULER_SECRET,
+              REDDIT_SERVICE_URL: process.env.REDDIT_SERVICE_URL,
+              INTERNAL_FETCH_SECRET: process.env.INTERNAL_FETCH_SECRET,
+              REDDIT_USER_AGENT: process.env.REDDIT_USER_AGENT
             };
             fs.writeFileSync("env.json", JSON.stringify(env));
           '
