@@ -1,5 +1,7 @@
 
 import "dotenv/config";
+import { redis } from "./server/middleware/rateLimiter.js";
+import { Queue } from "bullmq";
 import crypto from "crypto";
 import express from "express";
 import cors from "cors";
@@ -20,11 +22,20 @@ import {
     logFetchEvent,
     SavedThread
 } from "./server/firestore.js";
+import { 
+    syncQueue, 
+    granularAnalysisQueue, 
+    analysisQueue,
+    syncWorker, 
+    granularAnalysisWorker, 
+    analysisWorker,
+    sharedConnectionConfig
+} from "./server/queues.js";
 import { authMiddleware, getEffectiveConfig } from "./server/middleware/auth.js";
 import { usageGuard } from "./server/middleware/usageGuard.js";
 import { rateLimiterMiddleware, authRateLimiter } from "./server/middleware/rateLimiter.js";
 import { adminMiddleware } from "./server/middleware/admin.js";
-import { getAllUsers, getGlobalStats, getBetaTokens, getWaitlist, addWaitlistEntry, updateWaitlistStatus, getDailyStats } from "./server/admin.js";
+import { getAllUsers, getGlobalStats, getBetaTokens, getWaitlist, addWaitlistEntry, updateWaitlistStatus, getDailyStats, getStats } from "./server/admin.js";
 import { createFoundingOrder, verifySignature } from "./server/payments/razorpay.js";
 import {
     getFolders,
@@ -50,7 +61,28 @@ import {
     registerUserWithInvite
 } from "./server/firestore.js";
 import { analyzeThreads, analyzeThreadGranular } from "./server/ai.js";
+import marketingRouter from "./server/marketing/leads.js";
+import adminRouter from "./server/admin/router.js";
+import monitoringRouter from "./server/monitoring/router.js";
+
+// DIAGNOSTIC: Print all registered routes to help find the 404 root cause
+function printRoutes(stack: any[], prefix = '') {
+    stack.forEach(layer => {
+        if (layer.route) {
+            const methods = Object.keys(layer.route.methods).join(', ').toUpperCase();
+            console.log(`[ROUTE] ${methods} ${prefix}${layer.route.path}`);
+        } else if (layer.name === 'router' && layer.handle.stack) {
+            const routerPath = layer.regexp.source
+                .replace('\\/?(?=\\/|$)', '')
+                .replace('^\\', '')
+                .replace('\\/', '/');
+            printRoutes(layer.handle.stack, prefix + routerPath);
+        }
+    });
+}
+
 const app = express();
+// ... logic continues
 import { DiscoveryOrchestrator } from './server/discovery/orchestrator.js';
 
 const discoveryOrchestrator = new DiscoveryOrchestrator();
@@ -123,7 +155,11 @@ app.use(cors({
         if (origin.startsWith('chrome-extension://')) return callback(null, true);
 
         if (allowedOrigins.indexOf(origin) === -1) {
-            const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+            if (origin && (origin.startsWith('http://127.0.0.1:') || origin.startsWith('http://localhost:'))) {
+                return callback(null, true);
+            }
+            const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
+            console.error(msg);
             return callback(new Error(msg), false);
         }
         return callback(null, true);
@@ -136,10 +172,11 @@ app.use(rateLimiterMiddleware); // Apply global rate limits to all routes based 
 
 // ── Helpers ────────────────────────────────────────────────────────
 
-import marketingRouter from "./server/marketing/leads.js";
-app.use("/api/admin/marketing", marketingRouter);
+// ── API Routers ───────────────────────────────────────────────────
 
-import monitoringRouter from "./server/monitoring/router.js";
+console.log("[INIT] Mounting API Routers (Admin: " + (!!adminRouter) + ")");
+app.use("/api/admin/marketing", marketingRouter);
+app.use("/api/admin", adminRouter);
 app.use("/api/monitoring", monitoringRouter);
 
 // ── Helpers ────────────────────────────────────────────────────────
@@ -148,10 +185,13 @@ function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Monitoring and shutdown logic managed at process level
+
 
 // ── API Routes ─────────────────────────────────────────────────────
 
 import { getUserStats, updateStats } from "./server/firestore.js";
+import { initMonitoring, monitoringScraperQueue, opportunityMatcherQueue, monitoringScraperWorker, opportunityMatcherWorker } from "./server/monitoring/worker.js";
 
 app.get("/api/user/stats", async (req: express.Request, res: express.Response) => {
     if (!req.user) {
@@ -489,366 +529,12 @@ app.get("/api/folders/:id/threads", async (req: express.Request, res: express.Re
 
 // ── AI Analysis Route ─────────────────────────────────────────────
 
-// ── Analysis Queue (BullMQ) ────────────────────────────────────────
+// BullMQ orchestrations migrated to ./server/queues.js
 
-import { Queue, Worker, QueueEvents } from "bullmq";
-import { redis } from "./server/middleware/rateLimiter.js"; // Reuse Redis connection
-
-// Reuse the ioredis instance from rateLimiter for the Queue connection
-// Note: BullMQ requires a specific connection structure, but usually accepts ioredis instance or config
-// Ideally we pass connection config. Let's use the Redis URL from env directly for BullMQ to be safe
-// as it manages its own connections for blocking/non-blocking.
-const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
-
-const sharedConnectionConfig = {
-    url: redisUrl,
-    maxRetriesPerRequest: null,
-    enableReadyCheck: false
-};
-
-const analysisQueue = new Queue("analysis", {
-    connection: sharedConnectionConfig,
-    defaultJobOptions: {
-        removeOnComplete: {
-            count: 100, // Keep last 100 jobs to avoid race conditions with waitUntilFinished
-            age: 24 * 3600 // or keep for 24 hours
-        },
-        removeOnFail: {
-            count: 1000,
-            age: 7 * 24 * 3600
-        },
-        attempts: 2,
-        backoff: {
-            type: 'exponential',
-            delay: 10000
-        }
-    }
-});
-console.log("[INIT] BullMQ Analysis Queue initialized.");
-
-// ── Reddit Sync Queue (BullMQ) ───────────────────────────────────
-
-const syncQueue = new Queue("reddit-sync", {
-    connection: sharedConnectionConfig,
-    defaultJobOptions: {
-        removeOnComplete: { count: 50, age: 3600 },
-        removeOnFail: { count: 100, age: 24 * 3600 },
-        attempts: 3,
-        backoff: { type: 'exponential', delay: 30000 }
-    }
-});
-
-const granularAnalysisQueue = new Queue("granular-analysis", {
-    connection: sharedConnectionConfig,
-    defaultJobOptions: {
-        removeOnComplete: { count: 100, age: 3600 },
-        removeOnFail: { count: 100, age: 24 * 3600 },
-        attempts: 2,
-        backoff: { type: 'exponential', delay: 10000 }
-    }
-});
-console.log("[INIT] BullMQ Reddit Sync Queue initialized.");
-
-const syncWorker = new Worker("reddit-sync", async (job) => {
-    const { url, folderId, userUid } = job.data;
-    console.log(`[SyncWorker] Processing thread: ${url} for folder: ${folderId}`);
-
-    try {
-        // Detect source platform
-        const source: 'reddit' | 'hn' = url.includes('news.ycombinator.com') ? 'hn' : 'reddit';
-        const fullData = await discoveryOrchestrator.fetchFullThread(url, source);
-
-        if (!fullData) throw new Error(`Failed to fetch thread data from ${source.toUpperCase()}`);
-
-        const savedThread = await saveThreadToFolder(userUid, folderId, fullData);
-        console.log(`[SyncWorker] Successfully synced thread: ${url}`);
-
-        // 4. Auto-trigger Granular Analysis
-        // Ensure folder status is processing so UI shows metrics bar
-        const folder = await getFolder(userUid, folderId);
-        const analysisRunId = folder?.currentAnalysisRunId || `auto_${Date.now()}`;
-        await updateFolderAnalysisStatus(userUid, folderId, 'processing', analysisRunId);
-
-        const finalThreadId = crypto.createHash('md5').update(url).digest('hex').substring(0, 16);
-        if (finalThreadId) {
-            await granularAnalysisQueue.add("granular-analyze", {
-                threadId: finalThreadId,
-                url: url,
-                folderId,
-                userUid,
-                title: fullData.title || fullData.post?.title,
-                subreddit: fullData.subreddit || fullData.post?.subreddit,
-                analysisRunId
-            });
-        } else {
-            console.warn(`[SyncWorker] Could not trigger analysis: No thread ID found for ${url}`);
-        }
-    } catch (err: any) {
-        console.error(`[SyncWorker] Failed to sync ${url}:`, err.message);
-        throw err; // Allow BullMQ to retry
-    } finally {
-        // Decrease pending count and handle status update
-        await incrementPendingSyncCount(userUid, folderId, -1);
-    }
-}, {
-    connection: sharedConnectionConfig,
-    concurrency: 1, // STRICT rate limiting (1 thread at a time per worker instance)
-    limiter: {
-        max: 1,
-        duration: 1000 // 1 per second
-    },
-    drainDelay: 5, // Back to default for optimal performance
-    stalledInterval: 30000 // Normal stalled job polling (30s)
-});
-
-syncWorker.on('failed', (job, err) => {
-    console.error(`[SyncWorker] Job ${job?.id} failed:`, err);
-    sendAlert("REDDIT", `Sync Worker Failed! Job: ${job?.id}`, {
-        error: err.message,
-        statusCode: (err as any).statusCode,
-        responseSnippet: (err as any).responseSnippet,
-        url: job?.data?.url,
-        user: job?.data?.userUid,
-        attempt: job?.attemptsMade,
-        stack: err.stack?.split("\n").slice(0, 3).join("\n")
-    });
-});
-
-const granularAnalysisWorker = new Worker("granular-analysis", async (job) => {
-    const { threadId, url, folderId, userUid, title, subreddit } = job.data;
-    // Use the same URL hash ID to identify the correct document
-    const threadDocId = crypto.createHash('md5').update(url).digest('hex').substring(0, 16);
-
-    try {
-        // 0. Update thread status to processing
-        await updateThreadInsight(userUid, folderId, {
-            id: threadDocId,
-            folderId,
-            uid: userUid,
-            threadLink: url,
-            status: 'processing'
-        });
-
-        // 1. Fetch thread from Firestore (SavedThread)
-        const threads = await getThreadsInFolder(userUid, folderId);
-        const thread = threads.find(t => t.id === threadDocId);
-
-        if (!thread) throw new Error(`Thread ${threadId} not found in folder ${folderId}`);
-
-        // 2. Resolve content (Storage or local)
-        let comments = (thread.data as any)?.comments || [];
-        if (thread.storageUrl && comments.length === 0) {
-            const url = new URL(thread.storageUrl);
-            const pathWithV0 = url.pathname.split('/o/')[1].split('?')[0];
-            const filePath = decodeURIComponent(pathWithV0);
-            const [fileContents] = await getAdminStorage().bucket().file(filePath).download();
-            const contentJson = JSON.parse(fileContents.toString());
-            comments = contentJson.flattenedComments || contentJson.comments || contentJson.reviews || [];
-        }
-
-        // 3. Call AI with Timeout protection (2 minutes)
-        const analysisPromise = analyzeThreadGranular({
-            id: threadDocId,
-            title: thread.title,
-            subreddit: thread.subreddit,
-            comments: comments
-        });
-
-        const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("AI Analysis timed out after 2 minutes")), 120000)
-        );
-
-        const insights = await Promise.race([analysisPromise, timeoutPromise]) as any;
-
-        // 4. Save to Firestore (Helper handles metric increments & thread deletion)
-        console.log(`[GranularWorker] Intelligence extracted for ${threadDocId}. Saving to Firestore...`);
-        await updateThreadInsight(userUid, folderId, {
-            id: threadDocId,
-            folderId,
-            uid: userUid,
-            threadLink: url || thread.source,
-            status: 'success',
-            insights
-        });
-        console.log(`[GranularWorker] Successfully processed and saved ${threadDocId}`);
-
-        // Pass insights to finally block for siloed storage
-        (job.data as any).completedInsights = insights;
-
-    } catch (err: any) {
-        console.error(`[GranularWorker] Failed for ${threadDocId}:`, err.message);
-        await updateThreadInsight(userUid, folderId, {
-            id: threadDocId,
-            folderId,
-            uid: userUid,
-            threadLink: url,
-            status: 'failed',
-            error: err.message
-        });
-        throw err;
-    } finally {
-        try {
-            const db = getDb();
-            const folderRef = db.collection("folders").doc(folderId);
-            const trackerRef = folderRef.collection("completed_threads").doc(threadDocId);
-            const { analysisRunId } = job.data;
-
-            await db.runTransaction(async (transaction) => {
-                const folderDoc = await transaction.get(folderRef);
-                if (!folderDoc.exists) return;
-
-                const data = folderDoc.data() || {};
-
-                // Siloing: ONLY accept updates from the CURRENT analysis run accurately.
-                // If the job has no runId or it doesn't match, it's a zombie from a previous incarnation/reset.
-                if (!analysisRunId || data.currentAnalysisRunId !== analysisRunId) {
-                    console.log(`[GranularWorker] Ignoring zombie/untracked job ${threadId} (Job Run: ${analysisRunId}, Folder Run: ${data.currentAnalysisRunId})`);
-                    return;
-                }
-
-                const trackerDoc = await transaction.get(trackerRef);
-                if (trackerDoc.exists) return; // Already counted this thread in THIS run
-
-                const newCompleted = (data.completedAnalysisCount || 0) + 1;
-                const newPending = Math.max(0, (data.pendingAnalysisCount || 0) - 1);
-
-                const update: any = {
-                    completedAnalysisCount: newCompleted,
-                    pendingAnalysisCount: newPending
-                };
-
-                if (newPending <= 0) {
-                    console.log(`[GranularWorker] All threads analyzed for folder ${folderId}. Setting status to idle.`);
-                    update.analysisStatus = 'idle';
-                    update.pendingAnalysisCount = 0;
-                }
-
-                transaction.set(trackerRef, {
-                    completedAt: new Date(),
-                    insights: job.data.completedInsights || null
-                });
-                transaction.update(folderRef, update);
-            });
-        } catch (finalErr) {
-            console.error(`[GranularWorker] Error in finally block for ${threadId}:`, finalErr);
-        }
-    }
-}, {
-    connection: sharedConnectionConfig,
-    concurrency: 3, // Balanced for speed and API safety
-    drainDelay: 5, // Optimal speed
-    stalledInterval: 30000 // Normal stalled job polling
-});
-
-granularAnalysisWorker.on('failed', (job, err) => {
-    console.error(`[GranularWorker] Job ${job?.id} failed:`, err);
-    sendAlert("AI", `Granular Analysis Failed! Job: ${job?.id}`, {
-        error: err.message,
-        thread: job?.data?.title || job?.data?.threadId,
-        user: job?.data?.userUid
-    });
-});
-
-// Worker Processor (Analysis)
-const analysisWorker = new Worker("analysis", async (job) => {
-    console.log(">>>>>>>>>>>>>>>>>>>> WORKER PICKED UP JOB:", job.id);
-    const { threadsContext, folderContext, userUid, folderId, plan, totalComments } = job.data;
-    console.log(`[Worker] Processing analysis for folder ${folderId} (User: ${userUid}) with ${totalComments} comments.`);
-
-    try {
-        // HYBRID STORAGE: Resolve external content before analysis
-        const resolvedThreads = await Promise.all(threadsContext.map(async (t: any) => {
-            if (t.storageUrl && !t.comments) {
-                try {
-                    console.log(`[Worker] Fetching external content for thread ${t.id}: ${t.storageUrl}`);
-
-                    // Parse bucket and path from URL
-                    // Example: https://firebasestorage.googleapis.com/v0/b/BUCKET/o/PATH?alt=media
-                    const url = new URL(t.storageUrl);
-                    const pathWithV0 = url.pathname.split('/o/')[1].split('?')[0];
-                    const filePath = decodeURIComponent(pathWithV0);
-
-                    const [fileContents] = await getAdminStorage().bucket().file(filePath).download();
-                    const contentJson = JSON.parse(fileContents.toString());
-
-                    // Extract comments from content JSON
-                    // The structure depends on the platform
-                    let comments = contentJson.flattenedComments || contentJson.comments || contentJson.reviews || [];
-
-                    // If it's a Reddit tree, it might be nested under contentJson.post or similar if the structure matches SavedThread.data
-                    if (comments.length === 0 && contentJson.content) {
-                        comments = contentJson.content.flattenedComments || contentJson.content.comments || contentJson.content.reviews || [];
-                    }
-
-                    return { ...t, comments };
-                } catch (fetchErr) {
-                    console.error(`[Worker] Failed to fetch storage content for ${t.id}:`, fetchErr);
-                    return t; // Fallback to partial data
-                }
-            }
-            return t;
-        }));
-
-        // IMPORTANT: DO NOT break this token tracking logic as it is used for billing and usage monitoring.
-        const { analysis, usage } = await analyzeThreads(resolvedThreads, folderContext, totalComments);
-        console.log(`[Worker] AI Analysis Result received for ${folderId}. Keys:`, Object.keys(analysis));
-        console.log(`[Worker] Token Usage:`, usage);
-
-        // Calculate total comments (approximate from context or passed data)
-        // For simplicity in worker, we might need to pass this count or recalculate
-        // Let's assume the mutation of user stats happens here or we return result
-
-        const parsedResult = analysis;
-        parsedResult.createdAt = new Date().toISOString();
-
-        // Save to Firestore (Private usage metadata included)
-        await saveAnalysis(userUid, folderId, parsedResult, "gemini-2.0-flash", usage);
-
-        // Deduct Credit (Increment Usage)
-        // threadCount is also available in job.data as threadCount
-        const threadCount = job.data.threadCount;
-
-        await updateStats(userUid, {
-            reportsGenerated: 1,
-            intelligenceScanned: threadCount,
-            commentsAnalyzed: totalComments,
-            hoursSaved: parseFloat((threadCount * 5 / 60).toFixed(1))
-        });
-
-        console.log(`[Worker] Analysis complete for ${folderId}`);
-        return parsedResult;
-
-    } catch (err: any) {
-        console.error(`[Worker] Failed analysis for ${folderId}:`, err);
-        throw err;
-    }
-}, {
-    connection: sharedConnectionConfig,
-    concurrency: 2, // Analysis is more resource heavy
-    drainDelay: 5,
-    stalledInterval: 30000
-});
-
-analysisWorker.on('failed', (job, err) => {
-    console.error(`[AnalysisWorker] Job ${job?.id} failed:`, err);
-    sendAlert("AI", `Main Analysis Report Failed! Job: ${job?.id}`, {
-        error: err.message,
-        folderId: job?.data?.folderId,
-        userUid: job?.data?.userUid,
-        attempt: job?.attemptsMade,
-        stack: err.stack?.split("\n").slice(0, 3).join("\n")
-    });
-});
-
-analysisWorker.on('completed', (job, returnvalue) => {
-    console.log(`[BullMQ] Job ${job.id} completed!`);
-});
-
-analysisWorker.on('failed', (job, err) => {
-    console.error(`[BullMQ] Job ${job?.id} failed:`, err);
-});
 
 // ── API Routes ─────────────────────────────────────────────────────
+
+// Redundant mount removed
 
 app.post("/api/folders/:id/status", async (req: express.Request, res: express.Response) => {
     if (!req.user) return res.status(401).json({ error: "Unauthorized" });
@@ -1742,27 +1428,6 @@ app.get("/api/admin/invite-gen", (req: express.Request, res: express.Response) =
     `);
 });
 
-// ── Admin Routes ───────────────────────────────────────────────────
-
-app.get("/api/admin/metrics", adminMiddleware, async (req: express.Request, res: express.Response) => {
-    try {
-        const stats = await getGlobalStats();
-        const daily = await getDailyStats();
-        res.json({ counts: stats, daily });
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.get("/api/admin/users", adminMiddleware, async (req: express.Request, res: express.Response) => {
-    try {
-        const lastDocId = req.query.lastDocId as string | undefined;
-        const users = await getAllUsers(50, lastDocId);
-        res.json(users);
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
-});
 
 app.post("/api/admin/users/:uid/plan", adminMiddleware, async (req: express.Request, res: express.Response) => {
     try {
@@ -1794,10 +1459,21 @@ app.post("/api/admin/tokens", adminMiddleware, async (req: express.Request, res:
     }
 });
 
-app.get("/api/admin/waitlist", adminMiddleware, async (req: express.Request, res: express.Response) => {
+app.post("/api/admin/test-match", adminMiddleware, async (req: express.Request, res: express.Response) => {
     try {
-        const wlist = await getWaitlist();
-        res.json(wlist);
+        const { title, selftext, websiteContext } = req.body;
+        if (!title || !websiteContext) {
+            return res.status(400).json({ error: "Title and Website Context are required" });
+        }
+
+        const { scoreMarketingOpportunity } = await import("./server/ai.js");
+        const result = await scoreMarketingOpportunity(websiteContext, { 
+            title, 
+            selftext: selftext || "", 
+            subreddit: "tester" 
+        });
+
+        res.json(result);
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }
@@ -1838,35 +1514,7 @@ app.post("/api/waitlist", async (req: express.Request, res: express.Response) =>
     }
 });
 
-app.get("/api/admin/bullmq-stats", adminMiddleware, async (req: express.Request, res: express.Response) => {
-    try {
-        const getStats = async (q: Queue) => {
-            const counts = await q.getJobCounts();
-            return counts;
-        };
-
-        const db = await import("./server/firestore.js").then(m => m.getDb());
-        const activeAnalysesCount = (await db.collection("folders").where("analysisStatus", "==", "processing").count().get()).data().count;
-        const failedAnalysesCount = (await db.collection("folders").where("analysisStatus", "==", "failed").count().get()).data().count;
-        const completedAnalysesCount = (await db.collection("folders").where("analysisStatus", "==", "complete").count().get()).data().count;
-
-        const stats = {
-            sync: await getStats(syncQueue),
-            granular: await getStats(granularAnalysisQueue),
-            analysis: {
-                active: activeAnalysesCount,
-                waiting: 0,
-                completed: completedAnalysesCount,
-                failed: failedAnalysesCount,
-                delayed: 0,
-                paused: 0
-            }
-        };
-        res.json(stats);
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
-});
+// Administrative and diagnostic routes migrated to ./server/admin/router.js
 
 
 app.post("/api/auth/verify-invite", authRateLimiter, async (req: express.Request, res: express.Response) => {
@@ -1910,6 +1558,14 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 // ── Start ──────────────────────────────────────────────────────────
 
 app.listen(PORT, "0.0.0.0", () => {
+    console.log("------------------------------------------------------------------");
+    console.log("REGISTERED ROUTES:");
+    if ((app as any)._router?.stack) {
+        printRoutes((app as any)._router.stack);
+    } else {
+        console.log("   (Route table not available for inspection via _router.stack in this Express version)");
+    }
+    console.log("------------------------------------------------------------------");
     console.log(`🚀 OpinionDeck Platform Server running on port ${PORT}`);
     console.log(`   Host: 0.0.0.0 (Required for Cloud Run)`);
     console.log(`   Redis Status: ${redis.status}`);
@@ -1920,22 +1576,33 @@ app.listen(PORT, "0.0.0.0", () => {
 async function gracefulShutdown(signal: string) {
     console.log(`[SHUTDOWN] Received ${signal}. Closing BullMQ components...`);
 
+    // ── Fail-Safe Timeout ──
+    const forceExitTimeout = setTimeout(() => {
+        console.warn("[SHUTDOWN] HANG DETECTED. Forcing hard exit (10s limit)...");
+        process.exit(1);
+    }, 10000);
+    forceExitTimeout.unref(); // Don't let the timeout itself hang the process
+
     try {
         // 1. Close Workers first (stop picking up new jobs)
         await Promise.all([
             syncWorker.close(),
             granularAnalysisWorker.close(),
-            analysisWorker.close()
+            analysisWorker.close(),
+            monitoringScraperWorker.close(),
+            opportunityMatcherWorker.close()
         ]);
-        console.log("[SHUTDOWN] BullMQ Workers closed.");
+        console.log("[SHUTDOWN] BullMQ Workers closed (including Monitoring).");
 
         // 2. Close Queues
         await Promise.all([
             analysisQueue.close(),
             syncQueue.close(),
-            granularAnalysisQueue.close()
+            granularAnalysisQueue.close(),
+            monitoringScraperQueue.close(),
+            opportunityMatcherQueue.close()
         ]);
-        console.log("[SHUTDOWN] BullMQ Queues closed.");
+        console.log("[SHUTDOWN] BullMQ Queues closed (including Monitoring).");
 
         // 3. Close Redis
         await redis.quit();
@@ -1947,10 +1614,7 @@ async function gracefulShutdown(signal: string) {
         process.exit(1);
     }
 }
-import { initMonitoring } from "./server/monitoring/worker.js";
-initMonitoring().catch(err => {
-    console.error(`[Monitoring] Failed to initialize: ${err.message}`);
-});
+// Redundant imports and manual initialization removed (now at top-level)
 
 process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));

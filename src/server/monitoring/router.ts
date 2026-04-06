@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { MonitoringService } from './service.js';
 import { authMiddleware } from '../middleware/auth.js';
-import { monitoringScraperQueue } from './worker.js';
+import { monitoringScraperQueue, opportunityMatcherQueue } from './worker.js';
 import { logger } from '../utils/logger.js';
 
 const router = Router();
@@ -62,12 +62,37 @@ router.post('/opportunities/:id/status', authMiddleware, async (req: Request, re
 router.post('/sync', authMiddleware, async (req: Request, res: Response) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
     
-    // For V1, we'll allow any authenticated user to trigger a sync for testing
-    // but in production, we should limit this.
     try {
-        logger.info({ action: 'MONITORING_MANUAL_SYNC', uid: req.user.uid }, `Manual sync triggered`);
-        await monitoringScraperQueue.add("manual-sync", { triggeredBy: req.user.uid });
+        logger.info({ action: 'MONITORING_MANUAL_SYNC', uid: req.user.uid }, `Manual full sync (Scrape + Match) triggered`);
+        // Use deterministic jobId to prevent overlapping syncs for the same user
+        await monitoringScraperQueue.add(`manual-sync-${req.user.uid}`, { triggeredBy: req.user.uid }, {
+            jobId: `manual-sync-${req.user.uid}`
+        });
         res.json({ success: true, message: "Sync enqueued" });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.post('/match', authMiddleware, async (req: Request, res: Response) => {
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+    
+    try {
+        const config = await MonitoringService.getUserMonitor(req.user.uid);
+        if (!config || !config.subreddits.length) {
+            return res.status(400).json({ error: "No subreddits configured for monitoring." });
+        }
+
+        logger.info({ action: 'MONITORING_MANUAL_MATCH', uid: req.user.uid }, `Manual matching pipeline triggered`);
+        
+        await opportunityMatcherQueue.add(`manual-match-${req.user.uid}`, { 
+            uid: req.user.uid,
+            subreddits: config.subreddits
+        }, {
+            jobId: `manual-match-${req.user.uid}`
+        });
+        
+        res.json({ success: true, message: "Matching pipeline triggered using cached posts." });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }
@@ -77,27 +102,34 @@ router.post('/sync', authMiddleware, async (req: Request, res: Response) => {
 
 router.post('/suggestions', authMiddleware, async (req: Request, res: Response) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
-    const { context } = req.body;
+    let { context } = req.body;
     
     if (!context) return res.status(400).json({ error: 'Context required' });
 
     try {
-        const { DiscoveryOrchestrator } = await import('../discovery/orchestrator.js');
-        const orchestrator = new DiscoveryOrchestrator();
-        const { intent, queries } = await (orchestrator as any).discoveryBrain.expandIdeaToQueries(context, [], [], 3);
-        
-        // Use the expanded intent to mock/suggest subreddits
-        // For V1, we'll return a static-ish list based on the domain analysis
-        // In a real version, we'd search Reddit for these keywords to find related subreddits.
-        const suggestions = [
-            { name: "saas", members: "1.2M", signal: "High" },
-            { name: "startup", members: "4.5M", signal: "Medium" },
-            { name: "entrepreneur", members: "2.1M", signal: "High" },
-            { name: "productivity", members: "3.4M", signal: "Medium" }
-        ];
+        let summarizedContext = null;
 
-        res.json(suggestions);
+        // 1. Detect if context is a URL
+        const isUrl = /^(http|https):\/\/[^ "]+$/.test(context.trim());
+        if (isUrl) {
+            logger.info({ action: 'MONITORING_SUGGESTION_URL', url: context }, `Extracting context from URL`);
+            summarizedContext = await MonitoringService.scrapeAndSummarize(context.trim());
+            context = summarizedContext; // Use summarized text for query expansion
+        }
+
+        // 2. Expand Context to Keywords (for potential future use or to ensure we have text)
+        const { expandIdeaToQueries } = await import('../ai.js');
+        const { intent } = await expandIdeaToQueries(context, [], [], 1);
+        
+        // 3. Search for real subreddits using the full context for brainstorming
+        const suggestions = await MonitoringService.searchSubreddits(context);
+
+        res.json({
+            summarizedContext,
+            suggestions
+        });
     } catch (err: any) {
+        logger.error({ err, context }, "Suggestions endpoint failed");
         res.status(500).json({ error: err.message });
     }
 });

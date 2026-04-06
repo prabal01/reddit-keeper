@@ -51,18 +51,27 @@ export const monitoringScraperWorker = new Worker("monitoring-scraper", async (j
 
     for (const sub of uniqueSubreddits) {
         try {
+            // 1. Check Redis for 8-hour cooldown to avoid redundant fetches
+            const cooldownKey = `monitoring:cooldown:${sub}`;
+            const onCooldown = await redis.get(cooldownKey);
+            
+            if (onCooldown) {
+                logger.info({ action: 'MONITORING_SUBREDDIT_SKIP', subreddit: sub }, `[Monitoring] skipping r/${sub} - already fetched within 8h window.`);
+                continue;
+            }
+
             logger.info({ action: 'MONITORING_SUBREDDIT_FETCH', subreddit: sub }, `[Monitoring] Fetching r/${sub}...`);
             
-            // Using DiscoveryOrchestrator to fetch the subreddit listing
-            // We'll need a new method for "fetchSubredditNew" or similar if search is too broad
-            // For now, we'll implement the fetch directly via the reddit service to stay targeted.
             const { RedditDiscoveryService } = await import('../discovery/reddit.service.js');
             const redditService = new RedditDiscoveryService();
             
             const results = await redditService.fetchSubredditNew(sub, 100);
+            logger.info({ action: 'MONITORING_SUBREDDIT_FETCH_COUNT', subreddit: sub, count: results?.length || 0 }, `[Monitoring] Fetched ${results?.length || 0} posts for r/${sub}`);
             
             if (!results || results.length === 0) {
-                logger.warn({ action: 'MONITORING_SUBREDDIT_EMPTY', subreddit: sub }, `[Monitoring] No posts found for r/${sub}`);
+                // If we hit a snag, maybe don't set cooldown to allow retry? 
+                // Using 1 hour cooldown for empty results to prevent thrashing
+                await redis.set(cooldownKey, 'empty', 'EX', 3600);
                 continue;
             }
 
@@ -80,6 +89,9 @@ export const monitoringScraperWorker = new Worker("monitoring-scraper", async (j
                     fetchedAt: new Date().toISOString()
                 });
             }
+
+            // 3. Set 8-hour cooldown after successful fetch
+            await redis.set(cooldownKey, 'cached', 'EX', 8 * 3600);
 
             logger.info({ action: 'MONITORING_SUBREDDIT_CACHED', subreddit: sub, count: results.length }, `[Monitoring] Cached ${results.length} posts for r/${sub}`);
 
@@ -138,6 +150,14 @@ export const opportunityMatcherWorker = new Worker("opportunity-matcher", async 
                 subreddit: post.subreddit
             });
 
+            logger.info({ 
+                action: 'MONITORING_SCORING_RESULT', 
+                uid, 
+                subreddit: post.subreddit,
+                score: result.relevanceScore,
+                reason: result.matchReason 
+            }, `[Monitoring] Scored r/${post.subreddit} post: ${result.relevanceScore}% match. Reason: ${result.matchReason}`);
+
             if (result.relevanceScore >= 50) {
                 await MonitoringService.saveOpportunity({
                     id: `${uid}_${post.id}`,
@@ -178,12 +198,19 @@ export async function initMonitoring() {
         await monitoringScraperQueue.removeRepeatableByKey(job.key);
     }
 
-    // Add the 8-hour sync (every 8 hours: 0 */8 * * *)
+    // Drain any waiting manual jobs to prevent "zombie" runs on restart
+    await monitoringScraperQueue.drain();
+    await opportunityMatcherQueue.drain();
+
+    // 3. Add the 8-hour sync (every 8 hours: 0 */8 * * *)
+    // Use a stable jobId for the repeatable job to prevent duplicates
     await monitoringScraperQueue.add("global-scrape-cycle", {}, {
         repeat: {
-            pattern: '0 */8 * * *'
+            pattern: '0 */8 * * *',
+            // prevents it from firing immediately if the server starts mid-window
+            immediately: false 
         }
     });
 
-    logger.info({ action: 'MONITORING_CRON_SCHEDULED' }, `[Monitoring] Global 8-hour sync scheduled (0 */8 * * *).`);
+    logger.info({ action: 'MONITORING_INIT_COMPLETE' }, "[Monitoring] Pipeline initialized. Background scrape scheduled for every 8 hours.");
 }

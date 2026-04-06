@@ -1,4 +1,5 @@
 import { getDb, UserDoc, Folder, SavedThread, InviteCode } from "./firestore.js";
+import { Queue } from "bullmq";
 
 // Users
 export async function getAllUsers(limit: number = 1000, lastDocId?: string) {
@@ -44,6 +45,17 @@ export async function getBetaTokens() {
 
     const snapshot = await db.collection("invite_codes").orderBy("createdAt", "desc").get();
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InviteCode));
+}
+
+export async function createInviteCode(code: string, maxUses: number = 1) {
+    const db = getDb();
+    if (!db) throw new Error("Database not initialized");
+    await db.collection("invite_codes").doc(code).set({
+        code,
+        maxUses,
+        uses: 0,
+        createdAt: new Date().toISOString()
+    });
 }
 
 // Waitlist
@@ -139,4 +151,9 @@ export async function getDailyStats() {
     })).sort((a, b) => a.date.localeCompare(b.date));
 
     return sortedStats;
+}
+
+export async function getStats(q: Queue) {
+    const counts = await q.getJobCounts();
+    return counts;
 }
