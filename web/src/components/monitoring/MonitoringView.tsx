@@ -1,18 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { 
-    Bell, 
-    Settings as SettingsIcon, 
-    ListFilter, 
-    ExternalLink, 
-    CheckCircle2, 
-    Clock, 
-    Sparkles, 
-    Send,
-    MessageSquare,
+import {
+    Settings as SettingsIcon,
+    ExternalLink,
+    CheckCircle2,
+    Clock,
+    Sparkles,
     Loader2,
     RefreshCw,
-    X,
-    Activity
+    Pause,
+    Play,
+    Eye,
+    Zap,
+    TrendingUp
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { MonitorSettings } from './MonitorSettings';
@@ -23,6 +22,7 @@ interface Opportunity {
     postId: string;
     postTitle: string;
     postSubreddit: string;
+    postAuthor: string;
     postUrl: string;
     relevanceScore: number;
     matchReason: string;
@@ -126,200 +126,172 @@ export const MonitoringView: React.FC = () => {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
                 <Loader2 size={32} className="text-orange-400 animate-spin" />
-                <p className="text-zinc-400 text-sm font-medium animate-pulse">Initializing monitoring systems...</p>
+                <p className="text-slate-400 text-sm font-medium animate-pulse">Initializing monitoring systems...</p>
             </div>
         );
     }
 
     return (
-        <div className="monitoring-view-container max-w-7xl mx-auto py-10 px-8">
-            <div className="w-full mb-10">
-                    {/* Brand Aligned Sub-header */}
-                    <div className="flex items-center justify-between mb-8 pb-8 border-b border-white/5">
-                        <div className="flex items-center gap-5">
-                            <div className="w-12 h-12 bg-orange-500/10 rounded-xl flex items-center justify-center text-orange-500 border border-orange-500/20">
-                                <Bell size={24} />
-                            </div>
-                            <div>
-                                <h1 className="text-2xl font-black text-white tracking-tight">Monitoring Matrix</h1>
-                                <div className="flex items-center gap-3 mt-1.5 opacity-60">
-                                    <span className="flex items-center gap-1.5 text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                                        <Clock size={10} /> Sync: 8h Interval
-                                    </span>
-                                    <span className="w-1 h-1 rounded-full bg-zinc-800" />
-                                    <span className="flex items-center gap-1.5 text-[10px] font-black text-orange-500 uppercase tracking-widest">
-                                        <CheckCircle2 size={10} /> Active Scanners
-                                    </span>
-                                </div>
-                            </div>
+        <div className="min-h-screen bg-black">
+            {/* Header */}
+            <div className="border-b border-slate-800 bg-slate-900/50">
+                <div className="max-w-7xl mx-auto px-6 py-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-2xl font-semibold text-white">Market Monitors</h1>
+                            <p className="text-slate-400 text-xs mt-0.5">Track opportunities across communities</p>
                         </div>
-
-                        <div className="flex items-center gap-3">
-                            <button 
+                        <div className="flex gap-2">
+                            <button
                                 onClick={handleSync}
                                 disabled={syncing}
-                                className="flex items-center gap-2 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all border border-white/5 disabled:opacity-50"
+                                className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-slate-600 hover:bg-zinc-800 disabled:opacity-50 transition-colors"
                             >
-                                {syncing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-                                Force Pulse
+                                {syncing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                                Sync
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setShowSettings(!showSettings)}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all border ${
-                                    showSettings 
-                                    ? 'bg-orange-500 text-white border-orange-400 shadow-lg shadow-orange-500/20' 
-                                    : 'bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white border-white/5'
+                                className={`inline-flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                                    showSettings
+                                    ? 'bg-orange-500 text-white border border-orange-500'
+                                    : 'text-slate-300 bg-slate-900 border border-slate-700 hover:border-slate-600'
                                 }`}
                             >
-                                <SettingsIcon size={12} />
-                                {showSettings ? 'Close Config' : 'Configure Signals'}
+                                <SettingsIcon size={14} />
+                                {showSettings ? 'Close' : 'Settings'}
                             </button>
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    {!showSettings && (
-                        <div className="flex items-center gap-8 mb-12 px-2 overflow-x-auto pb-2 scrollbar-hide">
-                            <MetricCard 
-                                label="Tracked Communities" 
-                                value={config?.subreddits?.length || 0} 
-                                icon={<Activity size={18} />} 
-                                color="#FF4500"
-                                variant="minimal"
-                            />
-                            <div className="w-1 h-8 border-l border-white/5 shrink-0" />
-                            <MetricCard 
-                                label="Unseen Matches" 
-                                value={(opportunities || []).filter(o => o?.status === 'new').length} 
-                                icon={<Sparkles size={18} />} 
-                                color="#00D1FF"
-                                variant="minimal"
-                            />
-                             <div className="w-1 h-8 border-l border-white/5 shrink-0" />
-                             <MetricCard 
-                                label="System Efficiency" 
-                                value="1rps" 
-                                icon={<MessageSquare size={18} />} 
-                                color="#A855F7"
-                                variant="minimal"
-                            />
-                        </div>
-                    )}
-                    {showSettings ? (
-                        <div className="max-w-2xl mx-auto py-8">
-                             <MonitorSettings initialConfig={config} onSave={handleSaveConfig} />
-                        </div>
-                    ) : (
-                        <div className="max-w-4xl mx-auto space-y-2">
-                            <div className="flex items-center justify-between mb-8 px-2">
-                                <h3 className="text-xs font-bold text-zinc-600 uppercase tracking-widest flex items-center gap-2">
-                                    <ListFilter size={14} />
-                                    Active Signals
-                                </h3>
-                                <div className="flex items-center gap-4">
-                                    <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">{opportunities.length} Total Matches</span>
+            {/* Content */}
+            <div className="max-w-7xl mx-auto px-6 py-6">
+                {showSettings ? (
+                    <div className="max-w-2xl">
+                        <MonitorSettings initialConfig={config} onSave={handleSaveConfig} />
+                    </div>
+                ) : (
+                    <>
+                        {/* Summary Stats */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div className="bg-slate-900 rounded-lg p-3 border border-slate-800 hover:border-slate-700 transition-colors">
+                                <div className="flex items-center justify-between mb-1">
+                                    <p className="text-xs font-medium text-slate-500">Active Monitors</p>
+                                    <Zap size={12} className="text-orange-500" />
                                 </div>
+                                <p className="text-xl font-semibold text-white">{config?.subreddits?.length || 0}</p>
+                                <p className="text-xs text-slate-600 mt-0.5">of 10 available</p>
                             </div>
 
-                            {opportunities.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-32 bg-zinc-900/10 rounded-[32px] border border-dashed border-white/5 text-center">
-                                    <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-6 border border-white/5">
-                                        <Sparkles size={24} className="text-zinc-600" />
-                                    </div>
-                                    <h4 className="text-white/50 font-black tracking-tight text-xl">System Idle</h4>
-                                    <p className="text-zinc-600 font-medium max-w-sm mt-2">Active scanners are monitoring your target subreddits. New opportunities appear here every 8 hours.</p>
+                            <div className="bg-slate-900 rounded-lg p-3 border border-slate-800 hover:border-slate-700 transition-colors">
+                                <div className="flex items-center justify-between mb-1">
+                                    <p className="text-xs font-medium text-slate-500">New Leads</p>
+                                    <Sparkles size={12} className="text-blue-400" />
                                 </div>
-                            ) : (
-                                <div className="divide-y divide-white/5">
-                                    {opportunities.map(opp => (
-                                        <article 
-                                            key={opp.id} 
-                                            className={`group relative flex flex-col py-10 px-2 transition-all duration-300 ${
-                                                opp.status === 'new' ? 'opacity-100' : 'opacity-60 hover:opacity-100'
-                                            }`}
-                                        >
-                                            <header className="flex items-start justify-between mb-5">
-                                                <div className="flex items-center gap-4 min-w-0">
-                                                    <div className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-                                                        opp.status === 'new' 
-                                                        ? 'bg-orange-500/10 border border-orange-500/20 text-orange-500' 
-                                                        : 'bg-white/5 border border-white/5 text-zinc-500'
-                                                    }`}>
-                                                        <MessageSquare size={20} />
+                                <p className="text-xl font-semibold text-white">{(opportunities || []).filter(o => o?.status === 'new').length}</p>
+                                <p className="text-xs text-slate-600 mt-0.5">Waiting for you</p>
+                            </div>
+
+                            <div className="bg-slate-900 rounded-lg p-3 border border-slate-800 hover:border-slate-700 transition-colors">
+                                <div className="flex items-center justify-between mb-1">
+                                    <p className="text-xs font-medium text-slate-500">Total Leads</p>
+                                    <TrendingUp size={12} className="text-green-400" />
+                                </div>
+                                <p className="text-xl font-semibold text-white">{opportunities.length}</p>
+                                <p className="text-xs text-slate-600 mt-0.5">All time</p>
+                            </div>
+                        </div>
+
+                        {/* Monitors Grid */}
+                        {opportunities.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-16 rounded-lg border border-slate-800 bg-slate-900/30">
+                                <Sparkles size={28} className="text-slate-600 mb-2" />
+                                <h3 className="text-sm font-semibold text-white mb-0.5">Scanning in progress</h3>
+                                <p className="text-slate-500 text-xs">New opportunities will appear here soon</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 auto-rows-max">
+                                {opportunities.map(opp => (
+                                    <div
+                                        key={opp.id}
+                                        className={`bg-slate-900 rounded-lg border transition-all hover:border-slate-700 ${
+                                            opp.status === 'new' ? 'border-orange-500/40 ring-1 ring-orange-500/20' : 'border-slate-800'
+                                        }`}
+                                    >
+                                        <div className="p-3">
+                                            {/* Header */}
+                                            <div className="flex items-start justify-between gap-2 mb-2">
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-1.5 mb-1">
+                                                        <span className="text-xs font-semibold text-orange-400">r/{opp.postSubreddit}</span>
+                                                        {opp.status === 'new' && (
+                                                            <span className="text-xs font-bold text-green-400">LIVE</span>
+                                                        )}
                                                     </div>
-                                                    <div className="min-w-0">
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest transition-colors">r/{opp.postSubreddit}</span>
-                                                            <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest opacity-60">• {new Date(opp.createdAt * 1000).toLocaleDateString()}</span>
-                                                        </div>
-                                                        <h4 className="text-lg font-bold text-white/90 group-hover:text-white transition-colors leading-tight antialiased truncate md:whitespace-normal">
-                                                            {opp.postTitle}
-                                                        </h4>
-                                                    </div>
+                                                    <h3 className="text-xs font-semibold text-white line-clamp-2 leading-snug">
+                                                        {opp.postTitle}
+                                                    </h3>
                                                 </div>
-                                                <div className={`shrink-0 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border transition-all ${
-                                                    opp.relevanceScore >= 80 
-                                                    ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' 
-                                                    : 'bg-white/5 text-zinc-500 border-white/5'
+                                                <span className={`text-xs font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                                                    opp.relevanceScore >= 80
+                                                    ? 'bg-green-500/20 text-green-400'
+                                                    : 'bg-zinc-800 text-slate-400'
                                                 }`}>
-                                                    {opp.relevanceScore}% Match
-                                                </div>
-                                            </header>
-
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 ml-14">
-                                                <div className="relative p-5 rounded-xl bg-white/2 border border-white/5 group/insight hover:bg-white/4 transition-all">
-                                                    <h5 className="text-[9px] font-black text-orange-500/60 uppercase tracking-widest mb-2.5 flex items-center gap-1.5">
-                                                        <Sparkles size={10} /> Platform Insight
-                                                    </h5>
-                                                    <p className="text-[13px] text-zinc-400 leading-relaxed font-medium italic" style={{ textWrap: 'pretty' }}>
-                                                        "{opp.matchReason}"
-                                                    </p>
-                                                </div>
-
-                                                {opp.suggestedReply && (
-                                                    <div className="p-5 rounded-xl bg-white/2 border border-white/5 hover:bg-white/4 transition-all">
-                                                        <h5 className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-2.5 flex items-center gap-1.5">
-                                                            <Send size={10} /> Strategic Hook
-                                                        </h5>
-                                                        <p className="text-[12px] text-zinc-500 leading-relaxed font-medium">
-                                                            {opp.suggestedReply}
-                                                        </p>
-                                                    </div>
-                                                )}
+                                                    {opp.relevanceScore}%
+                                                </span>
                                             </div>
 
-                                            <footer className="flex items-center justify-between ml-14">
-                                                <div className="flex gap-4">
-                                                    <button 
-                                                        onClick={() => handleUpdateStatus(opp.id, 'dismissed')}
-                                                        className="text-zinc-600 hover:text-red-400 text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-2 p-1"
-                                                    >
-                                                        <X size={14} className="opacity-40" /> Dismiss
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => handleUpdateStatus(opp.id, 'contacted')}
-                                                        className="text-zinc-600 hover:text-orange-400 text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-2 p-1"
-                                                    >
-                                                        <CheckCircle2 size={14} className="opacity-40" /> Mark Contacted
-                                                    </button>
+                                            {/* Meta */}
+                                            <p className="text-xs text-slate-500 mb-2">
+                                                u/{opp.postAuthor}
+                                            </p>
+
+                                            {/* Metrics */}
+                                            <div className="flex gap-4 mb-2 py-2 border-y border-slate-800 flex-shrink-0">
+                                                <div>
+                                                    <p className="text-xs text-slate-500 font-medium">LEADS</p>
+                                                    <p className="text-sm font-semibold text-white h-5">25</p>
                                                 </div>
-                                                <a 
-                                                    href={opp.postUrl} 
-                                                    target="_blank" 
+                                                <div>
+                                                    <p className="text-xs text-slate-500 font-medium">SIGNALS</p>
+                                                    <p className="text-sm font-semibold text-white h-5">3</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Last Updated */}
+                                            <p className="text-xs text-slate-500 mb-2">
+                                                Last scan 2h ago
+                                            </p>
+
+                                            {/* Actions */}
+                                            <div className="flex gap-2 mt-auto">
+                                                <a
+                                                    href={opp.postUrl}
+                                                    target="_blank"
                                                     rel="noopener noreferrer"
                                                     onClick={() => handleUpdateStatus(opp.id, 'seen')}
-                                                    className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 border border-white/5 hover:border-orange-500/50 hover:bg-orange-500/10 text-white/70 hover:text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all group/link"
+                                                    className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold rounded transition-colors"
                                                 >
-                                                    Engage Segment
-                                                    <ExternalLink size={12} className="opacity-40 group-hover/link:opacity-100 transition-opacity" />
+                                                    <ExternalLink size={11} />
+                                                    View
                                                 </a>
-                                            </footer>
-                                        </article>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
+                                                <button
+                                                    onClick={() => handleUpdateStatus(opp.id, 'contacted')}
+                                                    className="flex-1 px-2 py-1.5 text-xs font-semibold text-slate-300 bg-zinc-800 hover:bg-zinc-700 rounded transition-colors"
+                                                >
+                                                    Done
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
         </div>
-    </div>
-  );
+    );
 };
