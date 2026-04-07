@@ -19,7 +19,7 @@ import { DiscoveryLab } from "./components/discovery/LabDiscovery";
 import { UpgradeModal } from "./components/UpgradeModal";
 import { PricingPage } from "./components/PricingPage";
 import { Breadcrumbs } from "./components/common/Breadcrumbs";
-import { MonitoringView } from "./components/monitoring/MonitoringView";
+import { MonitoringDashboard } from "./components/monitoring/MonitoringDashboard";
 
 import { LoginView } from "./components/LoginView";
 import { VerificationGate } from "./components/VerificationGate";
@@ -58,7 +58,7 @@ const AppSkeleton = () => (
     </aside>
 
     <div className="app-main-wrapper" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-      <header className="app-header" style={{ height: '64px', display: 'flex', alignItems: 'center', padding: '0 40px', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+      <header className="app-header" style={{ height: '64px', display: 'flex', alignItems: 'center', padding: '0 32px', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '16px', alignItems: 'center' }}>
           <Skeleton width="32px" height="32px" circle />
           <Skeleton width="32px" height="32px" circle />
@@ -67,7 +67,7 @@ const AppSkeleton = () => (
       </header>
 
       <main className="app-main" style={{ padding: '40px 0' }}>
-        <div className="content-container" style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 40px' }}>
+        <div className="content-container" style={{ maxWidth: '1440px', margin: '0 auto', padding: '0 32px' }}>
           
           {/* URL Input Skeleton */}
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '60px' }}>
@@ -240,14 +240,14 @@ function AppContent() {
     <div className="app">
       {user && !isLoginPage && <Sidebar />}
 
-      <div className="app-main-wrapper" style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflowY: 'auto' }}>
+      <div className="app-main-wrapper">
         {!isLoginPage && (
-          <header className="app-header" style={{ height: '56px', minHeight: '56px', display: 'flex', alignItems: 'center', position: 'sticky', top: 0, zIndex: 1000, background: 'rgba(10, 10, 12, 0.4)', backdropFilter: 'blur(40px)', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '0 32px' }}>
+          <header className="app-header">
+            <div className="header-content">
               <div className="header-breadcrumbs">
                 <Breadcrumbs />
               </div>
-              <div className="header-actions" style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+              <div className="header-actions">
                 <ThemeToggle />
                 {user && <AuthButton />}
               </div>
@@ -256,7 +256,7 @@ function AppContent() {
         )}
 
         <main className="app-main">
-          <div className="content-container" style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 40px' }}>
+          <div className="content-container">
             <Routes>
               <Route path="/login" element={<LoginView />} />
               <Route path="/verify-email" element={
@@ -266,6 +266,11 @@ function AppContent() {
               } />
 
               <Route path="/" element={
+                <RequireAuth>
+                  <MonitoringDashboard />
+                </RequireAuth>
+              } />
+              <Route path="/discovery" element={
                 <RequireAuth>
                   <ResearchView />
                 </RequireAuth>
@@ -287,11 +292,7 @@ function AppContent() {
                   <SettingsView />
                 </RequireAuth>
               } />
-              <Route path="/monitoring" element={
-                <RequireAuth>
-                  <MonitoringView />
-                </RequireAuth>
-              } />
+              <Route path="/monitoring" element={<Navigate to="/" replace />} />
               {/* Research alias handled by Navigate above */}
               <Route path="/folders/:folderId" element={
                 <RequireAuth>

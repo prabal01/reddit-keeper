@@ -1,5 +1,8 @@
 import { Loader2, Sparkles, History as HistoryIcon, Zap } from 'lucide-react';
 import React, { useState } from 'react';
+import { UIButton } from '../../common/UIButton';
+import { H2, Metadata } from '../../common/Typography';
+import { Badge } from '../../common/Badge';
 
 interface DiscoveryInputProps {
     activeTab: 'competitor' | 'idea' | 'bulk';
@@ -88,22 +91,22 @@ export const DiscoveryInput: React.FC<DiscoveryInputProps> = ({
             {/* Step 2 Header */}
             <div className="flex items-center justify-between px-6">
                 <div className="flex flex-col">
-                    <h2 className="text-2xl font-black text-white tracking-tight">
+                    <H2>
                         {activeTab === 'competitor' ? 'Who are your rivals?' : activeTab === 'idea' ? 'Tell us your focus' : 'Paste your links'}
-                    </h2>
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#FF4500]/60 mt-1">
+                    </H2>
+                    <Metadata className="text-(--bg-accent)! opacity-100! mt-1">
                         Step 2: Add specific details for the search
-                    </p>
+                    </Metadata>
                 </div>
             </div>
 
             {/* Main Integrated Bar */}
-            <div className="discovery-input-card relative flex items-center gap-4 bg-white/2 backdrop-blur-3xl border border-white/10 rounded-full px-8 py-4 shadow-2xl group-focus-within/input:border-[#FF4500]/40 transition-all duration-500">
+            <div className="discovery-input-card relative flex items-center gap-4 bg-(--bg-input) backdrop-blur-3xl border border-(--border) rounded-full px-8 py-4 shadow-2xl group-focus-within/input:border-[#FF4500]/40 transition-all duration-500">
                 <div className="flex-1 flex items-center min-w-0">
                     <div className="w-full transition-all duration-500">
                         {activeTab === 'competitor' && (
                             <input
-                                className="w-full bg-transparent border-none text-base font-bold text-white outline-none focus:outline-none focus:ring-0 placeholder:text-white/20 tracking-tight"
+                                className="w-full bg-transparent border-none text-base font-bold text-(--text-primary) outline-none focus:outline-none focus:ring-0 placeholder:text-(--text-tertiary) tracking-tight"
                                 type="text"
                                 placeholder="Enter names (e.g. Linear, Asana, Monday)"
                                 value={competitor}
@@ -115,9 +118,9 @@ export const DiscoveryInput: React.FC<DiscoveryInputProps> = ({
 
                         {activeTab === 'idea' && (
                             <div className="flex items-center gap-3 w-full text-base font-bold">
-                                <span className="text-slate-500 whitespace-nowrap hidden sm:inline">Solving</span>
+                                <span className="text-(--text-tertiary) opacity-50 whitespace-nowrap hidden sm:inline">Solving</span>
                                 <input
-                                    className="flex-1 bg-transparent border-none text-base font-bold text-white outline-none focus:outline-none focus:ring-0 placeholder:text-white/20 tracking-tight min-w-[150px]"
+                                    className="flex-1 bg-transparent border-none text-base font-bold text-(--text-primary) outline-none focus:outline-none focus:ring-0 placeholder:text-(--text-tertiary) tracking-tight min-w-[150px]"
                                     type="text"
                                     placeholder="specific problem..."
                                     value={problem}
@@ -125,9 +128,9 @@ export const DiscoveryInput: React.FC<DiscoveryInputProps> = ({
                                     onKeyPress={(e) => e.key === 'Enter' && onIdeaSearch()}
                                     autoFocus
                                 />
-                                <span className="text-slate-500 whitespace-nowrap hidden sm:inline">for</span>
+                                <span className="text-(--text-tertiary) opacity-50 whitespace-nowrap hidden sm:inline">for</span>
                                 <input
-                                    className="w-64 bg-transparent border-none text-base font-bold text-[#FF4500] outline-none focus:outline-none focus:ring-0 placeholder:text-[#FF4500]/30 tracking-tight"
+                                    className="w-64 bg-transparent border-none text-base font-bold text-(--primary-color) outline-none focus:outline-none focus:ring-0 placeholder:text-(--primary-color)/30 tracking-tight"
                                     type="text"
                                     placeholder="this specific audience"
                                     value={audience}
@@ -140,7 +143,7 @@ export const DiscoveryInput: React.FC<DiscoveryInputProps> = ({
                         {activeTab === 'bulk' && (
                             <div className="flex items-center gap-4 w-full">
                                 <input
-                                    className="w-full bg-transparent border-none text-base font-bold text-white outline-none focus:outline-none focus:ring-0 placeholder:text-white/20 tracking-tight"
+                                    className="w-full bg-transparent border-none text-base font-bold text-(--text-primary) outline-none focus:outline-none focus:ring-0 placeholder:text-(--text-tertiary) tracking-tight"
                                     placeholder="Paste Reddit or HN links here..."
                                     value={bulkUrls}
                                     onChange={(e) => setBulkUrls(e.target.value)}
@@ -152,22 +155,22 @@ export const DiscoveryInput: React.FC<DiscoveryInputProps> = ({
                 </div>
 
                 <div className="flex flex-col items-center gap-2 group/btn">
-                    <button
-                        className="dw-primary-btn px-8 py-3.5 rounded-full flex items-center gap-3 transform hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-20 disabled:grayscale disabled:scale-100 shadow-[0_0_20px_rgba(255,69,0,0.2)]"
+                    <UIButton
+                        size="lg"
+                        className="px-8 py-3.5 transform hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-20 disabled:grayscale disabled:scale-100 shadow-[0_0_20px_rgba(255,69,0,0.2)]"
                         onClick={activeTab === 'competitor' ? onCompetitorSearch : activeTab === 'idea' ? onIdeaSearch : validateAndImportBulk}
                         disabled={loading || (activeTab === 'competitor' && !competitor.trim()) || (activeTab === 'idea' && !problem.trim()) || (activeTab === 'bulk' && urlCount === 0)}
                     >
                         {loading ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
                         <span className="text-[12px] font-black uppercase tracking-widest leading-none pt-0.5 whitespace-nowrap">
-                            {loading ? 'Thinking...' : 'Start Search'}
+                            {loading ? 'Initializing...' : 'Start Monitoring Agent'}
                         </span>
-                    </button>
+                    </UIButton>
                     
                     {!loading && (
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#FF4500]/5 border border-[#FF4500]/10 rounded-lg animate-in fade-in slide-in-from-top-1 duration-500 whitespace-nowrap">
-                            <Zap size={10} className="text-[#FF4500] fill-[#FF4500]" />
-                            <span className="text-[7.5px] font-black text-[#FF4500] uppercase tracking-widest">Costs 1 Discovery Credit</span>
-                        </div>
+                        <Badge variant="premium" className="animate-in fade-in slide-in-from-top-1 duration-500" icon={<Zap size={10} />}>
+                            Costs 1 Discovery Credit
+                        </Badge>
                     )}
                 </div>
             </div>

@@ -1,5 +1,5 @@
-import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { Metadata, Caption } from './common/Typography';
 import './UsageProgress.css';
 
 export const UsageProgress: React.FC = () => {
@@ -31,10 +31,10 @@ export const UsageProgress: React.FC = () => {
     return (
         <div className="usage-progress-container">
             <div className="usage-header">
-                <span className="plan-badge">{plan?.toUpperCase() || 'FREE'} PLAN</span>
+                <Metadata className="plan-badge">{plan?.toUpperCase() || 'FREE'} PLAN</Metadata>
                 {plan !== 'pro' && (
                     <a href="mailto:hello@opiniondeck.com" className="upgrade-link-btn" style={{ textDecoration: 'none' }}>
-                        Get More Credits
+                        <Metadata className="text-(--bg-accent) font-black">Get More Credits</Metadata>
                     </a>
                 )}
             </div>
@@ -47,10 +47,10 @@ export const UsageProgress: React.FC = () => {
                     return (
                         <div key={item.label} className="usage-item">
                             <div className="usage-info">
-                                <span className="label">{item.label}</span>
-                                <span className="value">
+                                <Metadata className="label">{item.label}</Metadata>
+                                <Caption className="value">
                                     {item.current} / {item.limit === -1 ? '∞' : item.limit}
-                                </span>
+                                </Caption>
                             </div>
                             <div className="progress-track">
                                 <div

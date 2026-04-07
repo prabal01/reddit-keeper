@@ -79,6 +79,9 @@ export class DiscoveryOrchestrator {
             discoveryPlan
         };
 
+        // Enrich metadata for top results if needed
+        await this.enrichMetadata(sortedResults);
+
         // Save to History (Awaited to ensure consistency before response)
         try {
             await saveDiscoveryHistory(uid, {
@@ -189,35 +192,7 @@ export class DiscoveryOrchestrator {
             .sort((a, b) => b.score - a.score);
 
         // 5. Enrichment Phase: Fetch metadata for top results (especially from JustSerp)
-        const config = await getGlobalConfig();
-        const enrichmentLimit = config.discovery_enrichment_limit || 10;
-        const topToEnrich = finalResults.slice(0, enrichmentLimit);
-
-        const needsEnrichment = topToEnrich.filter((r): r is DiscoveryResult & { source: 'reddit' | 'hn' } =>
-            r.num_comments === 0 && (r.source === 'reddit' || r.source === 'hn')
-        );
-
-        if (needsEnrichment.length > 0) {
-            logger.info({
-                action: 'ENRICHMENT_PHASE_START',
-                totalChecked: topToEnrich.length,
-                toEnrich: needsEnrichment.length
-            }, `Enriching metadata for ${needsEnrichment.length} results (skipped ${topToEnrich.length - needsEnrichment.length} with existing metadata)`);
-
-            await Promise.all(needsEnrichment.map(async (r) => {
-                try {
-                    const fullData = await this.fetchFullThread(r.url, r.source);
-                    if (fullData && fullData.post) {
-                        r.num_comments = fullData.post.num_comments || 0;
-                        r.isCached = true;
-                    }
-                } catch (err) {
-                    logger.warn({ url: r.url }, "Failed to enrich metadata for result");
-                }
-            }));
-        } else {
-            logger.info({ action: 'ENRICHMENT_PHASE_SKIPPED', count: topToEnrich.length }, "All top results have metadata, skipping enrichment phase.");
-        }
+        await this.enrichMetadata(finalResults);
 
         logger.info({
             action: 'IDEA_DISCOVERY_COMPLETE',
@@ -414,5 +389,40 @@ export class DiscoveryOrchestrator {
         }
 
         return fullData;
+    }
+
+    private async enrichMetadata(results: DiscoveryResult[]): Promise<void> {
+        try {
+            const config = await getGlobalConfig();
+            const enrichmentLimit = config.discovery_enrichment_limit || 10;
+            const topToEnrich = results.slice(0, enrichmentLimit);
+
+            const needsEnrichment = topToEnrich.filter((r): r is DiscoveryResult & { source: 'reddit' | 'hn' } =>
+                (r.num_comments === 0 || r.author === 'unknown') && (r.source === 'reddit' || r.source === 'hn')
+            );
+
+            if (needsEnrichment.length > 0) {
+                logger.info({
+                    action: 'ENRICHMENT_PHASE_START',
+                    totalChecked: topToEnrich.length,
+                    toEnrich: needsEnrichment.length
+                }, `Enriching metadata for ${needsEnrichment.length} results...`);
+
+                await Promise.all(needsEnrichment.map(async (r) => {
+                    try {
+                        const fullData = await this.fetchFullThread(r.url, r.source);
+                        if (fullData && fullData.post) {
+                            r.num_comments = fullData.post.num_comments || 0;
+                            r.author = fullData.post.author || 'unknown';
+                            r.isCached = true;
+                        }
+                    } catch (err) {
+                        logger.warn({ url: r.url }, "Failed to enrich metadata for result");
+                    }
+                }));
+            }
+        } catch (err) {
+            logger.error({ err }, "Enrichment phase failed");
+        }
     }
 }

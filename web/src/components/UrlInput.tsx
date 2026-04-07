@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { UIButton } from "./common/UIButton";
 
 interface UrlInputProps {
     onFetch: (url: string, sort: string) => void;
@@ -34,7 +35,7 @@ export function UrlInput({ onFetch, loading }: UrlInputProps) {
                     id="reddit-url"
                     type="url"
                     className="url-input"
-                    placeholder="Paste Reddit, HN, X/Twitter, or G2 URL..."
+                    placeholder="Paste a Reddit link to analyze..."
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
                     disabled={loading}
@@ -43,7 +44,7 @@ export function UrlInput({ onFetch, loading }: UrlInputProps) {
                 />
                 <div className="url-input-actions">
                     <label htmlFor="sort-select" className="sr-only">
-                        Sort comments by
+                        Filter comments by
                     </label>
                     <select
                         id="sort-select"
@@ -51,7 +52,7 @@ export function UrlInput({ onFetch, loading }: UrlInputProps) {
                         value={sort}
                         onChange={(e) => setSort(e.target.value)}
                         disabled={loading}
-                        aria-label="Sort comments by"
+                        aria-label="Filter comments by"
                     >
                         {SORT_OPTIONS.map((opt) => (
                             <option key={opt.value} value={opt.value}>
@@ -59,23 +60,19 @@ export function UrlInput({ onFetch, loading }: UrlInputProps) {
                             </option>
                         ))}
                     </select>
-                    <button
+                    <UIButton
                         type="submit"
-                        className="fetch-btn"
+                        variant="primary"
+                        loading={loading}
                         disabled={!url.trim() || loading}
-                        aria-label="Fetch Reddit thread"
+                        aria-label="Analyze Reddit thread"
                     >
-                        {loading ? (
-                            <span className="spinner" aria-hidden="true" />
-                        ) : (
-                            "Fetch"
-                        )}
-                        {loading && <span className="sr-only">Loading...</span>}
-                    </button>
+                        Analyze
+                    </UIButton>
                 </div>
             </div>
             <p id="url-hint" className="url-hint">
-                e.g. https://www.reddit.com/... or https://x.com/user/status/...
+                e.g. https://www.reddit.com/r/subreddit/comments/...
             </p>
         </form>
     );

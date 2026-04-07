@@ -13,7 +13,7 @@ import {
     getDb
 } from "./firestore.js";
 import { DiscoveryOrchestrator } from "./discovery/orchestrator.js";
-import { analyzeThreadGranular, analyzeThreads } from "./ai.js";
+import { analyzeThreadGranular, analyzeThreads, analyzeDiscoveryBatch } from "./ai.js";
 import { sendAlert } from "./alerts.js";
 
 const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
@@ -54,6 +54,15 @@ export const granularAnalysisQueue = new Queue("granular-analysis", {
         removeOnFail: { count: 100, age: 24 * 3600 },
         attempts: 2,
         backoff: { type: 'exponential', delay: 10000 }
+    }
+});
+
+export const monitoringCronQueue = new Queue("monitoring-cron", {
+    connection: sharedConnectionConfig,
+    defaultJobOptions: {
+        removeOnComplete: { count: 50, age: 7 * 24 * 3600 },
+        removeOnFail: { count: 50, age: 7 * 24 * 3600 },
+        attempts: 2,
     }
 });
 
@@ -252,6 +261,170 @@ export const analysisWorker = new Worker("analysis", async (job) => {
 }, {
     connection: sharedConnectionConfig,
     concurrency: 2
+});
+
+export const monitoringCronWorker = new Worker("monitoring-cron", async () => {
+    const db = getDb();
+    if (!db) {
+        console.error("[MonitoringWorker] Firebase DB not initialized.");
+        return;
+    }
+
+    try {
+        console.log(`[MonitoringWorker] Starting cron cycle at ${new Date().toISOString()}`);
+        const snapshot = await db.collection("folders")
+            .where("is_monitoring_active", "==", true)
+            .get();
+
+        if (snapshot.empty) {
+            console.log("[MonitoringWorker] No active monitoring folders found. Skipping.");
+            return;
+        }
+
+        for (const doc of snapshot.docs) {
+            const folder = doc.data();
+            const folderId = doc.id;
+            const uid = folder.uid;
+            
+            // Prefer seed_keywords, fallback to folder name if missing
+            const keyword = (folder.seed_keywords && folder.seed_keywords.length > 0) 
+                ? folder.seed_keywords[0] 
+                : folder.name;
+
+            console.log(`[MonitoringWorker] Checking delta for folder: ${folderId} | Keyword: ${keyword}`);
+
+            // 1. Fetch current Leads to form the "seen" list
+            const leadsSnap = await db.collection("folders").doc(folderId).collection("leads").get();
+            const seenThreadIds = new Set<string>();
+            leadsSnap.forEach(leadDoc => {
+                const leadData = leadDoc.data();
+                if (leadData.thread_id) seenThreadIds.add(leadData.thread_id);
+                if (leadData.thread_url) seenThreadIds.add(leadData.thread_url);
+            });
+
+            // 2. Fetch new threads via Orchestrator
+            // Using logic similar to discovery/start endpoint (fetch top 30)
+            const plan = 'free'; // Cron runs globally; assume base features or pull from user doc if needed
+            const discoveryResp = await discoveryOrchestrator.ideaDiscovery(uid, keyword, [], [], false, plan);
+            const topResults = discoveryResp.results.slice(0, 30);
+            
+            // 3. Delta Filter
+            const newThreadsBatch = topResults.filter(r => {
+                const id = typeof r.id === 'string' ? r.id : r.url;
+                return !seenThreadIds.has(id) && !seenThreadIds.has(r.url);
+            }).slice(0, 15); // Cap to top 15 new ones for AI batching limits
+            
+            if (newThreadsBatch.length === 0) {
+                console.log(`[MonitoringWorker] No new unseen threads for folder: ${folderId}.`);
+                // Record a "no new data" alert so the user knows the agent checked
+                const noNewAlertRef = db.collection("folders").doc(folderId).collection("alerts").doc();
+                await noNewAlertRef.set({
+                    id: noNewAlertRef.id,
+                    folderId,
+                    uid,
+                    type: 'discovery',
+                    newLeadsCount: 0,
+                    newPatternsCount: 0,
+                    timestamp: new Date().toISOString(),
+                    status: 'no_new',
+                    keyword
+                });
+                continue;
+            }
+
+            console.log(`[MonitoringWorker] Found ${newThreadsBatch.length} new threads for folder: ${folderId}. Passing to AI.`);
+
+            const threadBatch = newThreadsBatch.map(r => ({
+                id: typeof r.id === 'string' ? r.id : r.url,
+                title: r.title,
+                text: r.url
+            }));
+
+            // 4. AI Processing
+            const insights = await analyzeDiscoveryBatch(keyword, threadBatch);
+
+            // 5. Update CRM Data
+            const batch = db.batch();
+            let newLeadsCount = 0;
+            const newPatternsCount = insights.patterns?.length || 0;
+            
+            if (insights.patterns && Array.isArray(insights.patterns)) {
+                insights.patterns.forEach((pattern: any) => {
+                    const patternRef = db.collection("folders").doc(folderId).collection("patterns").doc();
+                    batch.set(patternRef, {
+                        ...pattern,
+                        id: patternRef.id,
+                        folderId: folderId,
+                        createdAt: new Date().toISOString()
+                    });
+                });
+            }
+
+            if (insights.opportunities && Array.isArray(insights.opportunities)) {
+                insights.opportunities.forEach((opp: any) => {
+                    newLeadsCount++;
+                    const originalThread = newThreadsBatch.find(r => (typeof r.id === 'string' ? r.id : r.url) === opp.thread_id);
+                    const leadId = db.collection("folders").doc(folderId).collection("leads").doc().id;
+                    
+                    const leadRef = db.collection("folders").doc(folderId).collection("leads").doc(leadId);
+                    const intentMarkers = [...new Set([
+                        ...(opp.intent_category ? [opp.intent_category] : []),
+                        ...(originalThread?.intentMarkers || [])
+                    ])];
+                    batch.set(leadRef, {
+                        ...opp,
+                        id: leadId,
+                        folderId: folderId,
+                        uid,
+                        status: "new",
+                        saved_at: new Date().toISOString(),
+                        thread_url: originalThread?.url || opp.thread_id,
+                        thread_title: originalThread?.title || "Unknown Thread",
+                        author: originalThread?.author || 'unknown',
+                        subreddit: originalThread?.subreddit || '',
+                        relevance_score: opp.relevance_score || 0,
+                        intent_markers: intentMarkers,
+                    });
+                });
+            }
+
+            // 6. Save alert record for the feed
+            const alertRef = db.collection("folders").doc(folderId).collection("alerts").doc();
+            batch.set(alertRef, {
+                id: alertRef.id,
+                folderId,
+                uid,
+                type: 'discovery',
+                newLeadsCount,
+                newPatternsCount,
+                timestamp: new Date().toISOString(),
+                status: 'success',
+                keyword
+            });
+
+            if (newLeadsCount > 0 || newPatternsCount > 0) {
+                batch.update(doc.ref, {
+                    threadCount: (folder.threadCount || 0) + newLeadsCount
+                });
+            }
+            await batch.commit();
+            console.log(`[MonitoringWorker] Updated folder ${folderId} with ${newLeadsCount} new leads, ${newPatternsCount} new patterns.`);
+        }
+    } catch (err: any) {
+        console.error(`[MonitoringWorker] Cron execution failed:`, err);
+    }
+}, {
+    connection: sharedConnectionConfig,
+    concurrency: 1
+});
+
+// Automatically inject the recurring job into the queue
+monitoringCronQueue.add("monitor", {}, {
+    repeat: {
+        pattern: "0 */12 * * *" // Every 12 hours
+    }
+}).catch(err => {
+    console.error("[MonitoringWorker] Failed to inject recurring job:", err);
 });
 
 console.log("[INIT] BullMQ Queues and Workers initialized in standalone module.");

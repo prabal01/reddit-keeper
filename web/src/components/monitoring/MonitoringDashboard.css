@@ -1,0 +1,356 @@
+.monitoring-container {
+    width: 100%;
+    padding: 0;
+}
+
+/* Hero Header Area */
+.md-hero-header {
+    margin-bottom: 24px;
+}
+
+/* Hero Section */
+.md-hero {
+    margin-bottom: 40px;
+    text-align: left;
+}
+
+.md-hero-subtitle {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+    line-height: 1.5;
+}
+
+/* Input Bar */
+.md-input-bar {
+    max-width: 100%;
+    margin: 32px 0;
+}
+
+.md-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 4px 4px 16px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    transition: all 0.2s ease;
+}
+
+.md-input-wrapper:focus-within {
+    border-color: var(--bg-accent);
+    background: var(--bg-secondary);
+    box-shadow: 0 0 0 4px var(--bg-accent-alpha);
+}
+
+.md-input-icon {
+    color: var(--text-tertiary);
+}
+
+.md-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-primary);
+    font-size: 1.05rem;
+    font-weight: 500;
+    padding: 14px 0;
+}
+
+.md-input::placeholder {
+    color: var(--text-tertiary);
+}
+
+/* Searching Opportunities State (RedShip Style) */
+.md-searching-state {
+    margin-top: 40px;
+    padding: 60px 40px;
+    border: 1px dashed var(--border-light);
+    border-radius: var(--radius-xl);
+    background: var(--bg-secondary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.md-searching-icon-wrapper {
+    width: 48px;
+    height: 48px;
+    background: var(--bg-accent-alpha);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--bg-accent);
+    margin-bottom: 24px;
+    animation: spin 3s linear infinite;
+}
+
+.md-searching-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 32px;
+}
+
+.md-searching-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 400px;
+    width: 100%;
+}
+
+.md-step {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    text-align: left;
+    padding: 12px;
+    border-radius: var(--radius-md);
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-light);
+}
+
+.md-step.active {
+    background: var(--bg-accent-alpha);
+    border-color: var(--bg-accent);
+}
+
+.md-step-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-tertiary);
+}
+
+.md-step.active .md-step-icon {
+    background: var(--bg-secondary);
+    color: var(--bg-accent);
+}
+
+.md-step-info {
+    flex: 1;
+}
+
+.md-step-name {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.md-step-desc {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+}
+
+/* Monitors Grid */
+.md-monitors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+}
+
+/* Empty State */
+.md-empty-state {
+    padding: 80px 40px;
+    border: 1px dashed var(--border-light);
+    border-radius: var(--radius-xl);
+    background: var(--bg-secondary);
+    text-align: center;
+}
+
+/* Review Mission Step */
+.md-review-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-xl);
+    padding: 40px;
+    box-shadow: var(--shadow-lg);
+}
+
+.md-review-header {
+    margin-bottom: 32px;
+}
+
+.md-review-header h2 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    letter-spacing: -0.02em;
+}
+
+.md-review-header p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.md-review-field {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 24px;
+}
+
+.md-review-field label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.md-review-input, .md-review-textarea {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    width: 100%;
+}
+
+.md-review-input:focus, .md-review-textarea:focus {
+    border-color: var(--bg-accent);
+    background: var(--bg-secondary);
+    outline: none;
+}
+
+.md-keyword-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 16px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+}
+
+.md-keyword-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.md-keyword-pill button {
+    background: transparent;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: color 0.2s;
+}
+
+.md-keyword-pill button:hover {
+    color: var(--bg-accent);
+}
+
+.md-add-kw {
+    background: var(--bg-accent-alpha);
+    border: 1px dashed var(--bg-accent);
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    color: var(--bg-accent);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.md-review-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px;
+    margin-top: 32px;
+    padding-top: 32px;
+    border-top: 1px solid var(--border-light);
+}
+
+/* Zen Success State */
+.md-success-state {
+    margin-top: 40px;
+    padding: 80px 40px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-light);
+    border-radius: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    animation: fadeIn 0.8s ease-out;
+}
+
+.md-success-icon-wrapper {
+    width: 64px;
+    height: 64px;
+    background: var(--bg-accent-alpha);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--score-positive, #22c55e);
+    margin-bottom: 24px;
+}
+
+.zen-pulse {
+    animation: zen-pulse 4s ease-in-out infinite;
+}
+
+@keyframes zen-pulse {
+    0% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 0 0 var(--bg-accent-alpha); }
+    50% { transform: scale(1.05); opacity: 1; box-shadow: 0 0 20px 10px rgba(var(--primary-rgb), 0); }
+    100% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 0 0 rgba(var(--primary-rgb), 0); }
+}
+
+.md-success-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+}
+
+.md-success-text {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    max-width: 460px;
+    line-height: 1.6;
+    margin-bottom: 32px;
+}
+
+.md-redirect-timer {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--score-positive, #22c55e);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.fadeInUp {
+    animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}

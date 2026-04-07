@@ -4,6 +4,9 @@ import { useFolders } from "../contexts/FolderContext";
 import { Activity, MessageSquare, FolderOpen, FileText, Clock, TrendingUp, BarChart3, PieChart } from 'lucide-react';
 import { Skeleton } from "./Skeleton";
 import { MetricCard } from "./common/MetricCard";
+import { PageHeader } from './common/PageHeader';
+import { H2, Subtitle } from './common/Typography';
+import { Badge } from './common/Badge';
 import "./Reports.css";
 
 export const ReportsView: React.FC = () => {
@@ -20,10 +23,7 @@ export const ReportsView: React.FC = () => {
     if (loading) {
         return (
             <div className="reports-container">
-                <header className="reports-header">
-                    <Skeleton width="400px" height="48px" style={{ marginBottom: '12px' }} />
-                    <Skeleton width="100%" height="24px" />
-                </header>
+                <PageHeader title="" subtitle="" loading />
 
                 <div className="analytics-grid">
                     {[1, 2, 3, 4, 5, 6].map(i => (
@@ -40,20 +40,20 @@ export const ReportsView: React.FC = () => {
     }
 
     const analyticsCards = [
-        { label: 'Intelligence Scanned', value: stats?.intelligenceScanned || 0, icon: <Activity size={20} />, color: '#FF4500' },
-        { label: 'Insights Found', value: stats?.commentsAnalyzed || 0, icon: <MessageSquare size={20} />, color: '#00D1FF' },
-        { label: 'Strategy Folders', value: folders.length, icon: <FolderOpen size={20} />, color: '#A855F7' },
-        { label: 'Reports Generated', value: stats?.reportsGenerated || 0, icon: <FileText size={20} />, color: '#10B981' },
-        { label: 'Hours Saved', value: `${(stats?.hoursSaved || 0).toFixed(1)}h`, icon: <Clock size={20} />, color: '#F59E0B' },
-        { label: 'Avg Sentiment', value: '78%', icon: <TrendingUp size={20} />, color: '#EC4899' },
+        { label: 'Intelligence Scanned', value: stats?.intelligenceScanned || 0, icon: <Activity size={20} />, color: 'var(--bg-accent)' },
+        { label: 'Insights Found', value: stats?.commentsAnalyzed || 0, icon: <MessageSquare size={20} />, color: 'var(--bg-accent)' },
+        { label: 'Strategy Folders', value: folders.length, icon: <FolderOpen size={20} />, color: 'var(--bg-accent)' },
+        { label: 'Reports Generated', value: stats?.reportsGenerated || 0, icon: <FileText size={20} />, color: 'var(--bg-accent)' },
+        { label: 'Hours Saved', value: `${(stats?.hoursSaved || 0).toFixed(1)}h`, icon: <Clock size={20} />, color: 'var(--bg-accent)' },
+        { label: 'Avg Sentiment', value: '78%', icon: <TrendingUp size={20} />, color: 'var(--bg-accent)' },
     ];
 
     return (
         <div className="reports-container">
-            <header className="reports-header">
-                <h1>Intelligence Analytics</h1>
-                <p className="subtitle">Comprehensive overview of your research impact and data coverage.</p>
-            </header>
+            <PageHeader 
+                title="Intelligence Analytics" 
+                subtitle="Comprehensive overview of your research impact and data coverage." 
+            />
 
             <div className="analytics-grid">
                 {analyticsCards.map((card, i) => (
@@ -68,18 +68,18 @@ export const ReportsView: React.FC = () => {
             </div>
 
             <div className="analytics-visuals">
-                <div className="visual-card">
-                    <BarChart3 size={48} strokeWidth={1} style={{ marginBottom: '16px', opacity: 0.5 }} />
-                    <h3>Coverage Trend</h3>
-                    <p>Analysis of your research depth over time.</p>
-                    <div className="coming-soon-badge">Coming Soon</div>
+                <div className="visual-card bg-(--bg-secondary) border border-(--border-light) p-8 rounded-2xl relative overflow-hidden group">
+                    <BarChart3 size={48} strokeWidth={1} className="text-(--text-tertiary) mb-6 opacity-40 group-hover:text-(--bg-accent) transition-colors" />
+                    <H2 className="mb-2">Coverage Analytics</H2>
+                    <Subtitle className="text-sm! mb-6">Historical analysis of your research depth and opportunity velocity.</Subtitle>
+                    <Badge variant="premium" className="absolute top-6 right-6">Intelligence Alpha</Badge>
                 </div>
 
-                <div className="visual-card">
-                    <PieChart size={48} strokeWidth={1} style={{ marginBottom: '16px', opacity: 0.5 }} />
-                    <h3>Platform Distribution</h3>
-                    <p>Where your market intelligence comes from.</p>
-                    <div className="coming-soon-badge">Coming Soon</div>
+                <div className="visual-card bg-(--bg-secondary) border border-(--border-light) p-8 rounded-2xl relative overflow-hidden group">
+                    <PieChart size={48} strokeWidth={1} className="text-(--text-tertiary) mb-6 opacity-40 group-hover:text-(--bg-accent) transition-colors" />
+                    <H2 className="mb-2">Platform Distribution</H2>
+                    <Subtitle className="text-sm! mb-6">Visual breakdown of where your market signals are originating from.</Subtitle>
+                    <Badge variant="neutral" className="absolute top-6 right-6">Coming Soon</Badge>
                 </div>
             </div>
         </div>

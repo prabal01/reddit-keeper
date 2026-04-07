@@ -4,6 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useFolders } from '../contexts/FolderContext';
 import type { Folder } from '../contexts/FolderContext';
 import { Skeleton } from './Skeleton';
+import { H2, Subtitle, Metadata } from './common/Typography';
+import { UIButton } from './common/UIButton';
 import './Folders.css';
 
 interface FolderCardProps {
@@ -30,14 +32,14 @@ const FolderCard: React.FC<FolderCardProps> = ({ folder, onClick }) => {
             </div>
             
             <div className="folder-info">
-                <h3 className="folder-name">{folder.name}</h3>
-                {folder.description && <p className="folder-desc">{folder.description}</p>}
+                <H2 className="folder-name text-[1.1rem]! mb-1">{folder.name}</H2>
+                {folder.description && <Subtitle className="folder-desc text-[0.85rem]! line-clamp-1">{folder.description}</Subtitle>}
             </div>
 
             <div className="folder-card-meta">
-                <div className="thread-count-badge">
+                <Metadata className="thread-count-badge">
                     {folder.threadCount} {folder.threadCount === 1 ? 'thread' : 'threads'}
-                </div>
+                </Metadata>
                 <div className="folder-actions">
                     <button
                         className="btn-icon-v2"
@@ -109,11 +111,11 @@ export const FolderList: React.FC<{ onSelect: (folder: Folder) => void }> = ({ o
     return (
         <div className="folders-section">
             <div className="section-header">
-                <h2>Your Research Folders</h2>
+                <H2>My Monitors</H2>
                 {user && (
-                    <button className="btn-primary" onClick={() => setIsModalOpen(true)}>
-                        + New Folder
-                    </button>
+                    <UIButton size="sm" onClick={() => setIsModalOpen(true)}>
+                        + New Monitor
+                    </UIButton>
                 )}
             </div>
 
@@ -122,10 +124,12 @@ export const FolderList: React.FC<{ onSelect: (folder: Folder) => void }> = ({ o
                     <div className="empty-state-icon">
                         <FolderIcon size={48} strokeWidth={1.5} />
                     </div>
-                    <p>You haven't created any folders yet. Organization is the first step to deep research.</p>
-                    <button className="btn-primary" onClick={() => setIsModalOpen(true)}>
-                        <PlusCircle size={18} /> Create your first folder
-                    </button>
+                    <Subtitle className="max-w-[400px] mx-auto">
+                        You haven't set up any monitors yet. Create one to start tracking topics on Reddit.
+                    </Subtitle>
+                    <UIButton onClick={() => setIsModalOpen(true)}>
+                        <PlusCircle size={18} /> Create Your First Monitor
+                    </UIButton>
                 </div>
             ) : (
                 <div className="folders-grid">
@@ -139,7 +143,7 @@ export const FolderList: React.FC<{ onSelect: (folder: Folder) => void }> = ({ o
                 <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
                     <div className="modal-content" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h3>Create New Research Folder</h3>
+                            <H2>Create New Monitor</H2>
                         </div>
 
                         {(localError || contextError) && (
@@ -150,27 +154,27 @@ export const FolderList: React.FC<{ onSelect: (folder: Folder) => void }> = ({ o
                         )}
                         <form onSubmit={handleCreate}>
                             <div className="form-group">
-                                <label htmlFor="folder-name">Folder Name</label>
+                                <Metadata className="block mb-2 text-slate-400">What Do You Want to Monitor?</Metadata>
                                 <input
                                     id="folder-name"
                                     type="text"
                                     value={newName}
                                     onChange={e => setNewName(e.target.value)}
-                                    placeholder="e.g., My Research Project"
+                                    placeholder="e.g., SaaS alternatives, AI tools, marketing trends"
                                     required
                                     autoFocus
                                     className="modal-input-v2"
                                 />
-                                <p className="input-hint">Give your research a clear name to organize your insights.</p>
+                                <Subtitle className="input-hint text-[0.75rem]! mt-2">Choose a topic that interests you</Subtitle>
                             </div>
-                            
+
                             <div className="modal-actions">
-                                <button type="button" className="btn-secondary" onClick={() => setIsModalOpen(false)}>
+                                <UIButton variant="secondary" type="button" onClick={() => setIsModalOpen(false)}>
                                     Cancel
-                                </button>
-                                <button type="submit" className="btn-primary" disabled={!newName.trim() || submitting}>
-                                    {submitting ? 'Creating...' : 'Create Folder'}
-                                </button>
+                                </UIButton>
+                                <UIButton type="submit" disabled={!newName.trim() || submitting} loading={submitting}>
+                                    Create Monitor
+                                </UIButton>
                             </div>
                         </form>
                     </div>

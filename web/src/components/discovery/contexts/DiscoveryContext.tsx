@@ -19,6 +19,7 @@ interface DiscoveryContextType {
     status: string | null;
     search: (query: string) => Promise<void>;
     ideaSearch: (idea: string, communities?: string[], competitors?: string[]) => Promise<void>;
+    startMonitoring: (query: string) => Promise<string | null>;
     importUrls: (urls: string[]) => Promise<void>;
     enrichResult: (id: string, url: string, source: string) => Promise<void>;
     toggleSelection: (id: string) => void;

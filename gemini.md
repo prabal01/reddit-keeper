@@ -44,11 +44,15 @@ Always adhere to these limits to prevent service interruption:
 
 ## Architecture & Code Organization
 - **Component Directory**: React components are located in `web/src/components`. Large feature sets (like Discovery) should have their own subdirectories.
-- **Common Components**: If a component is used in 3+ places (e.g., `AuthButton`, `Skeleton`, `ThemeToggle`), it should be treated as a common component. Reuse existing styles and logic instead of duplicating.
+- **Common Components**: All UI should be built using components in `web/src/components/common/`.
+  - **Typography**: Mandatory use of `H1`, `H2`, `Subtitle`, `Metadata`, and `Caption` from `Typography.tsx` for all text.
+  - **Buttons**: Use `UIButton.tsx` for all actions to ensure brand-consistent gradients and hover states.
+  - **Headers**: Use `PageHeader.tsx` for all page titles. It handles icons, status indicators, and consistent layout.
+  - **Navigation**: Use `Breadcrumbs.tsx` for all nested folder views.
 - **File Splitting**: 
   - **Backend**: Avoid bloating `server.ts`. Move specific business logic to `src/server/` modules (like `ai.ts`, `firestore.ts`, `discovery/`).
   - **Frontend**: Break down massive components (e.g., `FolderDetail.tsx`) into smaller, focused sub-components. If a component exceeds 600 lines, it's a candidate for splitting.
-- **Styles**: Keep CSS files adjacent to their components (`Component.tsx` + `Component.css`). Use Tailwind for utility-first styling.
+- **Styles**: Use the centralized CSS variables in `index.css` (e.g., `var(--text-primary)`, `var(--bg-accent)`) for all colors to ensure theme-resilience. Never use hardcoded hex colors or Tailwind absolute color classes (e.g., `text-white`) without theme-prefixing.
 - **Naming Conventions**:
   - Components: `PascalCase.tsx`
   - Logic/Utils: `camelCase.ts`

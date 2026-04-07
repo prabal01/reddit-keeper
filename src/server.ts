@@ -58,12 +58,16 @@ import {
     saveDiscoveryHistory,
     verifyInviteCode,
     createInviteCode,
-    registerUserWithInvite
+    registerUserWithInvite,
+    getPatternsInFolder,
+    getLeadsInFolder,
+    getMonitoringAlerts
 } from "./server/firestore.js";
 import { analyzeThreads, analyzeThreadGranular } from "./server/ai.js";
 import marketingRouter from "./server/marketing/leads.js";
 import adminRouter from "./server/admin/router.js";
 import monitoringRouter from "./server/monitoring/router.js";
+import discoveryRouter from "./server/discovery/router.js";
 
 // DIAGNOSTIC: Print all registered routes to help find the 404 root cause
 function printRoutes(stack: any[], prefix = '') {
@@ -178,6 +182,7 @@ console.log("[INIT] Mounting API Routers (Admin: " + (!!adminRouter) + ")");
 app.use("/api/admin/marketing", marketingRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/monitoring", monitoringRouter);
+app.use("/api/discovery", discoveryRouter);
 
 // ── Helpers ────────────────────────────────────────────────────────
 
@@ -542,6 +547,73 @@ app.post("/api/folders/:id/status", async (req: express.Request, res: express.Re
         const { status } = req.body;
         const folderId = req.params.id as string;
         await updateFolderAnalysisStatus(req.user.uid, folderId, status);
+        res.json({ success: true });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get("/api/folders/:id/patterns", async (req: express.Request, res: express.Response) => {
+    if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+    try {
+        const patterns = await getPatternsInFolder(req.user.uid, req.params.id as string);
+        res.json(patterns);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get("/api/folders/:id/leads", async (req: express.Request, res: express.Response) => {
+    if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+    try {
+        const leads = await getLeadsInFolder(req.user.uid, req.params.id as string);
+        res.json(leads);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get("/api/folders/:id/alerts", async (req: express.Request, res: express.Response) => {
+    if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+    try {
+        const alerts = await getMonitoringAlerts(req.user.uid, req.params.id as string);
+        res.json(alerts);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.patch("/api/folders/:id/leads/:leadId", async (req: express.Request, res: express.Response) => {
+    if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+    try {
+        const { id: folderId, leadId } = req.params;
+        const { status } = req.body;
+        
+        if (!['new', 'contacted', 'ignored'].includes(status)) {
+            return res.status(400).json({ error: "Invalid status" });
+        }
+
+        const db = await import("./server/firestore.js").then(m => m.getDb());
+        if (!db) throw new Error("DB not initialized");
+        
+        // Ensure user owns folder (basic security)
+        const folderDoc = await db.collection("folders").doc(folderId as string).get();
+        if (!folderDoc.exists || folderDoc.data()?.uid !== req.user.uid) {
+            return res.status(403).json({ error: "Forbidden" });
+        }
+
+        await db.collection("folders").doc(folderId as string).collection("leads").doc(leadId as string).update({
+            status
+        });
+
         res.json({ success: true });
     } catch (err: any) {
         res.status(500).json({ error: err.message });

@@ -7,6 +7,8 @@ import { AdminWaitlist } from './AdminWaitlist';
 import { AdminQueues } from './AdminQueues';
 import { AdminLeads } from './AdminLeads';
 import { AdminTester } from './AdminTester';
+import { PageHeader } from '../common/PageHeader';
+import { Subtitle } from '../common/Typography';
 
 type Tab = 'overview' | 'users' | 'tokens' | 'waitlist' | 'queues' | 'leads' | 'sandbox';
 
@@ -26,11 +28,12 @@ export function AdminPortal() {
     return (
         <div className="admin-portal" style={{ animation: 'fadeIn 0.3s ease-out' }}>
             <div style={{ marginBottom: '32px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                    <Shield size={28} color="#ff4500" />
-                    <h1 style={{ fontSize: '2rem', fontWeight: '800', margin: 0 }}>Command Center</h1>
-                </div>
-                <p style={{ color: '#8e92a4', fontSize: '1rem', margin: 0 }}>Overview and management of the OpinionDeck platform.</p>
+                <PageHeader 
+                    title="Command Center" 
+                    subtitle="Platform Management" 
+                    icon={<Shield size={22} className="text-white" />}
+                />
+                <Subtitle className="mt-4">Overview and management of the OpinionDeck platform.</Subtitle>
             </div>
 
             {/* Tabs Navigation */}

@@ -12,6 +12,33 @@ export interface Folder {
     threadCount: number;
     syncStatus?: 'idle' | 'syncing';
     pendingSyncCount?: number;
+    is_monitoring_active?: boolean;
+    seed_keywords?: string[];
+}
+
+export interface Lead {
+    id: string;
+    folderId: string;
+    uid: string;
+    thread_id?: string;
+    thread_url?: string;
+    thread_title?: string;
+    status: 'new' | 'contacted' | 'ignored';
+    saved_at: string;
+    author?: string;
+    subreddit?: string;
+    relevance_score?: number;
+    intent_markers?: string[];
+}
+
+export interface PersonLead {
+    author: string;
+    threads: { title: string; url: string; time: string }[];
+    maxScore: number;
+    subreddits: string[];
+    intentMarkers: string[];
+    status: 'new' | 'contacted' | 'ignored';
+    leadIds: string[];
 }
 
 interface FolderContextType {
@@ -25,6 +52,10 @@ interface FolderContextType {
     getFolderThreads: (folderId: string) => Promise<any | { threads: any[], meta: any }>;
     analyzeFolder: (folderId: string) => Promise<any>;
     syncThreads: (folderId: string, urls: string[], items?: any[]) => Promise<void>;
+    getFolderPatterns: (folderId: string) => Promise<any[]>;
+    getFolderLeads: (folderId: string) => Promise<Lead[]>;
+    updateLeadStatus: (folderId: string, leadId: string, status: 'new' | 'contacted' | 'ignored') => Promise<void>;
+    getFolderAlerts: (folderId: string) => Promise<any[]>;
 }
 
 const FolderContext = createContext<FolderContextType | undefined>(undefined);
@@ -140,6 +171,55 @@ export const FolderProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
     };
 
+    const getFolderPatterns = async (folderId: string) => {
+        if (!user) return [];
+        try {
+            const token = await getIdToken();
+            const res = await fetch(`${API_BASE}/folders/${folderId}/patterns`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error('Failed to fetch patterns');
+            return await res.json();
+        } catch (err: any) {
+            console.error(err);
+            return [];
+        }
+    };
+
+    const getFolderLeads = async (folderId: string) => {
+        if (!user) return [];
+        try {
+            const token = await getIdToken();
+            const res = await fetch(`${API_BASE}/folders/${folderId}/leads`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error('Failed to fetch leads');
+            return await res.json();
+        } catch (err: any) {
+            console.error(err);
+            return [];
+        }
+    };
+
+    const updateLeadStatus = async (folderId: string, leadId: string, status: 'new' | 'contacted' | 'ignored') => {
+        if (!user) throw new Error('Not authenticated');
+        try {
+            const token = await getIdToken();
+            const res = await fetch(`${API_BASE}/folders/${folderId}/leads/${leadId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ status })
+            });
+            if (!res.ok) throw new Error('Failed to update lead status');
+        } catch (err: any) {
+            console.error(err);
+            throw err;
+        }
+    };
+
     const analyzeFolder = async (folderId: string) => {
         if (!user) throw new Error('Not authenticated');
         try {
@@ -190,6 +270,21 @@ export const FolderProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
     };
 
+    const getFolderAlerts = async (folderId: string) => {
+        if (!user) return [];
+        try {
+            const token = await getIdToken();
+            const res = await fetch(`${API_BASE}/folders/${folderId}/alerts`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error('Failed to fetch alerts');
+            return await res.json();
+        } catch (err: any) {
+            console.error(err);
+            return [];
+        }
+    };
+
     useEffect(() => {
         fetchFolders();
     }, [fetchFolders]);
@@ -203,6 +298,10 @@ export const FolderProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         deleteFolder,
         saveThread,
         getFolderThreads,
+        getFolderPatterns,
+        getFolderLeads,
+        updateLeadStatus,
+        getFolderAlerts,
         analyzeFolder,
         syncThreads
     }), [folders, loading, error, fetchFolders]);

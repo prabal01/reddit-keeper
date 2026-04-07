@@ -148,6 +148,11 @@ export interface Folder {
     triggerCount?: number;
     outcomeCount?: number;
     failedCount?: number;
+    source_url?: string; // Original website URL used for discovery
+    is_monitoring_active?: boolean;
+    seed_keywords?: string[];
+    niche?: string;
+    market_summary?: string; // AI generated strategy summary
     pendingAnalysisCount?: number;
     totalAnalysisCount?: number;
     completedAnalysisCount?: number;
@@ -157,6 +162,38 @@ export interface Folder {
         allDesiredOutcomeTitles: string[];
     };
     currentAnalysisRunId?: string;
+}
+
+export interface Pattern {
+    id: string;
+    folderId: string;
+    title: string;
+    count: number;
+    quote: string;
+    thread_ids: string[];
+    createdAt: string;
+}
+
+export interface Lead {
+    id: string; // leadId
+    folderId: string;
+    uid: string;
+    thread_id: string;
+    status: "new" | "contacted" | "ignored";
+    saved_at: string;
+}
+
+export interface MonitoringAlert {
+    id: string;
+    folderId: string;
+    uid: string;
+    type: 'discovery';
+    newLeadsCount: number;
+    newPatternsCount: number;
+    timestamp: string;
+    status: 'success' | 'no_new' | 'failed';
+    keyword?: string;
+    errorMessage?: string;
 }
 
 export interface SavedThread {
@@ -174,6 +211,28 @@ export interface SavedThread {
     savedAt: string;
     analysisStatus?: 'pending' | 'processing' | 'success' | 'failed';
     analysisTriggeredAt?: string;
+}
+
+export async function getPatternsInFolder(uid: string, folderId: string) {
+    if (!db) return [];
+    const snapshot = await db.collection("folders").doc(folderId).collection("patterns").get();
+    return snapshot.docs.map(doc => doc.data() as Pattern);
+}
+
+export async function getLeadsInFolder(uid: string, folderId: string) {
+    if (!db) return [];
+    const snapshot = await db.collection("folders").doc(folderId).collection("leads").get();
+    return snapshot.docs.map(doc => doc.data() as Lead);
+}
+
+export async function getMonitoringAlerts(uid: string, folderId: string): Promise<MonitoringAlert[]> {
+    if (!db) return [];
+    const snapshot = await db.collection("folders").doc(folderId)
+        .collection("alerts")
+        .orderBy("timestamp", "desc")
+        .limit(50)
+        .get();
+    return snapshot.docs.map(doc => doc.data() as MonitoringAlert);
 }
 
 export interface StructuredThreadInsights {
@@ -506,7 +565,7 @@ export async function getFolders(uid: string): Promise<Folder[]> {
     }
 }
 
-export async function createFolder(uid: string, name: string, description?: string): Promise<Folder> {
+export async function createFolder(uid: string, name: string, description?: string, source_url?: string): Promise<Folder> {
     if (!db) throw new Error("Firebase DB not initialized");
     const ref = db.collection("folders").doc();
     const folder: Folder = {
@@ -517,6 +576,7 @@ export async function createFolder(uid: string, name: string, description?: stri
         createdAt: new Date().toISOString(),
         threadCount: 0,
         ...(description ? { description } : {}),
+        ...(source_url ? { source_url } : {}),
     };
     await ref.set(folder);
     return folder;

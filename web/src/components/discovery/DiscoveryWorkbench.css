@@ -61,12 +61,13 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--border-light);
     border-radius: 10px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--text-tertiary);
+    opacity: 0.3;
 }
 
 @keyframes fadeInScale {
@@ -85,113 +86,31 @@
    ============================== */
 
 .discovery-input-card {
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--bg-secondary);
     backdrop-filter: blur(40px) saturate(200%);
     -webkit-backdrop-filter: blur(40px) saturate(200%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--border-light);
     border-radius: 9999px; /* Pill shape for bar feel */
     padding: 0.75rem 1rem;
     transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
     box-shadow: 
-        0 40px 100px -20px rgba(0, 0, 0, 0.5), 
-        0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+        0 40px 100px -20px var(--bg-primary-alpha), 
+        0 0 0 1px var(--border-light) inset;
     position: relative;
     z-index: 10;
 }
 
 .discovery-input-card:hover {
-    background: rgba(255, 255, 255, 0.04);
-    border-color: rgba(255, 255, 255, 0.12);
-    box-shadow: 
-        0 50px 120px -20px rgba(0, 0, 0, 0.6),
-        0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+    background: var(--bg-accent-alpha);
+    border-color: var(--border-light);
 }
 
 .discovery-input-card:focus-within {
-    border-color: rgba(255, 69, 0, 0.4);
-    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--bg-accent);
+    background: var(--bg-secondary);
     box-shadow: 
-        0 50px 120px -20px rgba(255, 69, 0, 0.15),
-        0 0 0 1px rgba(255, 69, 0, 0.1) inset;
-}
-
-.dw-primary-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-    background: linear-gradient(135deg, #FF4500 0%, #FF8717 100%);
-    color: white;
-    font-weight: 900;
-    font-size: 13px;
-    text-transform: uppercase;
-    letter-spacing: 0.3em;
-    padding: 1.5rem 3.5rem;
-    border-radius: 24px;
-    border: none;
-    cursor: pointer;
-    transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: 
-        0 15px 40px -10px rgba(255, 69, 0, 0.5),
-        0 0 0 1px rgba(255, 255, 255, 0.1) inset;
-    position: relative;
-    overflow: hidden;
-}
-
-.dw-primary-btn::after {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 60%);
-    opacity: 0;
-    transition: opacity 0.6s ease;
-}
-
-.dw-primary-btn:hover:not(:disabled)::after {
-    opacity: 1;
-}
-
-.dw-primary-btn:hover:not(:disabled) {
-    transform: translateY(-4px) scale(1.03);
-    box-shadow:
-        0 25px 60px -10px rgba(255, 69, 0, 0.6),
-        0 0 0 1px rgba(255, 255, 255, 0.2) inset;
-    filter: brightness(1.1);
-}
-
-.dw-primary-btn:active:not(:disabled) {
-    transform: translateY(-2px) scale(0.98);
-}
-
-.dw-primary-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-    background: linear-gradient(135deg, rgba(255, 69, 0, 0.5) 0%, rgba(255, 135, 23, 0.5) 100%);
-    box-shadow: none;
-}
-
-.mode-content-grid {
-    display: grid;
-    grid-template-rows: 0fr;
-    transition: grid-template-rows 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.mode-content-grid.active {
-    grid-template-rows: 1fr;
-}
-
-.grid-inner {
-    overflow: hidden;
-}
-
-.dw-thread-card {
-    height: 64px !important;
-    min-height: 64px !important;
-    border-radius: 12px !important;
+        0 50px 120px -20px var(--bg-accent-alpha),
+        0 0 0 1px var(--bg-accent-alpha) inset;
 }
 
 /* List View Stability */
