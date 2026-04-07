@@ -156,3 +156,26 @@ a:hover {
 .btn-secondary:hover {
     background: var(--bg-hover);
 }
+
+/* Responsive Utilities */
+@media (max-width: 768px) {
+    .container {
+        padding: 0 16px;
+    }
+
+    .btn {
+        padding: 8px 16px;
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 0 12px;
+    }
+
+    .btn {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+    }
+}

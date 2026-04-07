@@ -10,8 +10,8 @@ interface UpgradeModalProps {
 export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
 
-    const handleUpgrade = () => {
-        window.location.href = "mailto:hello@opiniondeck.com?subject=Founding Access Request&body=Hi, I would like to request extra discovery credits for the Opinion Deck Beta!";
+    const handleUpgrade = (plan: string) => {
+        window.location.href = `mailto:hello@opiniondeck.com?subject=Upgrade to ${plan}&body=Hi, I would like to upgrade to the ${plan} plan!`;
         onClose();
     };
 
@@ -24,50 +24,89 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) =
                     <div className="crown-icon-container">
                         <Crown size={32} className="crown-icon" />
                     </div>
-                    <h2>Beta Access & Limits</h2>
-                    <p className="subtitle">Opinion Deck is currently in Private Beta</p>
+                    <h2>Upgrade Your Plan</h2>
+                    <p className="subtitle">Get more monitors and team collaboration</p>
                 </div>
 
                 <div className="upgrade-body">
                     <div className="pricing-card">
-                        <div className="badge-founding">FREE EXTRA CREDITS</div>
+                        <div className="badge-founding">STARTER PLAN</div>
                         <div className="price-container">
-                            <span className="amount">BETA</span>
-                            <span className="term">/ program</span>
+                            <span className="amount">$19</span>
+                            <span className="term">/ month</span>
                         </div>
-                        <p className="price-subtext">We are rewarding early adopters with extra discovery credits.</p>
+                        <p className="price-subtext">Perfect for indie founders and makers</p>
 
                         <div className="features-list">
                             <div className="feature-item">
                                 <Zap size={18} className="feature-icon" />
                                 <div>
-                                    <strong>Deep-Scan Discovery</strong>
-                                    <p>Get more scans to find deeper niche insights.</p>
+                                    <strong>3 Monitors</strong>
+                                    <p>Track up to 3 market niches simultaneously</p>
                                 </div>
                             </div>
                             <div className="feature-item">
                                 <ShieldCheck size={18} className="feature-icon" />
                                 <div>
-                                    <strong>Unrestricted Analysis</strong>
-                                    <p>Test all AI report clusters during the beta phase.</p>
+                                    <strong>10 Subreddits per Monitor</strong>
+                                    <p>Deep coverage of your market space</p>
                                 </div>
                             </div>
                             <div className="feature-item">
                                 <Star size={18} className="feature-icon" />
                                 <div>
-                                    <strong>Priority Feedback</strong>
-                                    <p>Talk directly to the founders and shape the product.</p>
+                                    <strong>Full Analytics</strong>
+                                    <p>Pain points, triggers, and desired outcomes extraction</p>
                                 </div>
                             </div>
                         </div>
 
                         <button
                             className={`upgrade-submit-btn`}
-                            onClick={handleUpgrade}
+                            onClick={() => handleUpgrade('Starter')}
                         >
-                            Claim Extra Credits (Email)
+                            Upgrade to Starter
                         </button>
-                        <p className="secure-text text-slate-400 mt-4">Contact: hello@opiniondeck.com</p>
+                    </div>
+
+                    <div className="pricing-card featured">
+                        <div className="badge-founding">PROFESSIONAL PLAN</div>
+                        <div className="price-container">
+                            <span className="amount">$59</span>
+                            <span className="term">/ month</span>
+                        </div>
+                        <p className="price-subtext">For product and growth teams</p>
+
+                        <div className="features-list">
+                            <div className="feature-item">
+                                <Zap size={18} className="feature-icon" />
+                                <div>
+                                    <strong>10 Monitors</strong>
+                                    <p>Expand your market research scope</p>
+                                </div>
+                            </div>
+                            <div className="feature-item">
+                                <ShieldCheck size={18} className="feature-icon" />
+                                <div>
+                                    <strong>20 Subreddits per Monitor</strong>
+                                    <p>Comprehensive market coverage</p>
+                                </div>
+                            </div>
+                            <div className="feature-item">
+                                <Star size={18} className="feature-icon" />
+                                <div>
+                                    <strong>3 Team Seats</strong>
+                                    <p>Collaborate with your entire team</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button
+                            className={`upgrade-submit-btn`}
+                            onClick={() => handleUpgrade('Professional')}
+                        >
+                            Upgrade to Professional
+                        </button>
                     </div>
                 </div>
             </div>
