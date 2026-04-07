@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { Shield, Users, BarChart3, Ticket, Clock, Activity } from 'lucide-react';
+import { Shield, Users, BarChart3, Ticket, Clock, Activity, Brain } from 'lucide-react';
 import { AdminOverview } from './AdminOverview';
 import { AdminUserTable } from './AdminUserTable';
 import { AdminTokenManager } from './AdminTokenManager';
 import { AdminWaitlist } from './AdminWaitlist';
 import { AdminQueues } from './AdminQueues';
 import { AdminLeads } from './AdminLeads';
+import { AdminTester } from './AdminTester';
 
-type Tab = 'overview' | 'users' | 'tokens' | 'waitlist' | 'queues' | 'leads';
+type Tab = 'overview' | 'users' | 'tokens' | 'waitlist' | 'queues' | 'leads' | 'sandbox';
 
 export function AdminPortal() {
     const [activeTab, setActiveTab] = useState<Tab>('overview');
@@ -16,9 +17,10 @@ export function AdminPortal() {
         { id: 'overview', label: 'Overview', icon: BarChart3 },
         { id: 'users', label: 'Users', icon: Users },
         { id: 'leads', label: 'Leads', icon: Activity },
+        { id: 'sandbox', label: 'AI Sandbox', icon: Brain },
         { id: 'tokens', label: 'Beta Tokens', icon: Ticket },
         { id: 'waitlist', label: 'Waitlist', icon: Clock },
-        { id: 'queues', label: 'Queues', icon: BarChart3 }, // Using BarChart3 instead of Activity to avoid duplication
+        { id: 'queues', label: 'Queues', icon: BarChart3 },
     ];
 
     return (
@@ -76,6 +78,7 @@ export function AdminPortal() {
                 {activeTab === 'tokens' && <AdminTokenManager />}
                 {activeTab === 'waitlist' && <AdminWaitlist />}
                 {activeTab === 'queues' && <AdminQueues />}
+                {activeTab === 'sandbox' && <AdminTester />}
             </div>
         </div>
     );

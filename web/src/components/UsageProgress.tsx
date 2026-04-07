@@ -12,13 +12,13 @@ export const UsageProgress: React.FC = () => {
             label: 'Discovery Scans',
             current: usage.discoveryCount,
             limit: config.discoveryLimit,
-            color: '#3b82f6' // blue
+            color: '#ff4500' // orange
         },
         {
             label: 'AI Reports',
             current: usage.analysisCount,
             limit: config.analysisLimit,
-            color: '#8b5cf6' // purple
+            color: '#94a3b8' // slate-400
         },
         {
             label: 'Saved Threads',

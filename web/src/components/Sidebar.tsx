@@ -52,7 +52,7 @@ export const Sidebar: React.FC = () => {
                 <NavLink to="/monitoring" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                     <div style={{ position: 'relative' }}>
                         <Globe size={18} />
-                        <div style={{ position: 'absolute', top: -4, right: -4, width: 8, height: 8, background: '#4f46e5', borderRadius: '50%', border: '2px solid #0f172a' }} />
+                        <div style={{ position: 'absolute', top: -4, right: -4, width: 8, height: 8, background: '#ff4500', borderRadius: '50%', border: '2px solid #0f172a' }} />
                     </div>
                     <span className="link-text">Monitoring</span>
                 </NavLink>

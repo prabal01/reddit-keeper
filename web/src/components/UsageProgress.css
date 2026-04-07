@@ -15,12 +15,13 @@
 }
 
 .plan-badge {
-    background: rgba(59, 130, 246, 0.1);
-    color: #60a5fa;
-    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.4);
+    padding: 2px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 4px;
-    font-weight: 600;
-    font-size: 0.7rem;
+    font-weight: 800;
+    font-size: 0.65rem;
     letter-spacing: 0.05em;
 }
 

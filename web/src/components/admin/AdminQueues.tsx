@@ -30,6 +30,26 @@ export function AdminQueues() {
         }
     };
 
+    const [triggering, setTriggering] = useState(false);
+
+    const handleTriggerMatch = async () => {
+        setTriggering(true);
+        try {
+            const token = await getAuthToken();
+            const res = await fetch(`${API_BASE}/monitoring/match`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error("Trigger failed");
+            toast.success("AI Matching pulse sent to queue");
+            fetchStats();
+        } catch (err: any) {
+            toast.error(err.message);
+        } finally {
+            setTriggering(false);
+        }
+    };
+
     if (loading && !stats) return <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}><Loader2 className="animate-spin" size={24} color="#8e92a4" /></div>;
 
     const renderQueueCard = (title: string, data: any) => {
@@ -66,8 +86,33 @@ export function AdminQueues() {
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                <h2 style={{ fontSize: '1.4rem', fontWeight: '700', margin: 0 }}>System Queues (BullMQ)</h2>
-                {loading && <Loader2 className="animate-spin" size={16} color="#8e92a4" />}
+                <div>
+                    <h2 style={{ fontSize: '1.4rem', fontWeight: '700', margin: 0 }}>System Queues (BullMQ)</h2>
+                    <p style={{ color: '#8e92a4', fontSize: '0.8rem', marginTop: '4px' }}>Real-time background worker health</p>
+                </div>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                    <button 
+                        onClick={handleTriggerMatch}
+                        disabled={triggering}
+                        style={{ 
+                            background: 'rgba(255,69,0,0.1)', 
+                            border: '1px solid rgba(255,69,0,0.2)', 
+                            color: '#ff4500', 
+                            padding: '10px 20px', 
+                            borderRadius: '10px', 
+                            fontSize: '0.8rem', 
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                        }}
+                    >
+                        {triggering ? <Loader2 size={14} className="animate-spin" /> : <Server size={14} />}
+                        Force AI Matcher Pulse
+                    </button>
+                    {loading && <Loader2 className="animate-spin" size={16} color="#8e92a4" />}
+                </div>
             </div>
 
             {stats ? (
@@ -75,6 +120,8 @@ export function AdminQueues() {
                     {renderQueueCard("Sync Queue (Reddit/HN Scrape)", stats.sync)}
                     {renderQueueCard("Granular Analysis (Comments)", stats.granular)}
                     {renderQueueCard("Folder Analysis (Gemini)", stats.analysis)}
+                    {renderQueueCard("Opportunity Matcher (AI Intelligence)", stats.monitoring_matcher)}
+                    {renderQueueCard("Monitoring Scraper (Global Fetch)", stats.monitoring_scraper)}
                 </div>
             ) : (
                 <div style={{ color: '#8e92a4' }}>No data available</div>
