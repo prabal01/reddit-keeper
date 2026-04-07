@@ -1,4 +1,6 @@
 import { useAuth } from "../contexts/AuthContext";
+import { H2, Subtitle } from "./common/Typography";
+import { UIButton } from "./common/UIButton";
 
 const FEATURES = [
     { name: "Deep-Scan Discovery", free: "Standard (1x)", pro: "3x Resolution", highlight: true },
@@ -17,17 +19,17 @@ export function PricingPage() {
 
     return (
         <section className="pricing-section" id="pricing" aria-labelledby="pricing-heading">
-            <h2 id="pricing-heading" className="pricing-title">Simple, transparent pricing</h2>
-            <p className="pricing-subtitle">
+            <H2 id="pricing-heading" className="pricing-title text-center mb-2">Simple, transparent pricing</H2>
+            <Subtitle className="pricing-subtitle text-center mb-12">
                 The intelligence you need, priced for scale.
-            </p>
+            </Subtitle>
 
             <div className="pricing-cards">
                 {/* Free Plan */}
                 <div className="pricing-card" aria-label="Free plan">
                     <div className="pricing-card-header">
                         <span className="plan-emoji" aria-hidden="true">🌱</span>
-                        <h3 className="plan-name">Free Trial</h3>
+                        <H2 className="plan-name text-[1.5rem]!">{isPro ? "Free Tier" : "Active Plan"}</H2>
                         <div className="plan-price">
                             <span className="price-amount">$0</span>
                             <span className="price-period">/ month</span>
@@ -41,9 +43,9 @@ export function PricingPage() {
                             </li>
                         ))}
                     </ul>
-                    <button className="plan-cta free-cta" disabled aria-label="Currently using free plan">
-                        {isPro ? "Current" : "Active"}
-                    </button>
+                    <UIButton variant="secondary" className="w-full" disabled>
+                        {isPro ? "Legacy" : "Current"}
+                    </UIButton>
                 </div>
 
                 {/* Founding Access Plan */}
@@ -51,7 +53,7 @@ export function PricingPage() {
                     <div className="pricing-card-badge">Founding Access</div>
                     <div className="pricing-card-header">
                         <span className="plan-emoji" aria-hidden="true">🚀</span>
-                        <h3 className="plan-name">Beta Program</h3>
+                        <H2 className="plan-name text-[1.5rem]! text-white!">Beta Program</H2>
 
                         <div className="plan-price">
                             <span className="price-amount">BETA</span>
@@ -74,17 +76,17 @@ export function PricingPage() {
                     </ul>
 
                     {isPro ? (
-                        <button className="plan-cta pro-cta active" disabled aria-label="Currently on Founding plan">
+                        <UIButton variant="primary" className="active w-full" disabled>
                             ✓ Beta Member
-                        </button>
+                        </UIButton>
                     ) : (
-                        <a
-                            href="mailto:hello@opiniondeck.com?subject=Founding Access Request&body=Hi, I would like to request extra discovery credits for the Opinion Deck Beta!"
-                            className="plan-cta pro-cta text-center flex items-center justify-center no-underline"
-                            aria-label="Unlock Founding Access"
+                        <UIButton
+                            variant="primary"
+                            className="w-full"
+                            onClick={() => window.location.href = "mailto:hello@opiniondeck.com?subject=Founding Access Request"}
                         >
                             Claim Founding Access →
-                        </a>
+                        </UIButton>
                     )}
                 </div>
             </div>
@@ -131,8 +133,11 @@ export function PricingPage() {
                 }
                 .billing-msg {
                     font-size: 0.85rem;
-                    color: var(--text-tertiary);
+                    color: rgba(255, 255, 255, 0.4);
                     margin-top: 4px;
+                }
+                [data-theme="light"] .billing-msg {
+                    color: rgba(0, 0, 0, 0.5);
                 }
             `}</style>
         </section>

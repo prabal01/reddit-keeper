@@ -302,6 +302,32 @@ export class RedditDiscoveryService implements IDiscoveryService {
         }
     }
 
+    /**
+     * Fetch the most recent posts from a specific subreddit.
+     * Efficient single-request fetch for monitoring.
+     */
+    async fetchSubredditNew(subreddit: string, limit: number = 100): Promise<any[]> {
+        const url = `https://www.reddit.com/r/${subreddit}/new.json?limit=${limit}`;
+        try {
+            const data = await this.fetchJson(url);
+            if (!data?.data?.children) return [];
+
+            return data.data.children.map((child: any) => ({
+                id: child.data.name, // t3_...
+                title: child.data.title,
+                selftext: child.data.selftext,
+                subreddit: child.data.subreddit,
+                author: child.data.author,
+                url: `https://www.reddit.com${child.data.permalink}`,
+                num_comments: child.data.num_comments,
+                created_utc: child.data.created_utc
+            }));
+        } catch (err: any) {
+            logger.error({ action: 'REDDIT_SUBREDDIT_FETCH_ERROR', subreddit, err: err.message }, `Failed to fetch r/${subreddit}`);
+            throw err;
+        }
+    }
+
     private calculateIdeaRelevanceScore(post: any, idea: string, intent?: { persona: string; pain: string; domain: string }, isIdeaDiscovery = false): { score: number; markers: string[] } {
         const title = (post.title || '').toLowerCase();
         const text = (post.selftext || '').toLowerCase();

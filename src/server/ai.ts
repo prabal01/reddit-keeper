@@ -259,6 +259,38 @@ const ideaModel = vertexAI.getGenerativeModel({
     }
 });
 
+const nicheExtractionSchema: any = {
+    type: SchemaType.OBJECT,
+    properties: {
+        niche: { type: SchemaType.STRING },
+        description: { type: SchemaType.STRING },
+        target_audience: { type: SchemaType.STRING },
+        suggested_keywords: {
+            type: SchemaType.ARRAY,
+            items: { type: SchemaType.STRING }
+        }
+    },
+    required: ["niche", "description", "target_audience", "suggested_keywords"]
+};
+
+const nicheModel = vertexAI.getGenerativeModel({
+    model: "gemini-2.0-flash",
+    generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: nicheExtractionSchema
+    }
+});
+
+const opportunitySchema: any = {
+    type: SchemaType.OBJECT,
+    properties: {
+        relevanceScore: { type: SchemaType.NUMBER },
+        matchReason: { type: SchemaType.STRING },
+        suggestedReply: { type: SchemaType.STRING, nullable: true }
+    },
+    required: ["relevanceScore", "matchReason"]
+};
+
 const arbitrationModel = vertexAI.getGenerativeModel({
     model: "gemini-2.0-flash",
     generationConfig: {
@@ -272,6 +304,14 @@ const arbitrationModel = vertexAI.getGenerativeModel({
             },
             required: ["areSame", "reasoning", "canonicalTitle"]
         }
+    }
+});
+
+const opportunityModel = vertexAI.getGenerativeModel({
+    model: "gemini-2.0-flash",
+    generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: opportunitySchema
     }
 });
 
@@ -710,3 +750,144 @@ export async function synthesizeReport(categories: { painPoints: any[], triggers
         usage: response.usageMetadata
     };
 }
+
+export async function scoreMarketingOpportunity(productContext: string, post: { title: string; selftext: string; subreddit: string }) {
+    const prompt = `
+    You are a growth marketing expert. Evaluate if the following Reddit post is a "Marketing Opportunity" for a specific product.
+    
+    PRODUCT CONTEXT:
+    "${productContext}"
+    
+    REDDIT POST:
+    Title: ${post.title}
+    Subreddit: r/${post.subreddit}
+    Content: ${post.selftext}
+    
+    YOUR TASK:
+    1. Relevance Score (0-100): How relevant is this post to the product? Is the user expressing a pain point the product solves? Are they asking for recommendations? 
+    - 0-30: No relevance.
+    - 31-70: Tangential or related domain but no immediate intent.
+    - 71-100: High relevance. Direct pain point or category search.
+    
+    2. Match Reason: A 1-sentence explanation of why this matches (e.g., "User is frustrated with manual research time - fits your automated solution").
+    
+    3. Suggested Reply: A SHORT (1-2 sentence) non-spammy, helpful reply that mentions the product naturally. If relevance is < 70, return null.
+    
+    Return JSON.
+    `;
+
+    try {
+        const result = await withRetry(() => opportunityModel.generateContent(prompt));
+        const text = result.response.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) throw new Error("No response from Opportunity Model");
+        return JSON.parse(text);
+    } catch (error) {
+        console.error("[AI] [OPPORTUNITY_SCORE] Error:", error);
+        return { relevanceScore: 0, matchReason: "Failed to analyze", suggestedReply: null };
+    }
+}
+
+// ── MVP Monitoring Discovery ──────────────────────────────────────
+
+const discoveryBatchSchema: any = {
+    type: SchemaType.OBJECT,
+    properties: {
+        patterns: {
+            type: SchemaType.ARRAY,
+            items: {
+                type: SchemaType.OBJECT,
+                properties: {
+                    title: { type: SchemaType.STRING },
+                    count: { type: SchemaType.INTEGER },
+                    quote: { type: SchemaType.STRING },
+                    thread_ids: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } }
+                },
+                required: ["title", "count", "quote", "thread_ids"]
+            }
+        },
+        opportunities: {
+            type: SchemaType.ARRAY,
+            items: {
+                type: SchemaType.OBJECT,
+                properties: {
+                    thread_id: { type: SchemaType.STRING },
+                    relevance_score: { type: SchemaType.NUMBER },
+                    intent_category: { type: SchemaType.STRING }
+                },
+                required: ["thread_id", "relevance_score", "intent_category"]
+            }
+        }
+    },
+    required: ["patterns", "opportunities"]
+};
+
+const discoveryBatchModel = vertexAI.getGenerativeModel({
+    model: "gemini-2.0-flash",
+    generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: discoveryBatchSchema
+    }
+});
+
+export async function analyzeDiscoveryBatch(niche: string, threads: { id: string, title: string, text: string }[]) {
+    const prompt = `
+    You are a product strategist analyzing Reddit threads about a specific niche.
+    NICHE: "${niche}"
+    
+    You are given a batch of threads. Your task:
+    1. Identify recurring user complaints or pain points (Patterns) across these threads. Group them, give them a title, count how many threads mention it, provide a representative verbatim quote, and list the thread_ids.
+    2. Score each thread as an Opportunity (0-100) based on how immediate the intent/pain is. High scores imply strong buying intent or desperate need for a solution. Also assign an intent_category (e.g. "complaint", "question", "recommendation request").
+    
+    THREADS:
+    ${threads.map(t => `ID: ${t.id}\nTitle: ${t.title}\nContent: ${t.text}`).join('\n---\n')}
+    
+    Return the JSON directly according to the schema.
+    `;
+    
+    try {
+        console.log(`[AI] [DISCOVERY_BATCH] Analyzing ${threads.length} threads...`);
+        const result = await withRetry(() => discoveryBatchModel.generateContent(prompt));
+        const text = result.response.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) throw new Error("No response from Discovery Batch Model");
+        return JSON.parse(text);
+    } catch (error) {
+        console.error("[AI] [DISCOVERY_BATCH] Error:", error);
+        return { patterns: [], opportunities: [] };
+    }
+}
+
+export async function extractNicheFromWebsite(url: string, html: string) {
+    const prompt = `
+    You are a market intelligence expert. 
+    Analyze the following website content for "${url}" and extract the core product niche, description, and target audience.
+    
+    WEBSITE CONTENT (SNIPPET):
+    ${html.substring(0, 5000)}
+    
+    YOUR TASK:
+    1. niche: A 2-4 word summary of the market (e.g. "CRM for Agencies", "Developer Tools").
+    2. description: 1 sentence explaining what they do.
+    3. target_audience: 1 sentence on who uses this.
+    4. suggested_keywords: 5-8 highly targetted search terms to find users with pain points this product solves on Reddit/HN. 
+       (e.g. "budgeting app sucks", "alternative to quicken", "how to save more money").
+    
+    Return JSON.
+    `;
+    
+    try {
+        console.log(`[AI] [NICHE_EXTRACTION] Analyzing website for ${url}...`);
+        const result = await withRetry(() => nicheModel.generateContent(prompt));
+        const text = result.response.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) throw new Error("No response from Niche Extraction Model");
+        return JSON.parse(text);
+    } catch (error) {
+        console.error("[AI] [NICHE_EXTRACTION] Error:", error);
+        return {
+            niche: "Website Insight",
+            description: `Extracted from ${url}`,
+            target_audience: "unknown",
+            suggested_keywords: [url]
+        };
+    }
+}
+

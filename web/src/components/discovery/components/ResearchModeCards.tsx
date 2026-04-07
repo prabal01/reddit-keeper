@@ -39,7 +39,7 @@ export const ResearchModeCards: React.FC<ResearchModeCardsProps> = ({ onSelect }
                 <button
                     key={mode.id}
                     onClick={() => onSelect(mode.id as any)}
-                    className="group relative flex-1 flex flex-col p-5 rounded-[20px] bg-white/2 border border-white/5 hover:border-[#FF4500]/30 transition-all duration-500 text-left hover:scale-[1.02] hover:-translate-y-1 hover:shadow-2xl overflow-hidden min-h-[180px]"
+                    className="group relative flex-1 flex flex-col p-5 rounded-[20px] bg-(--bg-card) border border-(--border) hover:border-[#FF4500]/30 transition-all duration-500 text-left hover:scale-[1.02] hover:-translate-y-1 hover:shadow-2xl overflow-hidden min-h-[180px]"
                 >
                     {/* Hover Glow */}
                     <div className={`absolute inset-0 bg-linear-to-br ${mode.color} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
@@ -49,15 +49,15 @@ export const ResearchModeCards: React.FC<ResearchModeCardsProps> = ({ onSelect }
                             {mode.icon}
                         </div>
                         
-                        <h3 className="text-[8px] font-black uppercase tracking-[0.2em] text-white/30 mb-1.5 group-hover:text-[#FF4500] transition-colors duration-500">
+                        <h3 className="text-[8px] font-black uppercase tracking-[0.2em] text-(--text-tertiary) mb-1.5 group-hover:text-[#FF4500] transition-colors duration-500">
                             {mode.subtitle}
                         </h3>
                         
-                        <h2 className="text-base font-black text-white tracking-tight mb-1.5">
+                        <h2 className="text-base font-black text-(--text-primary) tracking-tight mb-1.5">
                             {mode.title}
                         </h2>
                         
-                        <p className="text-[11px] text-slate-500 font-medium leading-relaxed mb-4 group-hover:text-slate-300 transition-colors duration-500 line-clamp-3">
+                        <p className="text-[11px] text-(--text-secondary) font-medium leading-relaxed mb-4 group-hover:text-(--text-primary) transition-colors duration-500 line-clamp-3">
                             {mode.description}
                         </p>
                         

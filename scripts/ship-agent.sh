@@ -14,8 +14,27 @@ echo "=========================================="
 echo " 🚀 Shipping Unified Marketing Bot to Cloud Run"
 echo "=========================================="
 
+# Load .env variables from the root
+ENV_FILE="$(dirname "$0")/../.env"
+if [ -f "$ENV_FILE" ]; then
+    echo "📄 Loading environment variables from .env..."
+    # Only export lines that are valid bash identifiers (no hyphens, start with letter/underscore)
+    while IFS= read -r line || [ -n "$line" ]; do
+        # Skip comments and empty lines
+        [[ "$line" =~ ^#.*$ ]] && continue
+        [[ "$line" =~ ^[[:space:]]*$ ]] && continue
+        
+        # Only export if it's a valid identifier (Name=Value)
+        if [[ "$line" =~ ^[a-zA-Z_][a-zA-Z0-9_]*= ]]; then
+            export "$line"
+        fi
+    done < "$ENV_FILE"
+else
+    echo "⚠️  Warning: .env file not found at $ENV_FILE"
+fi
+
 echo "1. Building & Pushing Image (Cloud Build)..."
-cd bots/marketing-bot
+cd "$(dirname "$0")/../bots/marketing-bot"
 gcloud builds submit --tag $GCR_PATH . --project $PROJECT_ID
 
 echo "2. Deploying to Cloud Run..."
@@ -27,7 +46,7 @@ gcloud run deploy $SERVICE_NAME \
   --allow-unauthenticated \
   --memory 256Mi \
   --cpu 1 \
-  --update-env-vars "NODE_ENV=production"
+  --update-env-vars "NODE_ENV=production,REDDIT_SERVICE_URL=$REDDIT_SERVICE_URL,INTERNAL_FETCH_SECRET=$INTERNAL_FETCH_SECRET"
 
 echo "=========================================="
 echo " ✅ Bot Shipped & Deployed Successfully!"

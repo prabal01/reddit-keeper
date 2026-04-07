@@ -16,8 +16,8 @@
 
 .metric-card:hover {
     transform: translateY(-4px);
-    background: rgba(255, 255, 255, 0.04);
-    border-color: var(--accent-color, rgba(255, 255, 255, 0.2));
+    background: var(--bg-hover);
+    border-color: var(--bg-accent, rgba(255, 255, 255, 0.2));
     box-shadow: 
         0 20px 40px rgba(0, 0, 0, 0.4),
         0 0 0 1px rgba(255, 255, 255, 0.05),
@@ -62,7 +62,7 @@
 .metric-value {
     font-size: 2.25rem;
     font-weight: 900;
-    color: white;
+    color: var(--text-primary);
     letter-spacing: -0.04em;
     line-height: 1;
 }
@@ -130,7 +130,7 @@
 .metric-value-mini {
     font-size: 1.1rem;
     font-weight: 900;
-    color: white;
+    color: var(--text-primary);
     line-height: 1;
     letter-spacing: -0.02em;
 }

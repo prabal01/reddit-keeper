@@ -1,13 +1,16 @@
 import { useState } from 'react';
-import { Shield, Users, BarChart3, Ticket, Clock, Activity } from 'lucide-react';
+import { Shield, Users, BarChart3, Ticket, Clock, Activity, Brain } from 'lucide-react';
 import { AdminOverview } from './AdminOverview';
 import { AdminUserTable } from './AdminUserTable';
 import { AdminTokenManager } from './AdminTokenManager';
 import { AdminWaitlist } from './AdminWaitlist';
 import { AdminQueues } from './AdminQueues';
 import { AdminLeads } from './AdminLeads';
+import { AdminTester } from './AdminTester';
+import { PageHeader } from '../common/PageHeader';
+import { Subtitle } from '../common/Typography';
 
-type Tab = 'overview' | 'users' | 'tokens' | 'waitlist' | 'queues' | 'leads';
+type Tab = 'overview' | 'users' | 'tokens' | 'waitlist' | 'queues' | 'leads' | 'sandbox';
 
 export function AdminPortal() {
     const [activeTab, setActiveTab] = useState<Tab>('overview');
@@ -16,19 +19,21 @@ export function AdminPortal() {
         { id: 'overview', label: 'Overview', icon: BarChart3 },
         { id: 'users', label: 'Users', icon: Users },
         { id: 'leads', label: 'Leads', icon: Activity },
+        { id: 'sandbox', label: 'AI Sandbox', icon: Brain },
         { id: 'tokens', label: 'Beta Tokens', icon: Ticket },
         { id: 'waitlist', label: 'Waitlist', icon: Clock },
-        { id: 'queues', label: 'Queues', icon: BarChart3 }, // Using BarChart3 instead of Activity to avoid duplication
+        { id: 'queues', label: 'Queues', icon: BarChart3 },
     ];
 
     return (
         <div className="admin-portal" style={{ animation: 'fadeIn 0.3s ease-out' }}>
             <div style={{ marginBottom: '32px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                    <Shield size={28} color="#ff4500" />
-                    <h1 style={{ fontSize: '2rem', fontWeight: '800', margin: 0 }}>Command Center</h1>
-                </div>
-                <p style={{ color: '#8e92a4', fontSize: '1rem', margin: 0 }}>Overview and management of the OpinionDeck platform.</p>
+                <PageHeader 
+                    title="Command Center" 
+                    subtitle="Platform Management" 
+                    icon={<Shield size={22} className="text-white" />}
+                />
+                <Subtitle className="mt-4">Overview and management of the OpinionDeck platform.</Subtitle>
             </div>
 
             {/* Tabs Navigation */}
@@ -76,6 +81,7 @@ export function AdminPortal() {
                 {activeTab === 'tokens' && <AdminTokenManager />}
                 {activeTab === 'waitlist' && <AdminWaitlist />}
                 {activeTab === 'queues' && <AdminQueues />}
+                {activeTab === 'sandbox' && <AdminTester />}
             </div>
         </div>
     );

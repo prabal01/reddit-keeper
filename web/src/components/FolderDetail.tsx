@@ -3,17 +3,23 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useFolders } from '../contexts/FolderContext';
 import { useAuth } from '../contexts/AuthContext';
 import { FolderHeader } from './folder/FolderHeader';
-import { FolderMetrics } from './folder/FolderMetrics';
-import { FolderAnalyses } from './folder/FolderAnalyses';
-import { ThreadTable } from './folder/ThreadTable';
 import { PremiumLoader } from './PremiumLoader';
 import './Folders.css';
 import './AnalysisResults.css';
 import './folder/Folder.css';
 import { fetchFolderAnalysis, aggregateInsights } from '../lib/api';
-import { Loader2, AlertCircle, X, Search } from 'lucide-react';
+import { Loader2, AlertCircle, X, AlertTriangle, Sparkles, ExternalLink } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { BulkImportModal } from './BulkImportModal';
+import { Badge } from './common/Badge';
+import { UIButton } from './common/UIButton';
+import { H2, Metadata } from './common/Typography';
+
+// Tab Components
+import { InboxTab } from './folder/tabs/InboxTab';
+import { MarketMapTab } from './folder/tabs/MarketMapTab';
+import { StrategyTab } from './folder/tabs/StrategyTab';
+import { ConfigsTab } from './folder/tabs/ConfigsTab';
+import type { Lead } from '../contexts/FolderContext';
 
 interface SavedThread {
     id: string;
@@ -30,17 +36,10 @@ interface SavedThread {
     extractedPainPoints?: string[];
 }
 
-interface ThreadInsight {
-    id: string;
-    status: 'processing' | 'success' | 'failed';
-    insights?: any;
-    error?: string;
-}
-
 export const FolderDetail: React.FC = () => {
     const { folderId } = useParams<{ folderId: string }>();
     const navigate = useNavigate();
-    const { folders, getFolderThreads, deleteFolder, analyzeFolder } = useFolders();
+    const { folders, getFolderThreads, deleteFolder, analyzeFolder, getFolderPatterns, getFolderLeads, updateLeadStatus, getFolderAlerts } = useFolders();
     const { refreshStats } = useAuth();
 
     // Handle "inbox" virtual folder
@@ -58,9 +57,15 @@ export const FolderDetail: React.FC = () => {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [analysisError, setAnalysisError] = useState<string | null>(null);
     const [realtimeFolder, setRealtimeFolder] = useState<any>(null);
-    const [threadInsights] = useState<Record<string, ThreadInsight>>({});
     const [isAggregating, setIsAggregating] = useState(false);
-    const [showImportModal, setShowImportModal] = useState(false);
+
+    const [patterns, setPatterns] = useState<any[]>([]);
+    const [leads, setLeads] = useState<Lead[]>([]);
+    const [alerts, setAlerts] = useState<any[]>([]);
+
+    // 3-Tab Dashboard + Configs panel state
+    const [activeTab, setActiveTab] = useState<'feed' | 'painmap' | 'strategy'>('feed');
+    const [showConfigs, setShowConfigs] = useState(false);
 
     useEffect(() => {
         if (!folderId || folderId === 'inbox') {
@@ -70,8 +75,17 @@ export const FolderDetail: React.FC = () => {
 
         const loadFolderData = async () => {
             try {
-                const threadData = await getFolderThreads(folderId) as any;
-                setThreads(Array.isArray(threadData) ? threadData : (threadData.threads || []));
+                const [threadData, patternData, leadData, alertData] = await Promise.all([
+                    getFolderThreads(folderId),
+                    getFolderPatterns(folderId),
+                    getFolderLeads(folderId),
+                    getFolderAlerts(folderId)
+                ]);
+
+                setThreads(Array.isArray(threadData) ? threadData : ((threadData as any).threads || []));
+                setPatterns(patternData || []);
+                setLeads(leadData || []);
+                setAlerts(alertData || []);
 
                 const analysisData = await fetchFolderAnalysis(folderId);
                 if (analysisData) {
@@ -159,8 +173,20 @@ export const FolderDetail: React.FC = () => {
         }
     };
 
+    // Batch status update for person-centric leads (all threads from one author)
+    const handleBatchUpdateLeadStatus = async (leadIds: string[], status: 'new' | 'contacted' | 'ignored'): Promise<void> => {
+        if (!folderId) return;
+        try {
+            await Promise.all(leadIds.map(id => updateLeadStatus(folderId, id, status)));
+            setLeads(prev => prev.map(l => leadIds.includes(l.id) ? { ...l, status } : l));
+            toast.success(`Marked ${leadIds.length > 1 ? `${leadIds.length} threads` : 'thread'} as ${status}`);
+        } catch {
+            toast.error("Failed to update status");
+        }
+    };
+
     const handleAnalyze = async () => {
-        if (!folderId || (threads.length === 0 && Object.keys(threadInsights).length === 0)) return;
+        if (!folderId || threads.length === 0) return;
         setIsAnalyzing(true);
         setAnalysisError(null);
         try {
@@ -178,7 +204,7 @@ export const FolderDetail: React.FC = () => {
         try {
             const result = await aggregateInsights(folderId);
             toast.success(`Aggregation complete! Created ${result.aggregates.painPoints.length + result.aggregates.triggers.length + result.aggregates.outcomes.length} clusters.`);
-            
+
             const rawData = await fetchFolderAnalysis(folderId);
             const processData = (d: any) => ({ ...(d.data || d), id: d.id, createdAt: d.createdAt || (d.data && d.data.createdAt), model: d.model });
             if (Array.isArray(rawData)) setAnalyses(rawData.map(processData));
@@ -195,6 +221,7 @@ export const FolderDetail: React.FC = () => {
         const targetThread = threads.find(t => t.data && JSON.stringify(t.data).includes(cleanId));
 
         if (targetThread) {
+            setActiveTab('feed');
             await handleSelectThread(targetThread);
             setTimeout(() => {
                 const el = document.getElementById(cleanId);
@@ -207,8 +234,26 @@ export const FolderDetail: React.FC = () => {
         }
     };
 
+    const handleClearStuck = async () => {
+        if (confirm('Is the analysis stuck? This will force the status back to IDLE.')) {
+            const { getAuth } = await import('firebase/auth');
+            const token = await getAuth().currentUser?.getIdToken();
+            const API_BASE = window.location.origin.includes('localhost') ? 'http://localhost:3001/api' : '/api';
+
+            await fetch(`${API_BASE}/folders/${folderId}/status`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ status: 'idle' })
+            });
+            window.location.reload();
+        }
+    };
+
     if (fetchingThread) {
-        return <PremiumLoader fullPage text="Downloading from Cloud..." />;
+        return <PremiumLoader fullPage text="Loading thread..." />;
     }
 
     if (loading) {
@@ -230,146 +275,152 @@ export const FolderDetail: React.FC = () => {
     }
 
     return (
-        <div className="folder-detail-view">
+        <div className="folder-detail-view dashboard-layout">
             <div className="folder-detail-container">
-                <FolderHeader 
+                <FolderHeader
                     folder={folder}
                     isAnalyzing={isAnalyzing || (realtimeFolder || folder).analysisStatus === 'analyzing'}
-                    isAggregating={isAggregating}
-                    hasThreads={threads.length > 0}
-                    analysesCount={analyses.length}
-                    onAnalyze={handleAnalyze}
-                    onImport={() => setShowImportModal(true)}
-                    onReport={handleTestAggregation}
-                    onDelete={handleDelete}
-                    onClearStuck={async () => {
-                        if (confirm('Is the analysis stuck? This will force the status back to IDLE.')) {
-                            const { getAuth } = await import('firebase/auth');
-                            const token = await getAuth().currentUser?.getIdToken();
-                            const API_BASE = window.location.origin.includes('localhost') ? 'http://localhost:3001/api' : '/api';
-
-                            await fetch(`${API_BASE}/folders/${folderId}/status`, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': `Bearer ${token}`
-                                },
-                                body: JSON.stringify({ status: 'idle' })
-                            });
-                            window.location.reload();
-                        }
-                    }}
+                    leadsCount={leads.length}
+                    patternsCount={patterns.length}
+                    lastScanTime={alerts[0]?.timestamp || null}
+                    onConfigsOpen={() => setShowConfigs(s => !s)}
+                    configsOpen={showConfigs}
                 />
 
                 {analysisError && (
                     <div className="error-banner mb-6">
-                        <span className="error-icon"><AlertCircle size={20} /></span>
+                        <span className="error-icon"><AlertTriangle size={20} /></span>
                         <p>{analysisError}</p>
                     </div>
                 )}
 
-                <FolderMetrics folder={realtimeFolder || folder} />
-
-                {threads.length === 0 ? (
-                    <div className="empty-folder-cta fadeInUp">
-                        <div className="cta-icon-wrapper">
-                            <Search size={32} />
-                        </div>
-                        <h3>This folder needs some insights</h3>
-                        <p>Head over to the Discovery workbench to find competitors, pain points, or market gaps to analyze.</p>
-                        <button className="btn-primary px-8 py-3 mt-6" onClick={() => navigate('/')}>
-                            Find Your First Insight
-                        </button>
+                {/* Inline Configs Panel */}
+                {showConfigs && (
+                    <div className="configs-inline-panel">
+                        <ConfigsTab
+                            folder={realtimeFolder || folder}
+                            onDelete={handleDelete}
+                            onClearStuck={handleClearStuck}
+                            onClose={() => setShowConfigs(false)}
+                        />
                     </div>
-                ) : (
-                    <>
-                        <FolderAnalyses 
-                            analyses={analyses} 
-                            onCitationClick={handleCitationClick} 
-                        />
-
-                        <ThreadTable 
-                            threads={threads} 
-                            isAnalyzing={isAnalyzing || (realtimeFolder || folder).analysisStatus === 'analyzing'}
-                            onSelectThread={handleSelectThread}
-                        />
-                    </>
                 )}
+
+                {/* 3-Tab Navigation */}
+                <div className="folder-tab-navbar sticky-tabs fadeInUp bg-(--bg-secondary)/50 backdrop-blur-md border-b border-(--border-light) mb-6 flex items-center px-2">
+                    <button
+                        className={`folder-tab flex items-center gap-2 px-6 py-4 border-b-2 transition-all ${activeTab === 'feed' ? 'border-(--bg-accent) text-(--text-primary)' : 'border-transparent text-(--text-tertiary) hover:text-(--text-secondary)'}`}
+                        onClick={() => setActiveTab('feed')}
+                        title="People you should reach out to"
+                    >
+                        <span className="text-sm font-bold">Prospects</span>
+                        {leads.length > 0 && (
+                            <Badge variant="neutral" className="px-1.5! py-0! text-[10px]! font-black! bg-(--bg-accent)/10 text-(--bg-accent)">
+                                {leads.length}
+                            </Badge>
+                        )}
+                    </button>
+                    <button
+                        className={`folder-tab flex items-center gap-2 px-6 py-4 border-b-2 transition-all ${activeTab === 'painmap' ? 'border-(--bg-accent) text-(--text-primary)' : 'border-transparent text-(--text-tertiary) hover:text-(--text-secondary)'}`}
+                        onClick={() => setActiveTab('painmap')}
+                        title="Common problems people are having"
+                    >
+                        <span className="text-sm font-bold">Problems</span>
+                        {patterns.length > 0 && (
+                            <Badge variant="neutral" className="px-1.5! py-0! text-[10px]! font-black! bg-orange-500/10 text-orange-500">
+                                {patterns.length}
+                            </Badge>
+                        )}
+                    </button>
+                    <button
+                        className={`folder-tab flex items-center gap-2 px-6 py-4 border-b-2 transition-all ${activeTab === 'strategy' ? 'border-(--bg-accent) text-(--text-primary)' : 'border-transparent text-(--text-tertiary) hover:text-(--text-secondary)'}`}
+                        onClick={() => setActiveTab('strategy')}
+                        title="Settings for this monitor"
+                    >
+                        <Sparkles size={14} className={activeTab === 'strategy' ? 'text-(--bg-accent)' : ''} />
+                        <span className="text-sm font-bold">Settings</span>
+                    </button>
+                </div>
+
+                <div className="tab-content-wrapper">
+                    {activeTab === 'feed' && (
+                        <InboxTab
+                            leads={leads}
+                            alerts={alerts}
+                            onUpdateLeadStatus={handleBatchUpdateLeadStatus}
+                        />
+                    )}
+
+                    {activeTab === 'painmap' && (
+                        <MarketMapTab
+                            patterns={patterns}
+                        />
+                    )}
+
+                    {activeTab === 'strategy' && (
+                        <StrategyTab
+                            analyses={analyses}
+                            isAnalyzing={isAnalyzing}
+                            isAggregating={isAggregating}
+                            hasThreads={threads.length > 0}
+                            onAnalyze={handleAnalyze}
+                            onReport={handleTestAggregation}
+                            onCitationClick={handleCitationClick}
+                        />
+                    )}
+                </div>
             </div>
 
             {/* Thread Detail Modal */}
             {selectedThread && (
-                <div className="modal-overlay" onClick={() => setSelectedThread(null)}>
-                    <div className="modal-content large" onClick={e => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h3>{selectedThread.title || selectedThread.post?.title || 'Insight Details'}</h3>
-                            <button className="btn-icon" onClick={() => setSelectedThread(null)}>
-                                <X size={20} />
-                            </button>
+                <div className="modal-overlay fixed inset-0 bg-(--bg-primary)/80 backdrop-blur-sm z-2000 flex items-center justify-center p-6" onClick={() => setSelectedThread(null)}>
+                    <div className="modal-content large bg-(--bg-secondary) border border-(--border-light) rounded-3xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header p-6 border-b border-(--border-light) flex justify-between items-center bg-(--bg-secondary)">
+                            <H2 className="text-xl! truncate pr-8">{selectedThread.title || selectedThread.post?.title || 'Insight Details'}</H2>
+                            <UIButton variant="secondary" size="sm" className="p-2!" onClick={() => setSelectedThread(null)} icon={<X size={20} />} />
                         </div>
-                        <div className="modal-body scrollable">
-                            <div className="detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '24px' }}>
-                                <div className="detail-main">
-                                    <div className="detail-section" style={{ marginBottom: '24px' }}>
-                                        <h4 style={{ color: 'var(--text-secondary)', marginBottom: '12px' }}>Raw Content</h4>
-                                        <div style={{ 
-                                            padding: '20px', 
-                                            background: 'rgba(0,0,0,0.2)', 
-                                            borderRadius: '12px', 
-                                            fontSize: '0.95rem', 
-                                            lineHeight: '1.6', 
-                                            color: 'var(--text-primary)',
-                                            border: '1px solid var(--border-light)'
-                                        }}>
+                        <div className="modal-body overflow-y-auto p-8 custom-scrollbar">
+                            <div className="grid grid-cols-1 md:grid-cols-[1fr_320px] gap-8">
+                                <div className="space-y-6">
+                                    <div className="space-y-3">
+                                        <Metadata className="text-(--text-tertiary) font-bold uppercase tracking-wider text-[10px]">Intelligence Source</Metadata>
+                                        <div className="bg-(--bg-input) border border-(--border-light) rounded-2xl p-6 text-(--text-primary) leading-relaxed selection:bg-(--bg-accent)/20">
                                             {selectedThread.content || selectedThread.summary || 'No original content available.'}
                                         </div>
                                     </div>
                                 </div>
-                                <div className="detail-sidebar">
-                                    <div style={{ 
-                                        padding: '20px', 
-                                        background: 'var(--bg-secondary)', 
-                                        borderRadius: '12px', 
-                                        border: '1px solid var(--border)' 
-                                    }}>
-                                        <h4 style={{ marginBottom: '16px', fontSize: '0.9rem', color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Thread Info</h4>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Source</span>
-                                                <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{selectedThread.post?.subreddit || 'Reddit'}</span>
+                                <div className="space-y-6">
+                                    <div className="bg-(--bg-input) border border-(--border-light) rounded-2xl p-6 space-y-6 shadow-sm">
+                                        <div className="space-y-4">
+                                            <Metadata className="text-(--text-tertiary) font-bold uppercase tracking-wider text-[10px]">Signal Origin</Metadata>
+                                            <div className="space-y-3">
+                                                <div className="flex justify-between items-center text-sm">
+                                                    <span className="text-(--text-secondary)">Subreddit</span>
+                                                    <span className="font-bold text-(--bg-accent)">r/{selectedThread.post?.subreddit || 'Reddit'}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-sm">
+                                                    <span className="text-(--text-secondary)">Thread Author</span>
+                                                    <span className="font-bold">u/{selectedThread.post?.author || 'Anonymous'}</span>
+                                                </div>
                                             </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Author</span>
-                                                <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>u/{selectedThread.post?.author || 'Anonymous'}</span>
-                                            </div>
-                                            {selectedThread.metadata?.source && (
-                                                <a 
-                                                    href={selectedThread.metadata.source} 
-                                                    target="_blank" 
-                                                    rel="noopener noreferrer"
-                                                    className="btn-glass"
-                                                    style={{ marginTop: '16px', justifyContent: 'center', width: '100%' }}
-                                                >
-                                                    Open on Source
-                                                </a>
-                                            )}
                                         </div>
+                                        
+                                        {selectedThread.metadata?.source && (
+                                            <UIButton
+                                                variant="primary"
+                                                className="w-full justify-center"
+                                                onClick={() => window.open(selectedThread.metadata.source, '_blank')}
+                                                icon={<ExternalLink size={16} />}
+                                            >
+                                                Open on Source
+                                            </UIButton>
+                                        )}
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            )}
-
-            {showImportModal && folderId && (
-                <BulkImportModal
-                    folderId={folderId}
-                    onClose={() => setShowImportModal(false)}
-                    onSuccess={(count) => {
-                        toast.success(`Successfully started import of ${count} URLs`);
-                    }}
-                />
             )}
         </div>
     );

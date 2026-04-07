@@ -19,6 +19,8 @@ import { BRANDING } from "../constants/branding";
 import { AlertTriangle, Check, X, Activity, FolderOpen, Clock, MessageSquare } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { MetricCard } from "./common/MetricCard";
+import { PageHeader } from "./common/PageHeader";
+import { H2 } from "./common/Typography";
 import "./Home.css";
 
 export function HomeView() {
@@ -146,7 +148,7 @@ export function HomeView() {
             )}
 
             {loading && (
-                <PremiumLoader text="Fetching intelligence from platform..." />
+                <PremiumLoader text="Analyzing the discussion..." />
             )}
 
             {filteredThread && !loading && (
@@ -162,13 +164,13 @@ export function HomeView() {
                                         disabled={saveStatus === 'saving'}
                                         className="btn-secondary"
                                         value=""
-                                        aria-label="Save thread to folder"
+                                        aria-label="Save thread to monitor"
                                     >
-                                        <option value="" disabled>Save to Folder...</option>
+                                        <option value="" disabled>Save to Monitor...</option>
                                         {folders.map(f => (
                                             <option key={f.id} value={f.id}>{f.name}</option>
                                         ))}
-                                        <option value="__new__">+ New Folder</option>
+                                        <option value="__new__">+ New Monitor</option>
                                     </select>
                                 ) : (
                                     <div className="new-folder-inline">
@@ -218,46 +220,50 @@ export function HomeView() {
 
             {!thread && !loading && !error && (
                 <>
-                    <header className="dashboard-header">
-                        <h1>Welcome to {BRANDING.NAME}</h1>
-                        <p className="subtitle">Your Strategic Market Intelligence Hub</p>
-                    </header>
+                    <PageHeader
+                        title={"Monitor What Matters"}
+                        subtitle="Keep track of what people are talking about on Reddit"
+                        showStatus={false}
+                    />
 
                     <div className="impact-stats-bar">
-                        <MetricCard 
-                            label="Intelligence Scanned" 
-                            value={stats?.intelligenceScanned || 0} 
-                            icon={<Activity size={18} />} 
-                            color="#FF4500"
+                        <MetricCard
+                            label="Topics Tracked"
+                            value={stats?.intelligenceScanned || 0}
+                            icon={<Activity size={18} />}
+                            color="var(--bg-accent)"
                             loading={!stats}
                             variant="minimal"
                         />
-                        <MetricCard 
-                            label="Insights Found" 
-                            value={stats?.commentsAnalyzed || 0} 
-                            icon={<MessageSquare size={18} />} 
-                            color="#00D1FF"
+                        <MetricCard
+                            label="Comments Analyzed"
+                            value={stats?.commentsAnalyzed || 0}
+                            icon={<MessageSquare size={18} />}
+                            color="var(--bg-accent)"
                             loading={!stats}
                             variant="minimal"
                         />
-                        <MetricCard 
-                            label="Strategy Folders" 
-                            value={folders.length} 
-                            icon={<FolderOpen size={18} />} 
-                            color="#A855F7"
+                        <MetricCard
+                            label="Active Monitors"
+                            value={folders.length}
+                            icon={<FolderOpen size={18} />}
+                            color="var(--bg-accent)"
                             loading={!stats}
                             variant="minimal"
                         />
-                        <MetricCard 
-                            label="Hours Saved" 
-                            value={`${(stats?.hoursSaved || 0).toFixed(1)}h`} 
-                            icon={<Clock size={18} />} 
-                            color="#EAB308"
+                        <MetricCard
+                            label="Time Saved"
+                            value={`${(stats?.hoursSaved || 0).toFixed(1)}h`}
+                            icon={<Clock size={18} />}
+                            color="var(--bg-accent)"
                             loading={!stats}
                             variant="minimal"
                         />
                     </div>
 
+                    <div className="section-header mb-6">
+                        <H2>My Monitors</H2>
+                    </div>
                     <FolderList onSelect={(folder) => navigate(`/folders/${folder.id}`)} />
 
                     {!user && (

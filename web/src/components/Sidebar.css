@@ -1,0 +1,105 @@
+.sidebar-section {
+    margin-top: 12px;
+}
+
+.history-toggle-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 32px;
+    background: transparent;
+    border: none;
+    color: var(--sidebar-text);
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.history-toggle-btn:hover {
+    color: var(--sidebar-text-active);
+}
+
+.history-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin-top: 4px;
+    max-height: 160px;
+    overflow-y: auto;
+}
+
+.history-item {
+    padding: 10px 32px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.history-item-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--bg-accent);
+    opacity: 0.4;
+    transition: all 0.3s;
+}
+
+.history-item:hover .history-item-dot {
+    opacity: 1;
+    box-shadow: 0 0 8px var(--bg-accent);
+}
+
+.history-item-text {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--sidebar-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color 0.3s;
+    flex: 1;
+}
+
+.history-item:hover .history-item-text {
+    color: var(--sidebar-text-active);
+}
+
+.history-delete-btn {
+    opacity: 0;
+    padding: 1.5px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-light);
+    border-radius: 6px;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: all 0.2s;
+    transform: scale(0.75);
+}
+
+.history-item:hover .history-delete-btn {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.history-delete-btn:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.2);
+}
+
+.sidebar-divider {
+    margin: 16px 0;
+    height: 1px;
+    background: var(--sidebar-border);
+}
+
+.sidebar-footer .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 32px;
+    text-decoration: none;
+}

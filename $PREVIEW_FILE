@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpinionDeck Design System Preview</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Cabinet+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --brand-primary: #3b82f6;
+            --brand-indigo: #6366f1;
+            --accent-glow: rgba(59, 130, 246, 0.2);
+            --border: #334155;
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --font-display: 'Cabinet Grotesk', sans-serif;
+            --font-body: 'Geist', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            margin: 0;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        header {
+            margin-bottom: 60px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 20px;
+        }
+
+        h1, h2, h3 {
+            font-family: var(--font-display);
+            margin: 0;
+        }
+
+        .section-title {
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--brand-primary);
+            margin-bottom: 12px;
+        }
+
+        /* OPPORTUNITY CARD DESIGN */
+        .opportunity-feed {
+            display: grid;
+            gap: 16px;
+            max-width: 800px;
+        }
+
+        .opportunity-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            transition: all 0.2s ease;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .opportunity-card:hover {
+            border-color: var(--brand-primary);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .opportunity-card.high-relevance {
+            border-left: 4px solid var(--brand-primary);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .subreddit {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .score-badge {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--brand-primary);
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .post-title {
+            font-family: var(--font-display);
+            font-size: 1.125rem;
+            margin-bottom: 8px;
+        }
+
+        .post-excerpt {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .ai-insight {
+            background: rgba(99, 102, 241, 0.05);
+            border: 1px dashed var(--brand-indigo);
+            padding: 12px;
+            border-radius: var(--radius-sm);
+            font-size: 0.8125rem;
+            color: #c7d2fe;
+            display: flex;
+            gap: 8px;
+        }
+
+        /* AI SUGGESTION UI */
+        .suggestion-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .suggestion-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            padding: 16px;
+            border-radius: var(--radius-md);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .suggestion-card:hover {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .suggestion-name {
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        .suggestion-metrics {
+            display: flex;
+            gap: 12px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border-radius: var(--radius-sm);
+            font-weight: 700;
+            font-size: 0.875rem;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            font-family: var(--font-body);
+        }
+
+        .btn-primary {
+            background: var(--brand-primary);
+            color: white;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        .btn-outline:hover {
+            background: var(--border);
+        }
+
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 40px;
+        }
+
+        .sidebar-mock {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            height: fit-content;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="section-title">Design Preview — OpinionDeck</div>
+            <h1>Marketing Opportunity Console</h1>
+        </header>
+
+        <div style="margin-bottom: 80px;">
+            <div class="section-title">Stage 2: Intelligence Suggestions</div>
+            <h3>Recommended Subreddits for your context</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 24px;">We've analyzed your product description and found these high-signal communities.</p>
+            
+            <div class="suggestion-grid">
+                <div class="suggestion-card">
+                    <div>
+                        <div class="suggestion-name">r/saas</div>
+                        <div class="suggestion-metrics">
+                            <span>🔥 1.2M members</span>
+                            <span>⚡ High Signal</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary">+ Add Monitor</button>
+                </div>
+
+                <div class="suggestion-card">
+                    <div>
+                        <div class="suggestion-name">r/productivity</div>
+                        <div class="suggestion-metrics">
+                            <span>🔥 3.4M members</span>
+                            <span>✅ Verified Relevant</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline">Already Tracking</button>
+                </div>
+
+                <div class="suggestion-card">
+                    <div>
+                        <div class="suggestion-name">r/solopreneur</div>
+                        <div class="suggestion-metrics">
+                            <span>🔥 45k members</span>
+                            <span>💬 High Context</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary">+ Add Monitor</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-layout">
+            <div>
+                <div class="section-title">Step 3: Live Opportunity Feed</div>
+                <div class="opportunity-feed">
+                    <!-- CARD 1 -->
+                    <div class="opportunity-card high-relevance">
+                        <div class="card-header">
+                            <span class="subreddit">
+                                <img src="https://www.redditstatic.com/desktop2x/img/favicon/favicon-32x32.png" width="16" />
+                                r/saas • 4h ago
+                            </span>
+                            <span class="score-badge">94% Marketing Match</span>
+                        </div>
+                        <div class="post-title">How do you guys track Reddit mentions without getting banned?</div>
+                        <div class="post-excerpt">I've been trying to use scripts but I keep hitting the rate limits or my account gets flagged. Any tools that work in 2025?</div>
+                        <div class="ai-insight">
+                            <strong>✨ Opportunity Found:</strong> User is actively seeking Reddit monitoring alternatives. Perfect context to mention OpinionDeck's resilient fetcher bridge.
+                        </div>
+                    </div>
+
+                    <!-- CARD 2 -->
+                    <div class="opportunity-card">
+                        <div class="card-header">
+                            <span class="subreddit">
+                                <img src="https://www.redditstatic.com/desktop2x/img/favicon/favicon-32x32.png" width="16" />
+                                r/productivity • 12h ago
+                            </span>
+                            <span class="score-badge">81% Match</span>
+                        </div>
+                        <div class="post-title">My workflow for market research is broken.</div>
+                        <div class="post-excerpt">Spend 4 hours a day on HN and Reddit just to find 2-3 relevant threads. Is there a better way?</div>
+                        <div class="ai-insight">
+                            <strong>✨ Idea:</strong> User is frustrated with manual research time. Position OpinionDeck as the "Automatic Researcher."
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-mock">
+                <h3>Console Setup</h3>
+                <div style="margin-top: 20px; font-size: 0.875rem;">
+                    <div style="margin-bottom: 12px; color: var(--text-secondary);">PRODUCT CONTEXT</div>
+                    <div style="padding: 12px; background: var(--bg-primary); border-radius: var(--radius-sm); border-left: 2px solid var(--brand-indigo);">
+                        "A SaaS for Reddit monitoring and research that helps founders find leads."
+                    </div>
+                    
+                    <div style="margin-top: 24px; margin-bottom: 12px; color: var(--text-secondary);">MONITORED SUBS (4)</div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                        <span class="score-badge">r/saas</span>
+                        <span class="score-badge">r/productivity</span>
+                        <span class="score-badge">r/startup</span>
+                        <span class="score-badge">r/tools</span>
+                    </div>
+
+                    <button class="btn btn-primary" style="width: 100%; margin-top: 30px;">Sync & Refresh (8h)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

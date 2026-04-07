@@ -1,495 +1,481 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { 
-    Search, 
-    ArrowRight, 
-    Zap, 
-    ShieldCheck, 
-    Users, 
-    Briefcase, 
-    CheckCircle2, 
-    XCircle,
-    BarChart3,
+import {
+    ArrowRight,
+    Zap,
+    Bell,
+    Users,
+    Briefcase,
     TrendingUp,
     MessageSquare,
-    Globe,
     LineChart,
-    Rocket
+    Rocket,
+    Target,
+    RefreshCw,
+    BookMarked,
+    AlertCircle,
+    ChevronRight,
+    Radio
 } from 'lucide-react';
 
 const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
 ---
 
 <Layout>
+    <!-- Hero -->
 	<section class="hero-section">
 		<div class="container">
 			<div class="hero-content">
-                <div class="beta-badge">Now in Open Beta</div>
-				<h1 class="hero-title">See why users are switching from your competitors. <br />Before you write any code.</h1>
+                <div class="beta-badge">
+                    <Radio size={12} class="inline-icon" />
+                    Live Monitoring · Now in Beta
+                </div>
+				<h1 class="hero-title">Your next customer is <br /><span class="text-gradient">complaining on Reddit</span><br />right now.</h1>
 				<p class="hero-subtitle">
-					OpinionDeck analyzes Reddit and Hacker News to find real pain points and product gaps. Build what people actually want.
+					OpinionDeck monitors Reddit 24/7 to surface recurring pain points in your niche — and alerts you to threads where real buyers are asking for exactly what you sell.
 				</p>
-				
+
                 <div class="hero-cta-group">
-                    <a href={dashboardUrl} class="btn btn-primary btn-xl">Get Early Access (Beta)</a>
-                    <p class="hero-subtext">No credit card required. Free discovery included.</p>
+                    <a href={dashboardUrl} class="btn btn-primary btn-xl">Start Monitoring for Free</a>
+                    <p class="hero-subtext">No credit card required · Free tier includes 5 AI analyses</p>
+                </div>
+
+                <div class="hero-proof-strip">
+                    <div class="proof-item">
+                        <span class="proof-num">24/7</span>
+                        <span class="proof-label">Reddit monitoring</span>
+                    </div>
+                    <div class="proof-divider"></div>
+                    <div class="proof-item">
+                        <span class="proof-num">Pattern</span>
+                        <span class="proof-label">clustering AI</span>
+                    </div>
+                    <div class="proof-divider"></div>
+                    <div class="proof-item">
+                        <span class="proof-num">Real-time</span>
+                        <span class="proof-label">lead alerts</span>
+                    </div>
                 </div>
 			</div>
 		</div>
 	</section>
 
-    <section class="problem-solution-section">
+    <!-- Problem Section -->
+    <section class="problem-section">
         <div class="container">
             <div class="section-header">
-                <h2 class="section-title">The Signal Gap</h2>
-                <p class="section-subtitle">Most founders scroll Reddit for hours and get generic AI summaries. They still end up guessing what to build.</p>
+                <h2 class="section-title">Reddit is the best B2B signal you're ignoring.</h2>
+                <p class="section-subtitle">Every day, your potential customers post exactly what they need — in your competitors' threads, in niche subreddits, in comment replies. You're just not seeing it.</p>
             </div>
-            
-            <div class="signal-gap-container">
-                <div class="gap-card chaos">
-                    <div class="card-header">
-                        <XCircle size={32} class="text-negative mb-4" />
-                        <h3>The Manual Chaos</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="gap-item">
-                            <span class="step-label">Input</span>
-                            <p>Hours of manual scrolling & 20+ open tabs.</p>
-                        </div>
-                        <div class="gap-item">
-                            <span class="step-label">Process</span>
-                            <p>Copy-pasting into generic LLMs.</p>
-                        </div>
-                        <div class="gap-item">
-                            <span class="step-label">Outcome</span>
-                            <p>Vague summaries that don't drive decisions.</p>
-                        </div>
-                    </div>
-                </div>
 
-                <div class="gap-divider">
-                    <div class="divider-line"></div>
-                    <div class="divider-icon">
-                        <ArrowRight size={24} />
-                    </div>
-                    <div class="divider-line"></div>
+            <div class="pain-cards">
+                <div class="pain-card">
+                    <AlertCircle size={28} class="pain-icon" />
+                    <h3>Buried in noise</h3>
+                    <p>Manually checking subreddits takes hours and still misses 95% of relevant posts.</p>
                 </div>
-
-                <div class="gap-card leverage">
-                    <div class="card-header">
-                        <Zap size={32} class="text-accent mb-4" />
-                        <h3>The OpinionDeck Advantage</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="gap-item">
-                            <span class="step-label">Input</span>
-                            <p>Deep-scan Reddit and Hacker News threads automatically.</p>
-                        </div>
-                        <div class="gap-item">
-                            <span class="step-label">Process</span>
-                            <p>AI-driven extraction of real-world pain points & gaps.</p>
-                        </div>
-                        <div class="gap-item">
-                            <span class="step-label">Outcome</span>
-                            <p>A clear roadmap of what to build and how to position it.</p>
-                        </div>
-                    </div>
+                <div class="pain-card">
+                    <AlertCircle size={28} class="pain-icon" />
+                    <h3>No pattern visibility</h3>
+                    <p>Individual posts look random. You can't see that "missing feature X" is mentioned 3x per week.</p>
+                </div>
+                <div class="pain-card">
+                    <AlertCircle size={28} class="pain-icon" />
+                    <h3>Slow to respond</h3>
+                    <p>By the time you find a "which tool should I use?" thread, someone else already converted them.</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Workflow Section -->
+    <!-- How It Works -->
     <section class="workflow-section" id="how-it-works">
         <div class="container">
             <div class="section-header">
-                <div class="platforms-supported">
-                    <span class="platform-chip active">Reddit</span>
-                    <span class="platform-chip active">Hacker News</span>
-                    <span class="platform-chip">G2 (Soon)</span>
-                    <span class="platform-chip">Capterra (Soon)</span>
-                    <span class="platform-chip">Trustpilot (Soon)</span>
-                </div>
-                <h2 class="section-title">From noise to clarity — <span class="text-gradient">in minutes</span></h2>
-                <p class="section-subtitle">A simple path from public discussion to product confidence.</p>
+                <h2 class="section-title">From setup to leads — <span class="text-gradient">in minutes</span></h2>
+                <p class="section-subtitle">Enter your product or competitors. We handle the rest.</p>
             </div>
             <div class="workflow-steps">
                 <div class="step-item">
-                    <div class="step-num"><Globe size={24} /></div>
+                    <div class="step-num"><Target size={22} /></div>
                     <div class="step-content">
-                        <h3>1. Select Your Market</h3>
-                        <p>Choose a competitor you want to beat or a problem space you want to solve. We'll find where the most relevant discussions are happening.</p>
+                        <h3>1. Enter your URL or keywords</h3>
+                        <p>Point us at your product, a competitor's site, or a topic. We auto-generate the keyword set and find the subreddits where your audience lives.</p>
                     </div>
                 </div>
                 <div class="step-item">
-                    <div class="step-num"><Zap size={24} /></div>
+                    <div class="step-num"><Zap size={22} /></div>
                     <div class="step-content">
-                        <h3>2. Extract Real Signals</h3>
-                        <p>Our AI scans thousands of comments across Reddit and Hacker News. It filters out the noise to find honest feedback, complaints, and missed opportunities.</p>
+                        <h3>2. Run an instant discovery scan</h3>
+                        <p>We scan thousands of threads immediately and hand you two views: <strong>Patterns</strong> — the recurring complaints clustered by frequency — and <strong>Opportunities</strong> — specific threads to engage right now.</p>
                     </div>
                 </div>
                 <div class="step-item">
-                    <div class="step-num"><LineChart size={24} /></div>
+                    <div class="step-num"><Radio size={22} /></div>
                     <div class="step-content">
-                        <h3>3. Build with Confidence</h3>
-                        <p>Get a prioritized list of what people actually hate about current solutions and exactly what they're looking for in a new product.</p>
+                        <h3>3. Monitor on autopilot</h3>
+                        <p>Background monitoring keeps running after you set it up. New high-intent threads and emerging pain patterns surface in your dashboard — and hit your inbox — before your competitors see them.</p>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-num"><BookMarked size={22} /></div>
+                    <div class="step-content">
+                        <h3>4. Save leads, track follow-ups</h3>
+                        <p>One click saves a thread as a lead. Track your outreach status (New → Contacted → Converted) without switching to a separate CRM.</p>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
+    <!-- Two Outputs Section -->
+    <section class="outputs-section">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Two views. One platform.</h2>
+                <p class="section-subtitle">Most tools give you a firehose of posts. We give you the two things that actually move the needle.</p>
+            </div>
+
+            <div class="outputs-split">
+                <div class="output-card patterns">
+                    <div class="output-tag">Patterns</div>
+                    <h3>What keeps coming up</h3>
+                    <p class="output-desc">AI clusters recurring complaints across hundreds of threads so you can see the signal beneath the noise.</p>
+                    <div class="output-example">
+                        <div class="example-row high">
+                            <span class="example-label">Pricing opacity</span>
+                            <span class="example-count">18 mentions this week ↑</span>
+                        </div>
+                        <div class="example-row mid">
+                            <span class="example-label">No CSV export</span>
+                            <span class="example-count">11 mentions this week</span>
+                        </div>
+                        <div class="example-row mid">
+                            <span class="example-label">Onboarding too long</span>
+                            <span class="example-count">9 mentions this week</span>
+                        </div>
+                        <div class="example-row low">
+                            <span class="example-label">Mobile experience</span>
+                            <span class="example-count">4 mentions this week</span>
+                        </div>
+                    </div>
+                    <p class="output-quote">"Wish [competitor] had an export button — it's insane this doesn't exist yet"</p>
+                </div>
+
+                <div class="output-card opportunities">
+                    <div class="output-tag">Opportunities</div>
+                    <h3>Who to engage today</h3>
+                    <p class="output-desc">High-intent threads where someone is actively asking for a recommendation or expressing a need your product solves.</p>
+                    <div class="output-example">
+                        <div class="opp-row">
+                            <div class="opp-meta">
+                                <span class="opp-sub">r/SaaS</span>
+                                <span class="opp-score score-high">Score 92</span>
+                            </div>
+                            <p class="opp-title">"Which tool handles automated reporting without the bloat?"</p>
+                            <div class="opp-actions">
+                                <button class="opp-btn">Reply on Reddit</button>
+                                <button class="opp-btn secondary">Save as Lead</button>
+                            </div>
+                        </div>
+                        <div class="opp-row">
+                            <div class="opp-meta">
+                                <span class="opp-sub">r/Entrepreneur</span>
+                                <span class="opp-score score-mid">Score 78</span>
+                            </div>
+                            <p class="opp-title">"Switching from [competitor] — what are people using instead?"</p>
+                            <div class="opp-actions">
+                                <button class="opp-btn">Reply on Reddit</button>
+                                <button class="opp-btn secondary">Save as Lead</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Before / After -->
     <section class="outcomes-section">
         <div class="container">
             <div class="section-header">
-                <h2 class="section-title">What You Actually Walk Away With</h2>
-                <p class="section-subtitle">This is competitive leverage.</p>
+                <h2 class="section-title">What changes when you're monitoring</h2>
             </div>
             <div class="outcomes-grid">
                 <div class="outcome-card">
-                    <div class="outcome-header">Instead of:</div>
-                    <p class="outcome-old">“I think users care about this…”</p>
+                    <div class="outcome-header">Before</div>
+                    <p class="outcome-old">"I think our onboarding might be the problem... let me post in our Slack."</p>
                     <div class="outcome-arrow"><ArrowRight /></div>
-                    <div class="outcome-label">You get:</div>
-                    <p class="outcome-new">“Users repeatedly complain about this. Mentioned in 5 threads. Causing churn.”</p>
+                    <div class="outcome-label">After</div>
+                    <p class="outcome-new">"Onboarding friction has 12 mentions this week across 4 subreddits — here are the exact quotes."</p>
                 </div>
                 <div class="outcome-card">
-                    <div class="outcome-header">Instead of:</div>
-                    <p class="outcome-old">“Let’s try this positioning…”</p>
+                    <div class="outcome-header">Before</div>
+                    <p class="outcome-old">"Someone probably asked for tool recs on Reddit... I'll check later."</p>
                     <div class="outcome-arrow"><ArrowRight /></div>
-                    <div class="outcome-label">You get:</div>
-                    <p class="outcome-new">“Users explicitly say they switched because of this.”</p>
+                    <div class="outcome-label">After</div>
+                    <p class="outcome-new">"3 high-intent threads detected in the last 6 hours. Two are still fresh — reply now."</p>
                 </div>
             </div>
         </div>
     </section>
 
+    <!-- Audience -->
     <section class="audience-section">
         <div class="container">
             <div class="audience-content">
-                <h2>Who this is for</h2>
+                <h2>Built for people who sell to the internet</h2>
                 <div class="audience-grid">
-                    <div class="audience-item"><Users size={20} class="inline mr-2 text-accent" /> Founders validating an idea</div>
-                    <div class="audience-item"><Briefcase size={20} class="inline mr-2 text-accent" /> SaaS teams preparing to launch</div>
-                    <div class="audience-item"><TrendingUp size={20} class="inline mr-2 text-accent" /> Builders entering competitive markets</div>
-                    <div class="audience-item"><Zap size={20} class="inline mr-2 text-accent" /> Indie hackers who don’t want to guess</div>
+                    <div class="audience-item">
+                        <Users size={20} class="audience-icon" />
+                        <div>
+                            <strong>SaaS founders</strong>
+                            <p>Find buyers where they're actively looking for your category</p>
+                        </div>
+                    </div>
+                    <div class="audience-item">
+                        <Briefcase size={20} class="audience-icon" />
+                        <div>
+                            <strong>Marketing teams</strong>
+                            <p>Understand competitor weaknesses from real user language</p>
+                        </div>
+                    </div>
+                    <div class="audience-item">
+                        <TrendingUp size={20} class="audience-icon" />
+                        <div>
+                            <strong>Growth leads</strong>
+                            <p>Build a repeatable pipeline from Reddit community discussions</p>
+                        </div>
+                    </div>
+                    <div class="audience-item">
+                        <Zap size={20} class="audience-icon" />
+                        <div>
+                            <strong>Indie hackers</strong>
+                            <p>Validate and find early users without a marketing budget</p>
+                        </div>
+                    </div>
                 </div>
-                <p class="audience-note">If you’re building something completely novel with no competition — this isn’t for you. If you're entering an existing market — it is.</p>
+                <p class="audience-note">If your buyers are on Reddit, this works. If your niche has no Reddit presence, it probably won't.</p>
             </div>
         </div>
     </section>
 
+    <!-- Pricing -->
     <section class="pricing-section" id="pricing">
         <div class="container">
-            <h2 class="section-title">Simple, transparent pricing</h2>
-            <p class="section-subtitle">One avoided mistake pays for the tool.</p>
-            
+            <h2 class="section-title">Start free. Upgrade when it's working.</h2>
+            <p class="section-subtitle">One converted customer pays for a year.</p>
+
             <div class="pricing-grid">
-                <!-- Beta Plan -->
-                <div class="pricing-card active">
-                    <div class="badge">Founding Access (Beta)</div>
+                <div class="pricing-card">
                     <div class="pricing-header">
-                        <div class="plan-icon text-accent"><Zap size={32} /></div>
-                        <h3>Founding Beta</h3>
+                        <div class="plan-icon"><MessageSquare size={28} /></div>
+                        <h3>Free</h3>
                         <div class="price">$0</div>
-                        <p class="billing-msg">Free access while we're in early development.</p>
+                        <p class="billing-msg">Try it. No card needed.</p>
                     </div>
                     <ul class="features-list">
-                        <li><strong>15</strong> Discovery Searches / month</li>
-                        <li><strong>5</strong> AI analysis reports / month</li>
+                        <li><strong>5</strong> AI analyses (one-time)</li>
                         <li>Save up to <strong>30 threads</strong></li>
-                        <li><strong>Unlimited</strong> Research Folders</li>
-                        <li>Deep-Scan extraction (Reddit + HN)</li>
-                        <li>Full PDF & Markdown Exports</li>
-                        <li>Direct feedback channel to founders</li>
+                        <li><strong>1</strong> research folder</li>
+                        <li>Instant discovery scan</li>
+                        <li>Patterns + Opportunities view</li>
                     </ul>
                     <div class="cta-group">
-                        <a href={dashboardUrl} class="btn btn-primary btn-block">Join the Beta</a>
-                        <p class="cta-note">No credit card required. Limited early spots.</p>
+                        <a href={dashboardUrl} class="btn btn-secondary btn-block">Get Started Free</a>
                     </div>
-                    <p class="card-footer-note">Help us shape the product by providing feedback on AI insights.</p>
                 </div>
 
-                <!-- Pro Plan (Coming Soon) -->
-                <div class="pricing-card upcoming">
+                <div class="pricing-card active">
+                    <div class="badge">Most Popular</div>
                     <div class="pricing-header">
-                        <div class="plan-icon"><Rocket size={32} /></div>
+                        <div class="plan-icon text-accent"><Rocket size={28} /></div>
                         <h3>OpinionDeck Pro</h3>
-                        <div class="price text-muted">TBA</div>
-                        <p class="billing-msg">Coming Soon — Advanced signals for teams.</p>
+                        <div class="price">$9<span class="period">/mo</span></div>
+                        <p class="billing-msg">Or $89/yr — save 2 months.</p>
                     </div>
-                    <ul class="features-list opacity-50">
-                        <li><strong>Signal Radar</strong> (24/7 automated scans)</li>
-                        <li><strong>Multi-Platform Support</strong> (G2, Capterra)</li>
-                        <li><strong>Team Workspaces</strong> (Shared Decks)</li>
-                        <li><strong>Custom AI Training</strong> (Industry vertical focus)</li>
-                        <li><strong>Smart Alerts</strong> (Instant gap detection)</li>
-                        <li>Advanced opportunity scoring</li>
-                        <li>API Access for product workflows</li>
+                    <ul class="features-list">
+                        <li><strong>50</strong> AI analyses / month</li>
+                        <li>Save up to <strong>5,000 threads</strong></li>
+                        <li><strong>Unlimited</strong> research folders</li>
+                        <li><strong>24/7 background monitoring</strong></li>
+                        <li>Daily + weekly digest emails</li>
+                        <li>Lead CRM (save, track, follow up)</li>
+                        <li>Full JSON &amp; Markdown exports</li>
+                        <li>Pattern trend history</li>
                     </ul>
                     <div class="cta-group">
-                        <button class="btn btn-secondary btn-block" disabled>Coming after Beta</button>
+                        <a href={dashboardUrl} class="btn btn-primary btn-block">Start Pro — $9/mo</a>
+                        <p class="cta-note">Cancel anytime. No lock-in.</p>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <section class="public-reports-section">
-        <div class="container">
-            <div class="section-header">
-                <h2 class="section-title">Public Reports</h2>
-                <p class="section-subtitle">See real examples of live competitive breakdowns.</p>
-            </div>
-            <div class="reports-grid">
-                <a href="#" class="report-card">
-                    <div class="report-icon"><MessageSquare /></div>
-                    <h4>Why users are leaving YNAB</h4>
-                    <span>View Report <ArrowRight size={16} class="inline ml-1" /></span>
-                </a>
-                <a href="#" class="report-card">
-                    <div class="report-icon"><MessageSquare /></div>
-                    <h4>What habit tracker users actually hate</h4>
-                    <span>View Report <ArrowRight size={16} class="inline ml-1" /></span>
-                </a>
-                <a href="#" class="report-card">
-                    <div class="report-icon"><MessageSquare /></div>
-                    <h4>Where note-taking apps are failing</h4>
-                    <span>View Report <ArrowRight size={16} class="inline ml-1" /></span>
-                </a>
-            </div>
-            <div class="text-center mt-8">
-                <a href={dashboardUrl} class="btn btn-secondary">View All Public Reports</a>
-            </div>
-        </div>
-    </section>
-
-    <section class="responsible-section">
-        <div class="container">
-            <h3 class="flex items-center justify-center gap-2"><ShieldCheck class="text-accent" /> Responsible Research</h3>
-            <p>OpinionDeck analyzes publicly available discussions and transforms them into structured insights. We focus on signal extraction — not content replication.</p>
-        </div>
-    </section>
-
-    <!-- Call to Action -->
+    <!-- Final CTA -->
     <section class="cta-section">
         <div class="container">
             <div class="cta-content">
-                <Rocket size={48} class="mb-6 text-accent animate-bounce" />
-                <h2 class="section-title">Stop guessing. Start building.</h2>
-                <p class="section-subtitle">See what users already hate about your competitors. Join the beta and get the data you need to ship with confidence.</p>
-                <div class="mt-8 cta-button-container-bottom">
-                    <a href={dashboardUrl} class="btn btn-primary btn-xl">Join the Beta for Free</a>
+                <div class="cta-icon-wrap">
+                    <Bell size={40} />
                 </div>
+                <h2 class="section-title">Someone just asked for your product on Reddit.</h2>
+                <p class="section-subtitle">Did you see it? With OpinionDeck, you will.</p>
+                <div class="mt-8 cta-button-container-bottom">
+                    <a href={dashboardUrl} class="btn btn-primary btn-xl">Start Monitoring Free</a>
+                </div>
+                <p class="cta-subtext">Free tier · No credit card · Setup in 2 minutes</p>
             </div>
         </div>
     </section>
 </Layout>
 
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        console.log('Landing page loaded with Lucide icons');
-    });
-</script>
-
 <style>
-    /* Hero Section */
+    /* ─── Hero ──────────────────────────────────────── */
 	.hero-section {
 		padding: 120px 0 100px;
         text-align: center;
-        background: radial-gradient(circle at 50% 20%, rgba(255, 69, 0, 0.1) 0%, transparent 60%);
+        background: radial-gradient(circle at 50% 20%, rgba(255, 69, 0, 0.08) 0%, transparent 65%);
 	}
-
-    .hero-bullets {
-        display: flex;
-        justify-content: center;
-        gap: 32px;
-        margin-bottom: 48px;
-        font-weight: 600;
-        color: var(--text-secondary);
-    }
-
-    .hero-bullets span {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
 
     .hero-title {
         font-size: 4rem;
-        line-height: 1.05;
+        line-height: 1.08;
         font-weight: 800;
-        margin-bottom: 24px;
-        background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        max-width: 1000px;
+        margin-bottom: 28px;
+        max-width: 900px;
         margin-left: auto;
         margin-right: auto;
         letter-spacing: -0.02em;
+        color: var(--text-primary);
     }
 
     .hero-subtitle {
-        font-size: 1.5rem;
+        font-size: 1.4rem;
         color: var(--text-secondary);
-        max-width: 800px;
-        margin: 0 auto 40px;
-        line-height: 1.5;
+        max-width: 760px;
+        margin: 0 auto 44px;
+        line-height: 1.6;
     }
 
     .beta-badge {
-        display: inline-block;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
         padding: 6px 16px;
         background: rgba(255, 69, 0, 0.1);
         color: var(--bg-accent);
-        border: 1px solid rgba(255, 69, 0, 0.2);
+        border: 1px solid rgba(255, 69, 0, 0.25);
         border-radius: var(--radius-full);
-        font-size: 0.9rem;
+        font-size: 0.82rem;
         font-weight: 700;
-        margin-bottom: 24px;
-        letter-spacing: 0.05em;
+        margin-bottom: 28px;
+        letter-spacing: 0.04em;
         text-transform: uppercase;
     }
+
+    .inline-icon { display: inline; vertical-align: middle; }
 
     .hero-cta-group {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 16px;
+        gap: 14px;
     }
 
-    /* Platform Chips */
-    .platforms-supported {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 12px;
-        margin-bottom: 32px;
-    }
-
-    .platform-chip {
-        padding: 6px 14px;
-        background: var(--bg-tertiary);
+    .hero-subtext {
+        font-size: 0.9rem;
         color: var(--text-tertiary);
-        font-size: 0.8rem;
-        font-weight: 700;
-        border-radius: var(--radius-md);
-        border: 1px solid var(--border);
-        transition: all 0.2s;
+        margin: 0;
     }
 
-    .platform-chip.active {
-        background: rgba(255, 69, 0, 0.05);
-        color: var(--bg-accent);
-        border-color: rgba(255, 69, 0, 0.2);
-    }
-
-    /* Signal Gap Section (Redesigned) */
-    .problem-solution-section {
-        padding: 120px 0;
-        background: var(--bg-secondary);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .signal-gap-container {
+    .hero-proof-strip {
         display: flex;
+        justify-content: center;
         align-items: center;
-        gap: 20px;
-        margin-top: 60px;
+        gap: 40px;
+        margin-top: 64px;
+        padding-top: 48px;
+        border-top: 1px solid var(--border);
     }
 
-    .gap-card {
-        flex: 1;
-        padding: 48px;
-        border-radius: var(--radius-2xl);
-        background: var(--bg-primary);
-        border: 1px solid var(--border);
-        box-shadow: var(--shadow-xl);
-        transition: transform 0.3s ease;
-    }
-
-    .gap-card:hover {
-        transform: translateY(-5px);
-    }
-
-    .gap-card.leverage {
-        border-color: var(--bg-accent);
-        background: linear-gradient(180deg, var(--bg-primary) 0%, rgba(255, 69, 0, 0.03) 100%);
-        box-shadow: 0 20px 40px rgba(255, 69, 0, 0.05);
-    }
-
-    .card-header h3 {
-        font-size: 1.75rem;
-        margin-bottom: 32px;
-        font-weight: 800;
-    }
-
-    .card-body {
+    .proof-item {
         display: flex;
         flex-direction: column;
-        gap: 24px;
-    }
-
-    .gap-item {
-        display: flex;
-        flex-direction: column;
+        align-items: center;
         gap: 4px;
     }
 
-    .step-label {
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        font-weight: 700;
-        letter-spacing: 0.1em;
-        color: var(--text-tertiary);
-    }
-
-    .gap-item p {
-        font-size: 1.1rem;
-        color: var(--text-secondary);
-        font-weight: 500;
-    }
-
-    .leverage .gap-item p {
+    .proof-num {
+        font-size: 1.5rem;
+        font-weight: 800;
         color: var(--text-primary);
     }
 
-    .gap-divider {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 12px;
-        z-index: 2;
+    .proof-label {
+        font-size: 0.8rem;
+        color: var(--text-tertiary);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
     }
 
-    .divider-line {
+    .proof-divider {
         width: 1px;
-        height: 60px;
+        height: 40px;
         background: var(--border);
     }
 
-    .divider-icon {
-        width: 48px;
-        height: 48px;
-        background: var(--bg-accent);
-        color: white;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 0 20px rgba(255, 69, 0, 0.3);
+    /* ─── Problem ──────────────────────────────────── */
+    .problem-section {
+        padding: 120px 0;
+        background: var(--bg-secondary);
     }
 
-    /* Workflow Section */
+    .pain-cards {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 28px;
+        margin-top: 60px;
+    }
+
+    .pain-card {
+        padding: 40px 36px;
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-2xl);
+        transition: transform 0.25s ease;
+    }
+
+    .pain-card:hover { transform: translateY(-4px); }
+
+    .pain-icon {
+        color: var(--score-negative);
+        margin-bottom: 20px;
+    }
+
+    .pain-card h3 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-bottom: 12px;
+    }
+
+    .pain-card p {
+        color: var(--text-secondary);
+        font-size: 1rem;
+        line-height: 1.6;
+    }
+
+    /* ─── Workflow ─────────────────────────────────── */
     .workflow-section {
         padding: 120px 0;
         background: var(--bg-primary);
     }
 
     .workflow-steps {
-        max-width: 900px;
-        margin: 80px auto 0;
+        max-width: 860px;
+        margin: 72px auto 0;
         display: flex;
         flex-direction: column;
         gap: 0;
@@ -499,7 +485,7 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
     .workflow-steps::before {
         content: "";
         position: absolute;
-        left: 24px;
+        left: 23px;
         top: 24px;
         bottom: 24px;
         width: 2px;
@@ -510,17 +496,16 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
     .step-item {
         display: flex;
         gap: 40px;
-        padding-bottom: 60px;
+        padding-bottom: 56px;
         position: relative;
     }
 
-    .step-item:last-child {
-        padding-bottom: 0;
-    }
+    .step-item:last-child { padding-bottom: 0; }
 
     .step-num {
         width: 48px;
         height: 48px;
+        min-width: 48px;
         background: var(--bg-primary);
         color: var(--bg-accent);
         border: 2px solid var(--bg-accent);
@@ -528,52 +513,212 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
         display: flex;
         align-items: center;
         justify-content: center;
-        flex-shrink: 0;
         z-index: 1;
-        transition: all 0.3s ease;
+        transition: all 0.25s ease;
     }
 
     .step-item:hover .step-num {
         background: var(--bg-accent);
         color: white;
-        transform: scale(1.1);
+        transform: scale(1.08);
     }
 
     .step-content h3 {
-        font-size: 1.5rem;
-        margin-bottom: 8px;
+        font-size: 1.4rem;
+        margin-bottom: 10px;
         font-weight: 700;
     }
 
     .step-content p {
         color: var(--text-secondary);
-        font-size: 1.15rem;
+        font-size: 1.1rem;
+        line-height: 1.65;
+    }
+
+    /* ─── Outputs ─────────────────────────────────── */
+    .outputs-section {
+        padding: 120px 0;
+        background: var(--bg-secondary);
+    }
+
+    .outputs-split {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 32px;
+        margin-top: 64px;
+    }
+
+    .output-card {
+        padding: 48px;
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-2xl);
+        transition: transform 0.25s ease;
+    }
+
+    .output-card:hover { transform: translateY(-4px); }
+
+    .output-card.patterns { border-color: rgba(255, 69, 0, 0.25); }
+    .output-card.opportunities { border-color: rgba(59, 130, 246, 0.25); }
+
+    .output-tag {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: var(--radius-full);
+        font-size: 0.75rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 20px;
+    }
+
+    .patterns .output-tag {
+        background: rgba(255, 69, 0, 0.1);
+        color: var(--bg-accent);
+    }
+
+    .opportunities .output-tag {
+        background: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+    }
+
+    .output-card h3 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 10px;
+    }
+
+    .output-desc {
+        color: var(--text-secondary);
+        margin-bottom: 32px;
         line-height: 1.6;
     }
 
-    /* Outcomes Section */
+    .output-example {
+        background: var(--bg-secondary);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        margin-bottom: 24px;
+    }
+
+    /* Pattern rows */
+    .example-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--border);
+        font-size: 0.95rem;
+    }
+
+    .example-row:last-child { border-bottom: none; }
+
+    .example-row.high { background: rgba(255, 69, 0, 0.04); }
+
+    .example-label { font-weight: 600; color: var(--text-primary); }
+
+    .example-count {
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: var(--text-tertiary);
+    }
+
+    .example-row.high .example-count { color: var(--bg-accent); }
+
+    .output-quote {
+        font-style: italic;
+        font-size: 0.92rem;
+        color: var(--text-secondary);
+        border-left: 3px solid var(--bg-accent);
+        padding-left: 14px;
+        line-height: 1.5;
+    }
+
+    /* Opportunity rows */
+    .opp-row {
+        padding: 18px 20px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .opp-row:last-child { border-bottom: none; }
+
+    .opp-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+    }
+
+    .opp-sub {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--text-tertiary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .opp-score {
+        font-size: 0.78rem;
+        font-weight: 800;
+        padding: 2px 8px;
+        border-radius: var(--radius-full);
+    }
+
+    .score-high { background: rgba(34, 197, 94, 0.15); color: #16a34a; }
+    .score-mid  { background: rgba(234, 179, 8, 0.15);  color: #ca8a04; }
+
+    .opp-title {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 12px;
+        line-height: 1.4;
+    }
+
+    .opp-actions { display: flex; gap: 8px; }
+
+    .opp-btn {
+        padding: 6px 14px;
+        border-radius: var(--radius-md);
+        font-size: 0.82rem;
+        font-weight: 700;
+        cursor: pointer;
+        border: 1px solid var(--bg-accent);
+        background: var(--bg-accent);
+        color: white;
+        transition: opacity 0.2s;
+    }
+
+    .opp-btn.secondary {
+        background: transparent;
+        color: var(--text-secondary);
+        border-color: var(--border);
+    }
+
+    .opp-btn:hover { opacity: 0.85; }
+
+    /* ─── Outcomes ────────────────────────────────── */
     .outcomes-section {
         padding: 120px 0;
-        background: var(--bg-secondary);
+        background: var(--bg-primary);
     }
 
     .outcomes-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 40px;
+        gap: 32px;
         margin-top: 60px;
     }
 
     .outcome-card {
         padding: 48px;
-        background: var(--bg-primary);
+        background: var(--bg-secondary);
         border-radius: var(--radius-2xl);
         border: 1px solid var(--border);
-        box-shadow: var(--shadow-lg);
     }
 
     .outcome-header, .outcome-label {
-        font-size: 0.85rem;
+        font-size: 0.78rem;
         font-weight: 800;
         text-transform: uppercase;
         letter-spacing: 0.1em;
@@ -584,12 +729,12 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
     .outcome-old {
         font-style: italic;
         color: var(--text-secondary);
-        font-size: 1.1rem;
+        font-size: 1.05rem;
         margin-bottom: 24px;
+        line-height: 1.5;
     }
 
     .outcome-arrow {
-        text-align: center;
         color: var(--bg-accent);
         margin: 16px 0;
         transform: rotate(90deg);
@@ -598,60 +743,82 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
     .outcome-new {
         font-weight: 700;
         color: var(--text-primary);
-        font-size: 1.25rem;
-        line-height: 1.4;
+        font-size: 1.15rem;
+        line-height: 1.5;
     }
 
-    /* Audience Section */
+    /* ─── Audience ────────────────────────────────── */
     .audience-section {
         padding: 100px 0;
-        background: var(--bg-tertiary);
+        background: var(--bg-secondary);
         text-align: center;
     }
 
     .audience-content h2 {
-        font-size: 3rem;
-        margin-bottom: 48px;
+        font-size: 2.75rem;
+        margin-bottom: 56px;
         font-weight: 800;
     }
 
     .audience-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
-        gap: 32px;
+        gap: 28px;
         text-align: left;
         margin-bottom: 48px;
-        max-width: 800px;
+        max-width: 860px;
         margin-left: auto;
         margin-right: auto;
     }
 
     .audience-item {
-        font-weight: 600;
-        font-size: 1.25rem;
-        color: var(--text-primary);
         display: flex;
-        align-items: center;
+        align-items: flex-start;
+        gap: 16px;
+        padding: 28px;
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+    }
+
+    .audience-icon {
+        color: var(--bg-accent);
+        margin-top: 2px;
+        flex-shrink: 0;
+    }
+
+    .audience-item strong {
+        display: block;
+        font-size: 1.05rem;
+        margin-bottom: 4px;
+    }
+
+    .audience-item p {
+        font-size: 0.92rem;
+        color: var(--text-secondary);
+        margin: 0;
+        line-height: 1.5;
     }
 
     .audience-note {
         font-style: italic;
         color: var(--text-secondary);
-        font-size: 1.1rem;
+        font-size: 1rem;
     }
 
-    /* Pricing Section */
+    /* ─── Pricing ─────────────────────────────────── */
     .pricing-section {
         padding: 120px 0;
+        background: var(--bg-primary);
         text-align: center;
     }
 
     .pricing-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(320px, 440px));
+        grid-template-columns: repeat(auto-fit, minmax(300px, 400px));
         justify-content: center;
         gap: 32px;
-        margin-top: 80px;
+        margin-top: 72px;
         align-items: stretch;
     }
 
@@ -667,91 +834,79 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
         position: relative;
     }
 
-    .pricing-card.upcoming {
-        background: var(--bg-tertiary);
-        border-style: dashed;
-        opacity: 0.9;
-        overflow: hidden;
-    }
-
-    .pricing-card.upcoming::after {
-        content: "COMING SOON";
-        position: absolute;
-        top: 24px;
-        right: -35px;
-        background: var(--text-tertiary);
-        color: var(--bg-primary);
-        padding: 6px 40px;
-        font-size: 0.7rem;
-        font-weight: 800;
-        transform: rotate(45deg);
-        box-shadow: var(--shadow-sm);
-        letter-spacing: 0.05em;
-    }
-
     .pricing-card.active {
         border-color: var(--bg-accent);
-        box-shadow: 0 30px 60px rgba(255, 69, 0, 0.1);
-        transform: scale(1.05);
+        box-shadow: 0 24px 60px rgba(255, 69, 0, 0.12);
+        transform: scale(1.04);
         z-index: 10;
         background: linear-gradient(180deg, var(--bg-card) 0%, rgba(255, 69, 0, 0.02) 100%);
     }
 
     .plan-icon {
-        width: 64px;
-        height: 64px;
+        width: 56px;
+        height: 56px;
         background: var(--bg-secondary);
-        border-radius: 16px;
+        border-radius: 14px;
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-bottom: 24px;
+        margin-bottom: 20px;
         color: var(--text-secondary);
     }
 
     .active .plan-icon {
         background: rgba(255, 69, 0, 0.1);
+        color: var(--bg-accent);
     }
 
     .pricing-header h3 {
-        font-size: 1.75rem;
-        margin-bottom: 8px;
+        font-size: 1.6rem;
+        margin-bottom: 6px;
         font-weight: 800;
     }
 
     .price {
-        font-size: 3.5rem;
+        font-size: 3.25rem;
         font-weight: 800;
-        margin-bottom: 4px;
         letter-spacing: -0.04em;
+        margin-bottom: 4px;
     }
 
     .period {
-        font-size: 1.1rem;
+        font-size: 1rem;
         color: var(--text-tertiary);
         font-weight: 600;
+    }
+
+    .billing-msg {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        margin-top: 6px;
+        margin-bottom: 0;
+        font-weight: 500;
     }
 
     .features-list {
         list-style: none;
         padding: 0;
-        margin: 40px 0;
+        margin: 36px 0;
         flex-grow: 1;
     }
 
     .features-list li {
-        padding: 14px 0;
+        padding: 13px 0;
         border-bottom: 1px solid var(--border-light);
         display: flex;
         align-items: center;
         gap: 12px;
-        font-size: 1.05rem;
+        font-size: 1rem;
     }
 
     .features-list li::before {
         content: "";
         width: 18px;
         height: 18px;
+        flex-shrink: 0;
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23FF4500' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
         background-size: contain;
         background-repeat: no-repeat;
@@ -764,178 +919,71 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
         transform: translateX(-50%);
         background: var(--bg-accent);
         color: white;
-        padding: 6px 20px;
+        padding: 5px 18px;
         border-radius: 20px;
         font-weight: 800;
-        font-size: 0.9rem;
+        font-size: 0.82rem;
         letter-spacing: 0.05em;
+        white-space: nowrap;
         box-shadow: 0 4px 12px rgba(255, 69, 0, 0.3);
     }
 
-    .billing-msg {
-        font-size: 0.95rem;
-        color: var(--text-secondary);
-        margin-top: 8px;
-        font-weight: 500;
-    }
-
-    .sub-features {
-        margin: -20px 0 30px;
-        text-align: left;
-        padding-left: 30px;
-        font-size: 0.9rem;
-        color: var(--text-secondary);
-    }
-
-    .sub-features p {
-        font-weight: 700;
-        margin-bottom: 8px;
-        color: var(--text-primary);
-    }
-
-    .sub-features ul {
-        list-style: none;
-        padding: 0;
-    }
-
-    .sub-features li {
-        padding: 4px 0;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .sub-features li::before {
-        content: "•";
-        color: var(--bg-accent);
-        font-weight: bold;
-    }
-
-    .cta-group {
-        margin-top: auto;
-    }
-
-    .cta-button-container-bottom{
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
+    .cta-group { margin-top: auto; }
 
     .cta-note {
         font-size: 0.8rem;
         color: var(--text-tertiary);
-        margin-top: 12px;
-        font-style: italic;
+        margin-top: 10px;
+        text-align: center;
     }
 
-    .card-footer-note {
-        font-size: 0.85rem;
-        color: var(--text-secondary);
-        margin-top: 24px;
-        padding-top: 16px;
-        border-top: 1px dashed var(--border);
-    }
-
-    .btn.disabled, .btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-        pointer-events: none;
-        filter: grayscale(1);
-    }
-
-    .text-muted {
-        color: var(--text-tertiary);
-    }
-
-    .opacity-50 {
-        opacity: 0.5;
-    }
-
-    /* Public Reports */
-    .public-reports-section {
+    /* ─── Final CTA ───────────────────────────────── */
+    .cta-section {
         padding: 120px 0;
-        background: var(--bg-secondary);
+        background: radial-gradient(circle at 50% 50%, rgba(255, 69, 0, 0.06) 0%, transparent 70%);
+        border-top: 1px solid var(--border);
     }
 
-    .reports-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-        gap: 32px;
-        margin-top: 60px;
-    }
-
-    .report-card {
-        padding: 40px;
-        border-radius: var(--radius-2xl);
-        background: var(--bg-primary);
-        border: 1px solid var(--border);
-        text-decoration: none;
-        color: inherit;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    .cta-content {
+        max-width: 720px;
+        margin: 0 auto;
+        text-align: center;
         display: flex;
         flex-direction: column;
-        align-items: flex-start;
+        align-items: center;
     }
 
-    .report-card:hover {
-        transform: translateY(-8px);
-        border-color: var(--bg-accent);
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
-    }
-
-    .report-icon {
-        width: 48px;
-        height: 48px;
+    .cta-icon-wrap {
+        width: 72px;
+        height: 72px;
         background: rgba(255, 69, 0, 0.1);
         color: var(--bg-accent);
-        border-radius: 12px;
+        border-radius: 20px;
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-bottom: 24px;
+        margin-bottom: 32px;
     }
 
-    .report-card h4 {
-        font-size: 1.25rem;
-        font-weight: 700;
-        margin-bottom: 16px;
-        line-height: 1.4;
-    }
+    .cta-content .section-title { margin-bottom: 20px; }
 
-    .report-card span {
-        font-size: 0.95rem;
-        font-weight: 600;
-        color: var(--text-tertiary);
-        margin-top: auto;
+    .cta-button-container-bottom {
         display: flex;
+        justify-content: center;
         align-items: center;
-        gap: 4px;
-        transition: color 0.2s ease;
     }
 
-    .report-card:hover span {
-        color: var(--bg-accent);
+    .cta-subtext {
+        font-size: 0.88rem;
+        color: var(--text-tertiary);
+        margin-top: 16px;
     }
 
-    /* Responsible Research */
-    .responsible-section {
-        padding: 80px 0;
-        background: var(--bg-secondary);
-        border-top: 1px solid var(--border);
-        text-align: center;
-    }
-
-    .responsible-section h3 {
-        margin-bottom: 20px;
-        font-size: 1.5rem;
-        font-weight: 700;
-    }
-
-    /* Section Utilities */
+    /* ─── Shared ──────────────────────────────────── */
     .section-header {
         text-align: center;
         max-width: 800px;
-        margin: 0 auto 60px;
+        margin: 0 auto;
     }
 
     .section-title {
@@ -946,7 +994,7 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
     }
 
     .section-subtitle {
-        font-size: 1.35rem;
+        font-size: 1.3rem;
         color: var(--text-secondary);
         line-height: 1.6;
     }
@@ -958,82 +1006,27 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
     }
 
     .text-accent { color: var(--bg-accent); }
-    .text-negative { color: var(--score-negative); }
 
     .btn-xl {
-        padding: 20px 48px;
-        font-size: 1.25rem;
-        border-radius: 16px;
+        padding: 18px 44px;
+        font-size: 1.2rem;
+        border-radius: 14px;
     }
 
-    /* CTA Section (Bottom) */
-    .cta-section {
-        padding: 120px 0;
-        background: radial-gradient(circle at 50% 50%, rgba(255, 69, 0, 0.05) 0%, transparent 70%);
-        border-top: 1px solid var(--border);
-    }
+    .btn-block { width: 100%; }
 
-    .cta-content {
-        max-width: 800px;
-        margin: 0 auto;
-        text-align: center;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .cta-content .section-title {
-        margin-bottom: 24px;
-    }
-
+    /* ─── Responsive ──────────────────────────────── */
     @media (max-width: 992px) {
-        .signal-gap-container {
-            flex-direction: column;
-            gap: 40px;
-        }
-        
-        .gap-divider {
-            flex-direction: row;
-            width: 100%;
-            justify-content: center;
-        }
-        
-        .divider-line {
-            width: 60px;
-            height: 1px;
-        }
-
-        .gap-card {
-            width: 100%;
-        }
+        .outputs-split { grid-template-columns: 1fr; }
+        .pain-cards { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 768px) {
-        .hero-title {
-            font-size: 2.75rem;
-        }
-        
-        .hero-bullets {
-            flex-direction: column;
-            gap: 16px;
-            align-items: center;
-        }
-
-        .audience-grid, .outcomes-grid {
-            grid-template-columns: 1fr;
-        }
-        
-        .pricing-card.active {
-            transform: none;
-        }
-        
-        .workflow-steps::before {
-            left: 20px;
-        }
-        
-        .step-num {
-            width: 40px;
-            height: 40px;
-        }
+        .hero-title { font-size: 2.6rem; }
+        .hero-proof-strip { gap: 24px; }
+        .section-title { font-size: 2.25rem; }
+        .audience-grid, .outcomes-grid { grid-template-columns: 1fr; }
+        .pricing-card.active { transform: none; }
+        .workflow-steps::before { left: 22px; }
     }
 </style>

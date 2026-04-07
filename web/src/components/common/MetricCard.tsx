@@ -1,4 +1,4 @@
-import React from 'react';
+import { Metadata, Caption } from './Typography';
 import './MetricCard.css';
 
 interface MetricCardProps {
@@ -39,7 +39,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
                 </div>
                 <div className="metric-data-mini">
                     <span className="metric-value-mini">{value}</span>
-                    <span className="metric-label-mini">{label}</span>
+                    <Metadata className="metric-label-mini" style={{ opacity: 0.7 }}>{label}</Metadata>
                 </div>
             </div>
         );
@@ -58,9 +58,9 @@ export const MetricCard: React.FC<MetricCardProps> = ({
                 )}
             </div>
             <div className="metric-content">
-                <div className="metric-label">{label}</div>
+                <Metadata className="metric-label">{label}</Metadata>
                 <div className="metric-value">{value}</div>
-                {description && <div className="metric-description">{description}</div>}
+                {description && <Caption className="metric-description">{description}</Caption>}
             </div>
         </div>
     );

@@ -3,7 +3,17 @@ import { useLocation, Link, useParams } from 'react-router-dom';
 import { ChevronRight, Home } from 'lucide-react';
 import { useFolders } from '../../contexts/FolderContext';
 
-export const Breadcrumbs: React.FC = () => {
+interface BreadcrumbItem {
+    label: string;
+    path?: string;
+    current?: boolean;
+}
+
+interface BreadcrumbsProps {
+    items?: BreadcrumbItem[];
+}
+
+export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ items }) => {
     const location = useLocation();
     const { folderId } = useParams<{ folderId: string }>();
     const { folders } = useFolders();
@@ -16,54 +26,59 @@ export const Breadcrumbs: React.FC = () => {
 
     if (location.pathname === '/' || location.pathname === '/decks') {
         return (
-            <div className="flex items-center gap-2 text-sm font-medium text-tertiary">
-                <Home size={14} className="text-secondary" />
+            <div className="flex items-center gap-2 text-sm font-medium text-(--text-tertiary)">
+                <Home size={14} className="text-(--text-secondary)" />
                 <span>Dashboard</span>
             </div>
         );
     }
 
+    const renderItems = items || (pathnames.map((value, index) => {
+        const last = index === pathnames.length - 1;
+        const to = `/${pathnames.slice(0, index + 1).join('/')}`;
+        
+        let label = value.charAt(0).toUpperCase() + value.slice(1);
+        if (value === folderId) label = folderName || value;
+        if (value === 'lab') label = 'Experience Lab';
+        if (value === 'discovery') label = 'Discovery';
+        if (value === 'decks') return null;
+
+        return { label, path: last ? undefined : to, current: last };
+    }).filter(Boolean) as BreadcrumbItem[]);
+
     return (
         <nav className="flex items-center gap-2 text-sm font-medium" aria-label="Breadcrumb">
             <Link 
-                to="/decks" 
-                className="flex items-center gap-1.5 text-tertiary hover:text-white transition-colors"
+                to="/" 
+                className="flex items-center gap-1.5 text-(--text-tertiary) hover:text-(--text-primary) transition-colors"
             >
                 <Home size={14} />
                 <span>Dashboard</span>
             </Link>
             
-            {pathnames.length > 0 && (
-                <ChevronRight size={14} className="text-tertiary opacity-50" />
+            {renderItems.length > 0 && (
+                <ChevronRight size={14} className="text-(--text-tertiary) opacity-50" />
             )}
 
-            {pathnames.map((value, index) => {
-                const last = index === pathnames.length - 1;
-                const to = `/${pathnames.slice(0, index + 1).join('/')}`;
+            {renderItems.map((item, index) => {
+                const last = index === renderItems.length - 1;
                 
-                // Special mapping for IDs to Names
-                let label = value.charAt(0).toUpperCase() + value.slice(1);
-                if (value === folderId) label = folderName || value;
-                if (value === 'lab') label = 'Experience Lab';
-                if (value === 'discovery') label = 'Discovery';
-                if (value === 'decks') return null; // Skip "decks" since we have "Dashboard"
-
-                return last ? (
-                    <span key={to} className="text-white truncate max-w-[200px]" aria-current="page">
-                        {label}
+                return item.current || !item.path ? (
+                    <span key={index} className="text-(--text-primary) truncate max-w-[200px]" aria-current="page">
+                        {item.label}
                     </span>
                 ) : (
-                    <React.Fragment key={to}>
+                    <React.Fragment key={index}>
                         <Link 
-                            to={to} 
-                            className="text-tertiary hover:text-white transition-colors"
+                            to={item.path} 
+                            className="text-(--text-tertiary) hover:text-(--text-primary) transition-colors"
                         >
-                            {label}
+                            {item.label}
                         </Link>
-                        <ChevronRight size={14} className="text-tertiary opacity-50" />
+                        {!last && <ChevronRight size={14} className="text-(--text-tertiary) opacity-50" />}
                     </React.Fragment>
                 );
-            }).filter(Boolean)}
+            })}
         </nav>
     );
 };

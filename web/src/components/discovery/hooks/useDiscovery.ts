@@ -256,6 +256,39 @@ export const useDiscovery = () => {
         }
     }, [getIdToken, fetchHistory, refreshPlan]);
 
+    const startMonitoring = useCallback(async (query: string): Promise<string | null> => {
+        if (!query.trim()) return null;
+        setLoading(true);
+        setStatus('Initializing AI Monitoring Engine...');
+        setError(null);
+        try {
+            const token = await getIdToken();
+            const response = await fetch(`${API_BASE}/discovery/start`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ query })
+            });
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.error || 'Failed to start monitoring');
+            }
+
+            const data = await response.json();
+            return data.folderId;
+        } catch (err: any) {
+            console.error(err);
+            setError(err.message);
+            return null;
+        } finally {
+            setLoading(false);
+            setStatus(null);
+        }
+    }, [getIdToken]);
+
     const importUrls = useCallback(async (urls: string[]) => {
         setLoading(true);
         setIsSearchingStarted(true);
@@ -383,6 +416,7 @@ export const useDiscovery = () => {
         status,
         search,
         ideaSearch,
+        startMonitoring,
         importUrls,
         enrichResult,
         toggleSelection,
@@ -406,7 +440,7 @@ export const useDiscovery = () => {
     }), [
         results, allDiscoveredMap, selectedResults, loading, isSaving, 
         isSearchingStarted, selectedIds, discoveryPlan, platformFilter, 
-        intentFilter, status, search, ideaSearch, importUrls, 
+        intentFilter, status, search, ideaSearch, startMonitoring, importUrls, 
         enrichResult, toggleSelection, selectAllVisible, unselectAllVisible, 
         clearResults, detectedIntent, showSelectedOnly, history, 
         historyLoading, fetchHistory, deleteHistoryItem, loadHistory, saveSelection, 

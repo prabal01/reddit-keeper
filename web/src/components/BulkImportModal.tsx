@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { X, UploadCloud, Loader2, AlertCircle } from 'lucide-react';
 import { useFolders } from '../contexts/FolderContext';
+import { H2, Metadata } from './common/Typography';
+import { UIButton } from './common/UIButton';
 import './Folders.css';
 
 interface BulkImportModalProps {
@@ -45,24 +47,24 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ folderId, onCl
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px', width: '90%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <h2 style={{ fontSize: '1.5rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'white' }}>
-                        <UploadCloud size={24} style={{ color: 'var(--primary-color)' }} />
+            <div className="modal-content bg-(--bg-secondary) border border-(--border-light) p-8 rounded-3xl backdrop-blur-xl shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px', width: '90%' }}>
+                <div className="flex justify-between items-center mb-6">
+                    <H2 className="text-xl! flex items-center gap-2">
+                        <UploadCloud size={24} className="text-(--bg-accent)" />
                         Bulk Import Threads
-                    </h2>
-                    <button className="btn-icon-v2" onClick={onClose}><X size={20} /></button>
+                    </H2>
+                    <UIButton variant="secondary" size="sm" className="p-2!" onClick={onClose} icon={<X size={20} />} />
                 </div>
 
-                <p style={{ color: 'var(--text-secondary)', marginBottom: '20px', fontSize: '0.95rem', lineHeight: 1.5 }}>
+                <Metadata className="mb-6 leading-relaxed">
                     Paste a list of Reddit or Hacker News thread URLs. You can separate them by newlines or commas.
                     The system will automatically fetch, process, and analyze them in the background.
-                </p>
+                </Metadata>
 
                 {error && (
-                    <div className="error-banner" style={{ marginBottom: '16px' }}>
-                        <AlertCircle size={20} style={{ flexShrink: 0 }} />
-                        <span>{error}</span>
+                    <div className="error-banner mb-4 bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl flex items-center gap-3">
+                        <AlertCircle size={20} className="shrink-0" />
+                        <span className="text-xs font-bold">{error}</span>
                     </div>
                 )}
 
@@ -71,50 +73,26 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ folderId, onCl
                     onChange={e => setUrlsText(e.target.value)}
                     placeholder="https://www.reddit.com/r/Entrepreneur/comments/...
 https://news.ycombinator.com/item?id=..."
-                    style={{
-                        width: '100%',
-                        height: '200px',
-                        backgroundColor: 'rgba(0,0,0,0.2)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: '12px',
-                        padding: '16px',
-                        color: 'white',
-                        fontFamily: 'monospace',
-                        fontSize: '0.9rem',
-                        resize: 'vertical',
-                        marginBottom: '20px',
-                        outline: 'none',
-                        boxSizing: 'border-box'
-                    }}
+                    className="w-full h-48 bg-(--bg-input) border border-(--border-light) rounded-2xl p-5 text-(--text-primary) font-mono text-sm resize-none mb-6 outline-none focus:ring-2 focus:ring-(--bg-accent)/30 focus:border-(--bg-accent)/50 transition-all placeholder:text-(--text-tertiary)"
                     disabled={isSubmitting}
                 />
 
-                <div className="modal-actions" style={{ marginTop: 0 }}>
-                    <button
-                        className="btn-secondary"
+                <div className="flex justify-end items-center gap-4">
+                    <UIButton
+                        variant="secondary"
                         onClick={onClose}
                         disabled={isSubmitting}
                     >
                         Cancel
-                    </button>
-                    <button
-                        className="btn-primary"
+                    </UIButton>
+                    <UIButton
+                        variant="primary"
                         onClick={handleImport}
                         disabled={isSubmitting || !urlsText.trim()}
-                        style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                        icon={isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <UploadCloud size={18} />}
                     >
-                        {isSubmitting ? (
-                            <>
-                                <Loader2 className="animate-spin" size={18} />
-                                Importing...
-                            </>
-                        ) : (
-                            <>
-                                <UploadCloud size={18} />
-                                Import URLs
-                            </>
-                        )}
-                    </button>
+                        {isSubmitting ? 'Importing Threads...' : 'Import URLs'}
+                    </UIButton>
                 </div>
             </div>
         </div>
