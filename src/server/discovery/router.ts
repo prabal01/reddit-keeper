@@ -1,9 +1,15 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth.js';
+import { usageGuard } from '../middleware/usageGuard.js';
 import { DiscoveryOrchestrator } from './orchestrator.js';
 import { analyzeDiscoveryBatch } from '../ai.js';
-import { createFolder, getDb } from '../firestore.js';
+import {
+    createFolder, getDb,
+    getDiscoveryHistory, deleteDiscoveryHistory, saveDiscoveryHistory,
+    incrementDiscoveryCount
+} from '../firestore.js';
 import { logger } from '../utils/logger.js';
+import { USER_AGENT } from '../config.js';
 
 const router = Router();
 const orchestrator = new DiscoveryOrchestrator();
@@ -20,7 +26,7 @@ async function getProposeIntelligence(query: string) {
         try {
             logger.info({ action: 'SCRAPE_URL', url: query }, 'Fetching website content for niche extraction');
             const response = await fetch(query, {
-                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
+                headers: { 'User-Agent': USER_AGENT }
             });
             const html = await response.text();
             
@@ -59,9 +65,9 @@ router.post('/propose', authMiddleware, async (req: Request, res: Response) => {
     try {
         const intel = await getProposeIntelligence(query);
         res.json(intel);
-    } catch (err: any) {
-        logger.error({ err, query }, "Failed to generate proposal");
-        res.status(500).json({ error: err.message });
+    } catch (err: unknown) {
+        logger.error({ err, query }, 'Failed to generate proposal');
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
@@ -157,9 +163,136 @@ router.post('/start', authMiddleware, async (req: Request, res: Response) => {
         }
 
         res.json({ success: true, folderId: folder.id, patterns: insights.patterns, opportunities: insights.opportunities });
-    } catch (err: any) {
-        logger.error({ err, query }, "Failed to run discovery start");
-        res.status(500).json({ error: err.message });
+    } catch (err: unknown) {
+        logger.error({ err, query }, 'Failed to run discovery start');
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// ── Search & Idea Discovery ────────────────────────────────────────
+
+router.post('/compare', authMiddleware, usageGuard('DISCOVERY'), async (req: Request, res: Response) => {
+    if (!req.user) return void res.status(401).json({ error: 'Authentication required' });
+    const { query } = req.body;
+    if (!query) return void res.status(400).json({ error: 'Query is required' });
+    try {
+        const baseline = await orchestrator.search(req.user.uid, query, 'all', false, true);
+        const enhanced = await orchestrator.search(req.user.uid, query, 'all', true, true);
+        await incrementDiscoveryCount(req.user.uid);
+        res.json({ baseline: baseline.results, enhanced: enhanced.results });
+    } catch (err: unknown) {
+        logger.error({ err, query }, 'Discovery compare failed');
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+router.post('/search', authMiddleware, usageGuard('DISCOVERY'), async (req: Request, res: Response) => {
+    if (!req.user) return void res.status(401).json({ error: 'Authentication required' });
+    const { query, platform = 'all' } = req.body;
+    if (!query) return void res.status(400).json({ error: 'Query is required' });
+    try {
+        const platforms: ('reddit' | 'hn')[] | 'all' = platform === 'all' ? 'all' : [platform as 'reddit' | 'hn'];
+        const plan = req.user.plan === 'past_due' ? 'free' : req.user.plan;
+        const { results, discoveryPlan } = await orchestrator.search(req.user.uid, query, platforms, false, false, plan);
+        await incrementDiscoveryCount(req.user.uid);
+        res.json({ results, discoveryPlan });
+    } catch (err: unknown) {
+        logger.error({ err, query }, 'Discovery search failed');
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+router.post('/idea', authMiddleware, usageGuard('DISCOVERY'), async (req: Request, res: Response) => {
+    if (!req.user) return void res.status(401).json({ error: 'Authentication required' });
+    const { idea, communities, competitors, skipCache = false } = req.body;
+    if (!idea) return void res.status(400).json({ error: 'Idea is required' });
+    try {
+        const plan = req.user.plan === 'past_due' ? 'free' : req.user.plan;
+        const { results, discoveryPlan } = await orchestrator.ideaDiscovery(req.user.uid, idea, communities, competitors, skipCache, plan);
+        await incrementDiscoveryCount(req.user.uid);
+        res.json({ results, discoveryPlan });
+    } catch (err: unknown) {
+        logger.error({ err, idea }, 'Discovery idea search failed');
+        res.status(500).json({ error: 'Discovery failed' });
+    }
+});
+
+// ── Metadata Enrichment ────────────────────────────────────────────
+
+router.post('/metadata', authMiddleware, usageGuard('DISCOVERY'), async (req: Request, res: Response) => {
+    const { url, urls } = req.body;
+    const urlList = urls || (url ? [url] : []);
+    if (urlList.length === 0) return void res.status(400).json({ error: 'URLs are required' });
+    try {
+        const results = await Promise.all(urlList.map(async (targetUrl: string) => {
+            const detectedSource = targetUrl.includes('news.ycombinator.com') ? 'hn' : 'reddit';
+            try {
+                const fullData = await orchestrator.fetchFullThread(targetUrl, detectedSource);
+                if (!fullData?.post) return null;
+                return {
+                    id: Buffer.from(targetUrl).toString('base64'),
+                    title: fullData.post.title || 'Unknown Title',
+                    author: fullData.post.author || 'unknown',
+                    subreddit: fullData.post.subreddit || (detectedSource === 'hn' ? 'Hacker News' : 'unknown'),
+                    num_comments: fullData.post.num_comments || 0,
+                    created_utc: fullData.post.created_utc || Math.floor(Date.now() / 1000),
+                    url: targetUrl, source: detectedSource, score: 0, isCached: true
+                };
+            } catch (err) {
+                logger.warn({ err, url: targetUrl }, 'Failed to enrich metadata');
+                return null;
+            }
+        }));
+        const validResults = results.filter(Boolean);
+        if (validResults.length > 0 && req.user) {
+            await saveDiscoveryHistory(req.user.uid, {
+                type: 'bulk', query: urlList.join('\n'),
+                params: { platforms: ['reddit', 'hn'] },
+                resultsCount: validResults.length,
+                topResults: validResults.slice(0, 5).map(r => ({ title: r!.title, url: r!.url, source: r!.source as any, score: 0 }))
+            }).catch(err => logger.error({ err }, 'Failed to save bulk discovery history'));
+        }
+        res.json({ results: validResults });
+    } catch (err: unknown) {
+        logger.error({ err }, 'Discovery metadata enrichment failed');
+        res.status(500).json({ error: 'Failed to enrich metadata' });
+    }
+});
+
+// ── Discovery History ──────────────────────────────────────────────
+
+router.get('/history', authMiddleware, async (req: Request, res: Response) => {
+    if (!req.user) return void res.status(401).json({ error: 'Unauthorized' });
+    try {
+        const history = await getDiscoveryHistory(req.user.uid);
+        res.json(history);
+    } catch (err: unknown) {
+        logger.error({ err }, 'GET /api/discovery/history failed');
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+router.delete('/history/:id', authMiddleware, async (req: Request, res: Response) => {
+    if (!req.user) return void res.status(401).json({ error: 'Unauthorized' });
+    try {
+        await deleteDiscoveryHistory(req.user.uid, req.params.id as string);
+        res.json({ success: true });
+    } catch (err: unknown) {
+        logger.error({ err }, 'DELETE /api/discovery/history/:id failed');
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+router.get('/history/:id/results', authMiddleware, async (req: Request, res: Response) => {
+    if (!req.user) return void res.status(401).json({ error: 'Unauthorized' });
+    try {
+        const { getDiscoveryHistoryFull } = await import('../firestore.js');
+        const entry = await getDiscoveryHistoryFull(req.user.uid, req.params.id as string);
+        if (!entry) return void res.status(404).json({ error: 'History entry not found' });
+        res.json({ savedResults: entry.savedResults || [], discoveryPlan: entry.discoveryPlan || null });
+    } catch (err: unknown) {
+        logger.error({ err }, 'GET /api/discovery/history/:id/results failed');
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 

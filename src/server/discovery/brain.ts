@@ -1,4 +1,5 @@
 import { SchemaType } from "@google-cloud/vertexai";
+import { logger } from "../utils/logger.js";
 import { vertexAI } from "../ai.js";
 
 const queryExpansionSchema = {
@@ -55,7 +56,7 @@ Generate 10-15 unique, highly targeted queries. Keep them concise and focused on
             const parsed = JSON.parse(text);
             return parsed.queries || [];
         } catch (e) {
-            console.error("[DiscoveryBrain] Failed to parse queries:", e);
+            logger.error({ err: e }, "[DiscoveryBrain] Failed to parse queries");
             return [];
         }
     }

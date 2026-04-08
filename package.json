@@ -16,7 +16,12 @@
     "deploy:build": "docker build --platform linux/amd64 -t gcr.io/redditkeeperprod/opiniondeck-backend:latest .",
     "deploy:push": "docker push gcr.io/redditkeeperprod/opiniondeck-backend:latest",
     "deploy:run": "gcloud run deploy opiniondeck-backend --image gcr.io/redditkeeperprod/opiniondeck-backend:latest --platform managed --region us-east1 --allow-unauthenticated --env-vars-file env.yaml",
-    "deploy": "npm run deploy:build && npm run deploy:push && npm run deploy:run"
+    "deploy": "npm run deploy:build && npm run deploy:push && npm run deploy:run",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix"
   },
   "keywords": [
     "reddit",
@@ -49,13 +54,20 @@
     "p-queue": "^9.1.0",
     "pino": "^10.3.1",
     "razorpay": "^2.9.6",
+    "socks-proxy-agent": "^8.0.2",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/helmet": "^0.0.48",
     "@types/node-fetch": "^2.6.11",
     "@types/pino": "^7.0.4",
-    "pino-pretty": "^13.1.3"
+    "@vitest/coverage-v8": "^4.1.3",
+    "eslint": "^10.2.0",
+    "globals": "^17.4.0",
+    "pino-pretty": "^13.1.3",
+    "typescript-eslint": "^8.58.1",
+    "vitest": "^4.1.3"
   }
 }

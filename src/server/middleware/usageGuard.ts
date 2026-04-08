@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { logger } from '../utils/logger.js';
 import { getOrCreateUser, getPlanConfig, resolveUserConfig } from '../firestore.js';
 
 export type GuardedFeature = 'DISCOVERY' | 'ANALYSIS' | 'SAVED_THREADS';
@@ -58,10 +59,13 @@ export const usageGuard = (feature: GuardedFeature) => {
             }
 
             next();
-        } catch (err: any) {
-            console.error(`[UsageGuard] Error checking limits for user ${uid}:`, err);
-            // Fail open to avoid blocking users if Firestore is temporarily unavailable
-            next();
+        } catch (err: unknown) {
+            logger.error({ err, uid }, "[UsageGuard] Error checking limits");
+            // Fail closed — deny request when we can't verify limits
+            return res.status(503).json({
+                error: "Unable to verify usage limits. Please try again shortly.",
+                code: "SERVICE_UNAVAILABLE",
+            });
         }
     };
 };

@@ -10,14 +10,14 @@ const FEATURES = [
     { name: "Desired Outcomes", trial: "✅", starter: "✅", pro: "✅", enterprise: "✅", highlight: true },
     { name: "Semantic Clustering", trial: "✅", starter: "✅", pro: "✅", enterprise: "✅" },
     { name: "Export (PDF/JSON)", trial: "✅", starter: "✅", pro: "✅", enterprise: "✅" },
-    { name: "Team Seats", trial: "1", starter: "1", pro: "3", enterprise: "5+" },
+    { name: "Team Seats (Coming Soon)", trial: "1", starter: "1", pro: "3", enterprise: "5+" },
 ];
 
 export function PricingPage() {
     const { plan } = useAuth();
-    const isTrial = plan === "free";
+    const isTrial = plan === "free" || plan === "trial";
     const isStarter = plan === "starter";
-    const isPro = plan === "pro";
+    const isPro = plan === "pro" || plan === "professional";
     const isEnterprise = plan === "enterprise";
 
     return (

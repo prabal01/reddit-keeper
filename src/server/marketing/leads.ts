@@ -1,5 +1,6 @@
 import express from "express";
 import { getDb } from "../firestore.js";
+import { logger } from "../utils/logger.js";
 import { adminMiddleware } from "../middleware/admin.js";
 
 const router = express.Router();
@@ -23,8 +24,8 @@ router.get("/leads", adminMiddleware, async (req, res) => {
     }));
     
     res.json(leads);
-  } catch (err: any) {
-    console.error("[MARKETING_API] Failed to fetch leads:", err);
+  } catch (err: unknown) {
+    logger.error({ err }, "[MARKETING_API] Failed to fetch leads");
     res.status(500).json({ error: "Failed to fetch marketing leads." });
   }
 });
@@ -49,8 +50,8 @@ router.post("/leads/:id/status", adminMiddleware, async (req, res) => {
     });
     
     res.json({ success: true });
-  } catch (err: any) {
-    console.error("[MARKETING_API] Failed to update lead status:", err);
+  } catch (err: unknown) {
+    logger.error({ err }, "[MARKETING_API] Failed to update lead status");
     res.status(500).json({ error: "Failed to update lead status." });
   }
 });

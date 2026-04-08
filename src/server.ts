@@ -1,1628 +1,155 @@
 
 import "dotenv/config";
-import { redis } from "./server/middleware/rateLimiter.js";
-import { Queue } from "bullmq";
-import crypto from "crypto";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-// Queue definitions removed (replaced by BullMQ)
-import { countComments } from "./reddit/tree-builder.js";
+
+import { redis } from "./server/middleware/rateLimiter.js";
+import { initFirebase, getFirebaseStatus } from "./server/firestore.js";
 import {
-    Comment,
-} from "./reddit/types.js";
-import { minifyComments } from "./server/ai.js";
-import {
-    initFirebase,
-    getFirebaseStatus,
-    getAdminAuth,
-    incrementFetchCount,
-    incrementDiscoveryCount,
-    getPlanConfig,
-    logFetchEvent,
-    SavedThread
-} from "./server/firestore.js";
-import { 
-    syncQueue, 
-    granularAnalysisQueue, 
     analysisQueue,
-    syncWorker, 
-    granularAnalysisWorker, 
+    syncQueue,
+    granularAnalysisQueue,
+    monitoringCronQueue,
+    syncWorker,
+    granularAnalysisWorker,
     analysisWorker,
-    sharedConnectionConfig
+    monitoringCronWorker,
 } from "./server/queues.js";
-import { authMiddleware, getEffectiveConfig } from "./server/middleware/auth.js";
-import { usageGuard } from "./server/middleware/usageGuard.js";
-import { rateLimiterMiddleware, authRateLimiter } from "./server/middleware/rateLimiter.js";
-import { adminMiddleware } from "./server/middleware/admin.js";
-import { getAllUsers, getGlobalStats, getBetaTokens, getWaitlist, addWaitlistEntry, updateWaitlistStatus, getDailyStats, getStats } from "./server/admin.js";
-import { createFoundingOrder, verifySignature } from "./server/payments/razorpay.js";
-import {
-    getFolders,
-    getFolder,
-    createFolder,
-    deleteFolder,
-    saveThreadToFolder,
-    createPlaceholderThread,
-    getThreadsInFolder,
-    saveAnalysis,
-    getLatestAnalysis, getFolderAnalyses,
-    getAdminStorage,
-    updateFolderSyncStatus,
-    incrementPendingSyncCount,
-    updateFolderAnalysisStatus,
-    updateThreadInsight,
-    getDb,
-    getDiscoveryHistory,
-    deleteDiscoveryHistory,
-    saveDiscoveryHistory,
-    verifyInviteCode,
-    createInviteCode,
-    registerUserWithInvite,
-    getPatternsInFolder,
-    getLeadsInFolder,
-    getMonitoringAlerts
-} from "./server/firestore.js";
-import { analyzeThreads, analyzeThreadGranular } from "./server/ai.js";
+import { authMiddleware } from "./server/middleware/auth.js";
+import { rateLimiterMiddleware } from "./server/middleware/rateLimiter.js";
+import { config, validateConfig, TOOL_VERSION } from "./server/config.js";
+
+// ── Feature Routers ───────────────────────────────────────────────
 import marketingRouter from "./server/marketing/leads.js";
 import adminRouter from "./server/admin/router.js";
 import monitoringRouter from "./server/monitoring/router.js";
 import discoveryRouter from "./server/discovery/router.js";
+import userRouter from "./server/user/router.js";
+import paymentsRouter from "./server/payments/router.js";
+import foldersRouter from "./server/folders/router.js";
+import extractionsRouter from "./server/extractions/router.js";
+import authRouter from "./server/auth/router.js";
+import { addWaitlistEntry } from "./server/admin.js";
 
-// DIAGNOSTIC: Print all registered routes to help find the 404 root cause
-function printRoutes(stack: any[], prefix = '') {
-    stack.forEach(layer => {
-        if (layer.route) {
-            const methods = Object.keys(layer.route.methods).join(', ').toUpperCase();
-            console.log(`[ROUTE] ${methods} ${prefix}${layer.route.path}`);
-        } else if (layer.name === 'router' && layer.handle.stack) {
-            const routerPath = layer.regexp.source
-                .replace('\\/?(?=\\/|$)', '')
-                .replace('^\\', '')
-                .replace('\\/', '/');
-            printRoutes(layer.handle.stack, prefix + routerPath);
-        }
-    });
-}
+import { initMonitoring, monitoringScraperWorker, opportunityMatcherWorker } from "./server/monitoring/worker.js";
 
-const app = express();
-// ... logic continues
-import { DiscoveryOrchestrator } from './server/discovery/orchestrator.js';
-
-const discoveryOrchestrator = new DiscoveryOrchestrator();
-import { logger } from "./server/utils/logger.js";
-import { sendAlert } from "./server/alerts.js";
-const PORT = parseInt(process.env.PORT || "3001", 10);
-const USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
-const TOOL_VERSION = "1.0.1";
-const RATE_LIMIT_DELAY = 1000;
+const PORT = config.port;
 
 console.log("[INIT] Starting server.ts...");
 console.log(`[INIT] Node Version: ${process.version}`);
 console.log(`[INIT] PORT: ${PORT}`);
+validateConfig();
 
-// Initialize Firebase & Payments (non-blocking — app works without them)
+// Initialize Firebase (non-blocking)
 try {
-    console.log("[INIT] Initializing Firebase...");
     initFirebase();
-    console.log("[INIT] Firebase initialization call complete.");
-} catch (err: any) {
-    console.error("[INIT] FATAL error during Firebase init:", err);
+} catch (err) {
+    console.error("[INIT] FATAL: Firebase init failed:", err);
 }
 
-try {
-    console.log("[INIT] Initializing Payments...");
-    console.log("[INIT] Payments initialization complete.");
-} catch (err: any) {
-    console.error("[INIT] error during Payments init:", err);
-}
-
-process.on("unhandledRejection", (reason: unknown, promise: Promise<unknown>) => {
-    console.error("Unhandled Rejection at:", promise, "reason:", reason);
+process.on("unhandledRejection", (reason) => {
+    console.error("Unhandled Rejection:", reason);
 });
-
-process.on("uncaughtException", (err: Error) => {
+process.on("uncaughtException", (err) => {
     console.error("Uncaught Exception:", err);
 });
 
-// ── Request Queue & Diagnostics ───────────────────────────────────
+// ── App Setup ──────────────────────────────────────────────────────
 
-// Old p-queue based fetchQueue and analysisQueue removed.
-// Metrics should now track Redis queue sizes if needed.
+const app = express();
 
-// CORS Configuration
 const allowedOrigins = [
     "http://localhost:5173",
     "http://localhost:5174",
     "http://localhost:4321",
-    ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(/[;,]/) : [
-        "https://redditkeeperprod.web.app",
-        "https://opiniondeck-app.web.app",
-        "https://opiniondeck.com",
-        "https://www.opiniondeck.com",
-        "https://app.opiniondeck.com"
-    ])
+    ...config.allowedOrigins,
 ];
 
 app.use(helmet());
-
 app.use(cors({
-    origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
-        // Allow requests with no origin ONLY in development (curl, etc)
-        // In production, scrapers use no-origin so we block them
+    origin(origin, callback) {
         if (!origin) {
-            if (process.env.NODE_ENV !== 'production') return callback(null, true);
-            return callback(new Error('Origin missing'), false);
+            if (!config.isProd) return callback(null, true);
+            return callback(new Error("Origin missing"), false);
         }
-
-        // Allow Chrome Extensions
-        if (origin.startsWith('chrome-extension://')) return callback(null, true);
-
-        if (allowedOrigins.indexOf(origin) === -1) {
-            if (origin && (origin.startsWith('http://127.0.0.1:') || origin.startsWith('http://localhost:'))) {
-                return callback(null, true);
-            }
-            const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
-            console.error(msg);
-            return callback(new Error(msg), false);
+        if (origin.startsWith("chrome-extension://")) return callback(null, true);
+        if (
+            allowedOrigins.includes(origin) ||
+            origin.startsWith("http://127.0.0.1:") ||
+            origin.startsWith("http://localhost:")
+        ) {
+            return callback(null, true);
         }
-        return callback(null, true);
+        callback(new Error(`CORS: origin not allowed: ${origin}`), false);
     },
     credentials: true,
 }));
-app.use(express.json({ limit: '50mb' })); // Increased limit for large threads
+app.use(express.json({ limit: "50mb" }));
 app.use(authMiddleware);
-app.use(rateLimiterMiddleware); // Apply global rate limits to all routes based on auth config
+app.use(rateLimiterMiddleware);
 
-// ── Helpers ────────────────────────────────────────────────────────
+// ── Route Mounting ────────────────────────────────────────────────
 
-// ── API Routers ───────────────────────────────────────────────────
-
-console.log("[INIT] Mounting API Routers (Admin: " + (!!adminRouter) + ")");
 app.use("/api/admin/marketing", marketingRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/monitoring", monitoringRouter);
 app.use("/api/discovery", discoveryRouter);
+app.use("/api/user", userRouter);
+app.use("/api/payments", paymentsRouter);
+app.use("/api/folders", foldersRouter);
+app.use("/api/extractions", extractionsRouter);
+app.use("/api/auth", authRouter);
 
-// ── Helpers ────────────────────────────────────────────────────────
-
-function sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-// Monitoring and shutdown logic managed at process level
-
-
-// ── API Routes ─────────────────────────────────────────────────────
-
-import { getUserStats, updateStats } from "./server/firestore.js";
-import { initMonitoring, monitoringScraperQueue, opportunityMatcherQueue, monitoringScraperWorker, opportunityMatcherWorker } from "./server/monitoring/worker.js";
-
-app.get("/api/user/stats", async (req: express.Request, res: express.Response) => {
-    if (!req.user) {
-        res.status(401).json({ error: "Unauthorized" });
-        return;
-    }
+// Public waitlist signup — frontend calls POST /api/waitlist directly
+app.post("/api/waitlist", async (req, res) => {
+    const { email } = req.body;
+    if (!email) return void res.status(400).json({ error: "Email is required" });
     try {
-        const stats = await getUserStats(req.user.uid);
-        res.json(stats);
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// ── User Plan endpoint ─────────────────────────────────────────────
-
-app.get("/api/user/plan", async (req: express.Request, res: express.Response) => {
-    try {
-        if (!req.user) {
-            const freeConfig = await getPlanConfig("free");
-            res.json({
-                plan: "free",
-                authenticated: false,
-                config: freeConfig,
-            });
-            return;
-        }
-
-        res.json({
-            plan: req.user.plan,
-            authenticated: true,
-            config: req.user.config,
-            usage: req.user.usage,
-        });
-    } catch (err: any) {
-        console.error("GET /api/user/plan - Fatal Error:", err);
-        res.status(500).json({ error: "Internal Server Error" });
-    }
-});
-
-// ── Upgrade (stub — no payment provider yet) ───────────────────────
-
-app.post("/api/payments/create-order", authMiddleware, async (req: express.Request, res: express.Response) => {
-    if (!req.user) {
-        res.status(401).json({ error: "Please sign in to upgrade." });
-        return;
-    }
-
-    try {
-        const order = await createFoundingOrder(req.user.uid);
-        res.json(order);
-    } catch (err: any) {
-        console.error("[Razorpay] Create Order Error:", err);
-        res.status(500).json({ error: "Failed to create payment order." });
-    }
-});
-
-app.post("/api/payments/webhook", express.json(), async (req: express.Request, res: express.Response) => {
-    const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
-    const signature = req.headers["x-razorpay-signature"] as string;
-
-    if (secret && signature) {
-        const isValid = verifySignature(JSON.stringify(req.body), signature, secret);
-        if (!isValid) {
-            console.error("[Razorpay] Invalid Webhook Signature");
-            res.status(400).send("Invalid signature");
-            return;
-        }
-    }
-
-    const event = req.body.event;
-    console.log(`[Razorpay] Webhook received: ${event}`);
-
-    if (event === "order.paid") {
-        const { notes } = req.body.payload.order.entity;
-        const userId = notes?.userId;
-
-        if (userId) {
-            console.log(`[Razorpay] Upgrading user ${userId} to Founding Access`);
-            const { updateUserPlan } = await import("./server/firestore.js");
-            await updateUserPlan(userId, "pro");
-        }
-    }
-
-    res.json({ status: "ok" });
-});
-
-// ── Folder Routes ──────────────────────────────────────────────────
-
-app.get("/api/folders", async (req: express.Request, res: express.Response) => {
-    console.log("GET /api/folders - Request received", { user: req.user?.uid });
-    if (!req.user) {
-        res.status(401).json({ error: "Unauthorized" });
-        return;
-    }
-    try {
-        const folders = await getFolders(req.user.uid);
-        console.log(`GET /api/folders - Found ${folders.length} folders`);
-        res.json(folders);
-    } catch (err: any) {
-        console.error("GET /api/folders - Error:", err);
-        res.status(500).json({ error: err.message, stack: err.stack });
-    }
-});
-
-app.post("/api/folders", async (req: express.Request, res: express.Response) => {
-    // console.log("POST /api/folders - Request received", { user: req.user?.uid, body: req.body });
-    if (!req.user) {
-        res.status(401).json({ error: "Unauthorized" });
-        return;
-    }
-    const { name, description } = req.body;
-    if (!name) {
-        res.status(400).json({ error: "Folder name is required" });
-        return;
-    }
-    try {
-        const folder = await createFolder(req.user.uid, name, description);
-        res.json(folder);
-    } catch (err: any) {
-        console.error("POST /api/folders - Error:", err.message);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.delete("/api/folders/:id", async (req: express.Request, res: express.Response) => {
-    if (!req.user) {
-        res.status(401).json({ error: "Unauthorized" });
-        return;
-    }
-    try {
-        await deleteFolder(req.user.uid, req.params.id as string);
+        await addWaitlistEntry(email);
         res.json({ success: true });
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// ── Saved Thread Routes ───────────────────────────────────────────
-
-app.post("/api/folders/:id/threads", authMiddleware, async (req: express.Request, res: express.Response) => {
-    if (!req.user) {
-        res.status(401).json({ error: "Unauthorized" });
-        return;
-    }
-    const { threadData } = req.body;
-    if (!threadData?.post?.id) {
-        res.status(400).json({ error: "Invalid thread data" });
-        return;
-    }
-    try {
-        await saveThreadToFolder(req.user.uid, req.params.id as string, threadData);
-
-        // Auto-trigger analysis
-        const folderId = req.params.id as string;
-        const folder = await getFolder(req.user.uid, folderId);
-        let analysisRunId = folder?.currentAnalysisRunId;
-        if (!analysisRunId || folder?.analysisStatus !== 'processing') {
-            analysisRunId = `auto_${Date.now()}`;
-            await updateFolderAnalysisStatus(req.user.uid, folderId, 'processing', analysisRunId);
-        }
-
-        const threadId = threadData.id || threadData.post?.id;
-        await granularAnalysisQueue.add("granular-analyze", {
-            threadId,
-            url: threadData.source || threadData.post?.url,
-            folderId,
-            userUid: req.user.uid,
-            title: threadData.title || threadData.post?.title,
-            subreddit: threadData.subreddit || threadData.post?.subreddit,
-            analysisRunId
-        });
-
-        res.json({ success: true });
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.post("/api/folders/:id/sync", authMiddleware, async (req: express.Request, res: express.Response) => {
-    if (!req.user) {
-        res.status(401).json({ error: "Unauthorized" });
-        return;
-    }
-    const { urls, items } = req.body;
-    const folderId = req.params.id as string;
-
-    // Support either a simple string array (URLs) or rich objects (Items)
-    const hasUrls = Array.isArray(urls) && urls.length > 0;
-    const hasItems = Array.isArray(items) && items.length > 0;
-
-    if (!hasUrls && !hasItems) {
-        res.status(400).json({ error: "Invalid URLs or Items provided" });
-        return;
-    }
-
-    const payloadList = hasItems ? items : urls.map((url: string) => ({ url }));
-
-    try {
-        console.log(`[SyncAPI] Initiating sync for folder ${folderId} with ${payloadList.length} threads.`);
-        // 1. Set folder status to syncing
-        await updateFolderSyncStatus(req.user.uid, folderId, 'syncing');
-
-        // 2. Increment pending count & Create Placeholders
-        await incrementPendingSyncCount(req.user.uid, folderId, payloadList.length);
-
-        await Promise.all(payloadList.map((item: any) =>
-            createPlaceholderThread(req.user!.uid, folderId, item.url, item)
-        ));
-
-        // 3. Enqueue jobs with Priority based on Plan
-        const priority = req.user.plan === 'free' ? 10 : 3;
-
-        const jobs = payloadList.map((item: any) => ({
-            name: "sync",
-            data: { url: item.url, folderId, userUid: req.user!.uid },
-            opts: { priority }
-        }));
-
-        await syncQueue.addBulk(jobs);
-
-        res.json({ success: true, count: payloadList.length });
-    } catch (err: any) {
-        console.error(`[SyncAPI] Failed to initiate sync for folder ${folderId}:`, err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.get("/api/folders/:id/threads", async (req: express.Request, res: express.Response) => {
-    if (!req.user) {
-        res.status(401).json({ error: "Unauthorized" });
-        return;
-    }
-    try {
-        if (req.params.id === 'inbox') {
-            console.log(`GET /api/folders/inbox/threads - Fetching uncategorized extractions`);
-            const extractions = await listExtractions(req.user.uid);
-
-            // Map ExtractedData -> SavedThread
-            const threads: SavedThread[] = extractions.map(ext => {
-                const commentCount = ext.commentCount || (ext.content?.comments ? countComments(ext.content.comments) : (ext.content?.flattenedComments?.length || 0));
-
-                return {
-                    id: ext.id,
-                    folderId: 'inbox',
-                    uid: req.user!.uid,
-                    title: ext.title,
-                    author: ext.content?.post?.author || ext.post?.author || ext.content?.author || 'Unknown',
-                    subreddit: ext.content?.post?.subreddit || ext.post?.subreddit || ext.source,
-                    commentCount: commentCount,
-                    source: ext.source,
-                    savedAt: ext.extractedAt,
-                    data: {
-                        post: ext.content?.post || ext.post || { title: ext.title },
-                        content: ext.content,
-                        metadata: {
-                            fetchedAt: ext.extractedAt,
-                            source: ext.source
-                        }
-                    }
-                };
-            });
-            res.json(threads);
-        } else {
-            const folderId = req.params.id as string;
-            const uid = req.user.uid;
-            const [threads, folder] = await Promise.all([
-                getThreadsInFolder(uid, folderId),
-                getFolder(uid, folderId)
-            ]);
-
-            // AUTO-RECOVERY: Check for stale processing threads (> 5 mins)
-            const STALE_MS = 5 * 60 * 1000;
-            const now = Date.now();
-            const recoveryJobs: any[] = [];
-            const recoveryRunId = folder?.currentAnalysisRunId || `auto_${now}`;
-            for (const thread of threads) {
-                const isStuck = (thread.analysisStatus === 'pending' || thread.analysisStatus === 'processing');
-                const lastActivity = thread.analysisTriggeredAt || thread.savedAt;
-                const triggerTime = lastActivity ? new Date(lastActivity).getTime() : 0;
-
-                if (isStuck && (now - triggerTime > STALE_MS)) {
-                    console.log(`[AutoRecovery] Re-triggering stuck analysis for thread ${thread.id}`);
-
-                    // Pre-emptively mark as processing
-                    await updateThreadInsight(uid, folderId, {
-                        id: thread.id,
-                        folderId,
-                        uid,
-                        threadLink: thread.source,
-                        status: 'processing'
-                    });
-
-                    recoveryJobs.push({
-                        name: "granular-analyze",
-                        data: {
-                            threadId: thread.id,
-                            url: thread.source,
-                            folderId,
-                            userUid: uid,
-                            title: thread.title,
-                            subreddit: thread.subreddit,
-                            analysisRunId: recoveryRunId
-                        }
-                    });
-                }
-            }
-
-            if (recoveryJobs.length > 0) {
-                if (!folder?.currentAnalysisRunId) {
-                    await updateFolderAnalysisStatus(uid, folderId, 'processing', recoveryRunId);
-                }
-                await granularAnalysisQueue.addBulk(recoveryJobs);
-                console.log(`[AutoRecovery] Re-queued ${recoveryJobs.length} stale analysis jobs via Bulk for folder ${folderId}`);
-            }
-
-            res.json({
-                threads,
-                meta: {
-                    painPointCount: folder?.painPointCount || 0,
-                    triggerCount: folder?.triggerCount || 0,
-                    outcomeCount: folder?.outcomeCount || 0,
-                    intelligence_signals: folder?.intelligence_signals,
-                    totalAnalysisCount: folder?.totalAnalysisCount || 0,
-                    completedAnalysisCount: folder?.completedAnalysisCount || 0,
-                    failedCount: folder?.failedCount || 0,
-                    analysisStatus: folder?.analysisStatus
-                }
-            });
-        }
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// ── AI Analysis Route ─────────────────────────────────────────────
-
-// BullMQ orchestrations migrated to ./server/queues.js
-
-
-// ── API Routes ─────────────────────────────────────────────────────
-
-// Redundant mount removed
-
-app.post("/api/folders/:id/status", async (req: express.Request, res: express.Response) => {
-    if (!req.user) return res.status(401).json({ error: "Unauthorized" });
-    try {
-        const { status } = req.body;
-        const folderId = req.params.id as string;
-        await updateFolderAnalysisStatus(req.user.uid, folderId, status);
-        res.json({ success: true });
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.get("/api/folders/:id/patterns", async (req: express.Request, res: express.Response) => {
-    if (!req.user) {
-        return res.status(401).json({ error: "Unauthorized" });
-    }
-    try {
-        const patterns = await getPatternsInFolder(req.user.uid, req.params.id as string);
-        res.json(patterns);
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.get("/api/folders/:id/leads", async (req: express.Request, res: express.Response) => {
-    if (!req.user) {
-        return res.status(401).json({ error: "Unauthorized" });
-    }
-    try {
-        const leads = await getLeadsInFolder(req.user.uid, req.params.id as string);
-        res.json(leads);
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.get("/api/folders/:id/alerts", async (req: express.Request, res: express.Response) => {
-    if (!req.user) {
-        return res.status(401).json({ error: "Unauthorized" });
-    }
-    try {
-        const alerts = await getMonitoringAlerts(req.user.uid, req.params.id as string);
-        res.json(alerts);
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.patch("/api/folders/:id/leads/:leadId", async (req: express.Request, res: express.Response) => {
-    if (!req.user) {
-        return res.status(401).json({ error: "Unauthorized" });
-    }
-    try {
-        const { id: folderId, leadId } = req.params;
-        const { status } = req.body;
-        
-        if (!['new', 'contacted', 'ignored'].includes(status)) {
-            return res.status(400).json({ error: "Invalid status" });
-        }
-
-        const db = await import("./server/firestore.js").then(m => m.getDb());
-        if (!db) throw new Error("DB not initialized");
-        
-        // Ensure user owns folder (basic security)
-        const folderDoc = await db.collection("folders").doc(folderId as string).get();
-        if (!folderDoc.exists || folderDoc.data()?.uid !== req.user.uid) {
-            return res.status(403).json({ error: "Forbidden" });
-        }
-
-        await db.collection("folders").doc(folderId as string).collection("leads").doc(leadId as string).update({
-            status
-        });
-
-        res.json({ success: true });
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.post("/api/folders/:id/analyze", authMiddleware, usageGuard('ANALYSIS'), async (req: express.Request, res: express.Response) => {
-    if (!req.user) {
-        res.status(401).json({ error: "Unauthorized" });
-        return;
-    }
-
-    try {
-        const folderId = req.params.id as string;
-        console.log(`[SERVER] [ANALYZE] Triggered for folder: ${folderId} (User: ${req.user.uid})`);
-
-        const folder = folderId === 'inbox'
-            ? { id: 'inbox', name: 'Inbox' }
-            : await getFolder(req.user.uid, folderId);
-
-        if (!folder) {
-            console.warn(`[SERVER] [ANALYZE] Folder not found: ${folderId}`);
-            res.status(404).json({ error: "Folder not found" });
-            return;
-        }
-
-        // 1. Fetch all raw insights (Pain Points, Triggers, Outcomes) from completed threads
-        const firestore = await import("./server/firestore.js");
-        const signals = await firestore.getFolderIntelligenceSignals(req.user.uid, folderId);
-        console.log(`[SERVER] [ANALYZE] Retrieved signals - Pain: ${signals.painPoints.length}, Triggers: ${signals.triggers.length}, Outcomes: ${signals.outcomes.length}`);
-
-        const totalSignals = signals.painPoints.length + signals.triggers.length + signals.outcomes.length;
-        if (totalSignals === 0) {
-            res.status(400).json({ error: "No analyzed insights found in this folder. Please analyze some threads first." });
-            return;
-        }
-
-        // 2. Run Clustering Engine
-        const { ClusterEngine } = await import("./server/clustering.js");
-        const engine = new ClusterEngine(folderId, req.user.uid);
-
-        // We run all categories
-        const painPoints = await engine.aggregate(signals.painPoints, "pain_point");
-        const triggers = await engine.aggregate(signals.triggers, "switch_trigger");
-        const outcomes = await engine.aggregate(signals.outcomes, "desired_outcome");
-
-        // 3. Save aggregated clusters to the subcollection
-        const allClusters = [...painPoints, ...triggers, ...outcomes];
-        await firestore.saveAggregatedInsights(folderId, allClusters);
-
-        // 4. Run Final LLM Synthesis
-        console.log(`[SERVER] [ANALYZE] Running Stage 5 Ranked Synthesis for folder ${folderId}`);
-        const { synthesizeReport } = await import("./server/ai.js");
-
-        const uniqueThreadIds = new Set([
-            ...signals.painPoints.map((s: any) => s.thread_id),
-            ...signals.triggers.map((s: any) => s.thread_id),
-            ...signals.outcomes.map((s: any) => s.thread_id)
-        ]);
-        const totalThreads = uniqueThreadIds.size;
-        const totalComments = (folder as any)?.metrics?.commentsAnalyzed || 0;
-
-        const synthesisResult = await synthesizeReport({ painPoints, triggers, outcomes }, totalThreads, totalComments);
-
-        // Track Synthesis Cost
-        if (synthesisResult.usage) {
-            const inputTokens = synthesisResult.usage.promptTokenCount || 0;
-            const outputTokens = synthesisResult.usage.candidatesTokenCount || 0;
-            const inputCost = (inputTokens / 1000000) * 0.0375;
-            const outputCost = (outputTokens / 1000000) * 0.15;
-            await firestore.updateUserAicost(req.user.uid, {
-                totalInputTokens: inputTokens,
-                totalOutputTokens: outputTokens,
-                totalAiCost: inputCost + outputCost
-            });
-        }
-
-        // 5. Zero-Hallucination Quote Injection
-        // We map the LLM summary titles back to the raw clusters to extract a genuine verbatim quote.
-        const injectContext = (llmTitles: string[] | undefined, clusters: any[]) => {
-            if (!llmTitles) return [];
-            return llmTitles.map(title => {
-                const matchedCluster = clusters.find(c => c.canonicalTitle === title);
-                // Extract just the first valid quote to keep the UI clean
-                let quote = "";
-                if (matchedCluster && matchedCluster.rawInsights && matchedCluster.rawInsights.length > 0) {
-                    const firstInsight = matchedCluster.rawInsights.find((i: any) => i.quotes && i.quotes.length > 0);
-                    if (firstInsight) {
-                        quote = firstInsight.quotes[0];
-                    }
-                }
-                return {
-                    title: title,
-                    context_quote: quote
-                };
-            });
-        };
-
-        const injectPriorityContext = (priorities: any[] | undefined, clusters: any[]) => {
-            if (!priorities) return [];
-            return priorities.map(p => {
-                // Priorities are mapped from pain points. The LLM is instructed to return the exact 'source_title'
-                // which matches the canonicalTitle of the original cluster.
-                const cleanInitiative = (p.source_title || p.initiative || "").toLowerCase().trim();
-                const matchedCluster = clusters.find(c => {
-                    const cleanTitle = (c.canonicalTitle || "").toLowerCase().trim();
-                    return cleanTitle === cleanInitiative;
-                });
-
-                let quote = "";
-                if (matchedCluster && matchedCluster.rawInsights && matchedCluster.rawInsights.length > 0) {
-                    const firstInsight = matchedCluster.rawInsights.find((i: any) => i.quotes && i.quotes.length > 0);
-                    if (firstInsight) {
-                        quote = firstInsight.quotes[0];
-                    }
-                }
-                return {
-                    ...p,
-                    context_quote: quote
-                };
-            });
-        };
-
-        const finalReport = {
-            ...synthesisResult.parsedResult,
-            ranked_build_priorities: injectPriorityContext(synthesisResult.parsedResult.ranked_build_priorities, painPoints),
-            high_intensity_pain_points: injectContext(synthesisResult.parsedResult.high_intensity_pain_points, painPoints),
-            top_switch_triggers: injectContext(synthesisResult.parsedResult.top_switch_triggers, triggers),
-            top_desired_outcomes: injectContext(synthesisResult.parsedResult.top_desired_outcomes, outcomes),
-            metadata: {
-                ...synthesisResult.parsedResult.metadata,
-                total_threads: totalThreads,
-                total_comments: totalComments,
-                generated_at: new Date().toISOString()
-            }
-        };
-
-        await firestore.saveAnalysis(req.user.uid, folderId, finalReport, "gemini-2.0-flash", synthesisResult.usage);
-
-        // Increment usage count
-        await firestore.incrementAnalysisCount(req.user.uid);
-
-        res.json({
-            success: true,
-            folderId,
-            aggregates: {
-                painPoints,
-                triggers,
-                outcomes
-            },
-            synthesis: finalReport
-        });
-    } catch (err: any) {
-        console.error("Aggregation Error:", err);
-        res.status(500).json({ error: "Failed to aggregate insights: " + err.message });
-    }
-});
-
-// Helper to redact reports for Free Users
-function redactAnalysis(data: any): any {
-    console.log("[SERVER] Redacting analysis for free user...");
-    const redacted = {
-        ...data,
-        market_attack_summary: data.market_attack_summary // Explicitly preserve
-    };
-
-    // Metadata for the "Unlock" UI
-    redacted.locked_counts = {
-        pain_points: data.high_intensity_pain_points?.length || 0,
-        triggers: data.switch_triggers?.length || 0,
-        gaps: data.feature_gaps?.length || 0,
-        roadmap: data.ranked_build_priorities?.length || 0
-    };
-
-    // 1. Redact High-Intensity Pain Points
-    if (data.high_intensity_pain_points) {
-        redacted.high_intensity_pain_points = data.high_intensity_pain_points.map((p: any) => ({
-            title: "Locked Pain Point",
-            context_quote: "Unlock the Pro plan to see full details of this high-intensity pain point."
-        }));
-    }
-
-    // 2. Redact Switch Triggers
-    if (data.switch_triggers) {
-        redacted.switch_triggers = data.switch_triggers.map((s: any) => ({
-            title: "Locked Switch Trigger",
-            context_quote: "This switching trigger is available on the Pro plan."
-        }));
-    }
-
-    // 3. Redact Feature Gaps (Unchanged from original logic for now)
-    if (data.feature_gaps) {
-        redacted.feature_gaps = data.feature_gaps.map((f: any) => ({
-            ...f,
-            missing_or_weak_feature: "Locked Feature Deficiency",
-            context_summary: "Unlock to see specific feature gaps and demand signals.",
-            isLocked: true
-        }));
-    }
-
-    // 4. Redact Weakness Map
-    if (data.competitive_weakness_map) {
-        redacted.competitive_weakness_map = data.competitive_weakness_map.map((w: any) => ({
-            ...w,
-            competitor: "Locked Competitor",
-            perceived_weakness: "Hidden",
-            exploit_opportunity: "This strike plan is exclusive to Pro users.",
-            isLocked: true
-        }));
-    }
-
-    // 5. Redact Build Priorities
-    if (data.ranked_build_priorities) {
-        redacted.ranked_build_priorities = data.ranked_build_priorities.map((b: any) => ({
-            ...b,
-            initiative: "Locked Strategy Initiative",
-            justification: "Unlock to see the full reasoning for this roadmap priority.",
-            isLocked: true
-        }));
-    }
-
-    // 6. Redact Messaging Angles
-    if (data.messaging_and_positioning_angles) {
-        redacted.messaging_and_positioning_angles = data.messaging_and_positioning_angles.map((m: any) => ({
-            ...m,
-            angle: "Locked Messaging Angle",
-            supporting_emotional_driver: "This emotional lever is available on the Pro plan.",
-            supporting_evidence_quotes: ["Locked..."],
-            isLocked: true
-        }));
-    }
-
-    // 7. Redact Risk Flags
-    if (data.risk_flags) {
-        redacted.risk_flags = data.risk_flags.map((r: any) => ({
-            ...r,
-            risk: "Locked Risk",
-            evidence_basis: "Unlock to see intelligence risks and validation signals.",
-            isLocked: true
-        }));
-    }
-
-    redacted.isLocked = true;
-    return redacted;
-}
-
-app.get("/api/folders/:id/analysis", async (req: express.Request, res: express.Response) => {
-    if (!req.user) {
-        res.status(401).json({ error: "Unauthorized" });
-        return;
-    }
-    try {
-        const analyses = await getFolderAnalyses(req.user.uid, req.params.id as string);
-        const isFree = req.user.plan === 'free';
-
-        // Flatten the structure for the frontend
-        const flattened = analyses.map(a => {
-            let cleanData = { ...a.data };
-
-            // Apply Redaction if Free Plan
-            if (isFree) {
-                cleanData = redactAnalysis(cleanData);
-            }
-
-            return {
-                ...cleanData,
-                id: a.id,
-                createdAt: a.createdAt || new Date().toISOString()
-            };
-        });
-
-        console.log(`[GET /analysis] Returning ${flattened.length} reports for folder ${req.params.id}. Latest keys:`, flattened[0] ? Object.keys(flattened[0]) : "none");
-        res.json(flattened);
-    } catch (err: any) {
-        console.error("[GET /analysis] Error:", err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// ── Extension Extractions Routes ───────────────────────────────────
-
-import { saveExtractedData, listExtractions } from "./server/firestore.js";
-
-app.post("/api/extractions", authMiddleware, usageGuard('SAVED_THREADS'), async (req: express.Request, res: express.Response) => {
-    if (!req.user) {
-        res.status(401).json({ error: "Unauthorized" });
-        return;
-    }
-    try {
-        const { data } = req.body;
-        if (!data?.id) throw new Error("Invalid extraction data");
-
-        await saveExtractedData(req.user.uid, data);
-
-        // BRIDGE: If a folderId is provided, also save it to the folder's thread list
-        // so it appears in the dashboard folder view immediately.
-        if (data.folderId) {
-            try {
-                console.log(`[Bridge] Attempting to link extraction ${data.id} to folder ${data.folderId}`);
-                let threadPayload;
-
-                if (data.content) {
-                    // Apply Plan Limits (Truncate comments if on Free plan)
-                    const commentLimit = req.user.config.commentLimit;
-
-                    // Detect the correct array key
-                    let arrayKey = 'flattenedComments';
-                    if (Array.isArray(data.content.reviews)) {
-                        arrayKey = 'reviews';
-                    } else if (Array.isArray(data.content.comments)) {
-                        arrayKey = 'comments';
-                    }
-
-                    console.log(`[Bridge] Detected content type: ${arrayKey}`);
-                    let items = data.content[arrayKey] || [];
-                    const originalCount = items.length;
-                    let truncated = false;
-
-                    if (commentLimit > 0 && originalCount > commentLimit) {
-                        console.log(`[Limit] Truncating ${arrayKey} from ${originalCount} to ${commentLimit} for user ${req.user.uid}`);
-                        items = items.slice(0, commentLimit);
-                        truncated = true;
-                    }
-
-                    // Calculate accurate count (recursive for nested structures)
-                    const totalCount = (arrayKey === 'comments')
-                        ? countComments(data.content.comments)
-                        : items.length;
-
-                    // Calculate estimated token count
-                    const minifiedChars = minifyComments(items).length;
-                    const titleChars = data.title?.length || 0;
-                    const tokenCount = Math.ceil((minifiedChars + titleChars) / 4);
-
-                    // Update the content object with truncated array
-                    const updatedContent = { ...data.content };
-                    updatedContent[arrayKey] = items;
-                    updatedContent.originalCommentCount = totalCount;
-                    updatedContent.truncated = truncated;
-
-                    threadPayload = {
-                        id: data.id,
-                        title: data.title,
-                        post: data.content.post || { title: data.title },
-                        content: updatedContent,
-                        commentCount: truncated ? items.length : totalCount,
-                        tokenCount,
-                        source: data.source,
-                        metadata: {
-                            fetchedAt: data.extractedAt || new Date().toISOString(),
-                            totalCommentsFetched: truncated ? items.length : totalCount,
-                            originalCommentCount: totalCount,
-                            truncated: truncated,
-                            toolVersion: "ext-1.1.0",
-                            source: data.source
-                        }
-                    };
-                } else {
-                    // Hybrid Storage case (content is already in storage)
-                    const source = data.source || 'reddit';
-                    const subreddit = data.post?.subreddit || (source === 'reddit' ? 'r/unknown' : source);
-
-                    console.log(`[Bridge] Hybrid Storage link for thread: ${data.id} (Source: ${source}, Folder: ${data.folderId})`);
-
-                    threadPayload = {
-                        id: data.id,
-                        title: data.title,
-                        post: data.post || {
-                            title: data.title,
-                            author: data.author || 'anonymous',
-                            subreddit: subreddit
-                        },
-                        content: null,
-                        commentCount: data.commentCount || 0,
-                        tokenCount: data.tokenCount || 0,
-                        source: source,
-                        storageUrl: data.storageUrl,
-                        metadata: {
-                            fetchedAt: data.extractedAt || new Date().toISOString(),
-                            totalCommentsFetched: data.commentCount || 0,
-                            toolVersion: "ext-1.1.0",
-                            source: source
-                        }
-                    };
-                }
-
-                await saveThreadToFolder(req.user.uid, data.folderId, threadPayload);
-                console.log(`[Bridge] SUCCESS: Thread ${data.id} linked to folder ${data.folderId}`);
-            } catch (bridgeErr) {
-                console.error("[Bridge] Failed to link extraction to folder:", bridgeErr);
-            }
-        }
-
-        // If 'shouldAnalyze' is passed, trigger a background analysis job
-        if (data.shouldAnalyze) {
-            console.log(`[AI] Auto-analysis triggered for extraction: ${data.id}`);
-            // Logic to perform single extraction analysis would go here
-            // For now, we just mark that it was requested in the logs
-        }
-
-        res.json({ success: true, id: data.id });
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.post("/api/discovery/compare", authMiddleware, usageGuard('DISCOVERY'), async (req: express.Request, res: express.Response) => {
-    if (!req.user) {
-        return res.status(401).json({ error: "Authentication required for Discovery Lab" });
-    }
-    const { query } = req.body;
-    if (!query) return res.status(400).json({ error: "Query is required" });
-
-    try {
-        console.log(`[Discovery] [LAB] Starting comparison for: ${query}`);
-
-        // Run Baseline (Always skip cache in Lab for testing)
-        const baseline = await discoveryOrchestrator.search(req.user.uid, query, 'all', false, true);
-
-        // Run AI-Brain (Always skip cache in Lab for testing)
-        const enhanced = await discoveryOrchestrator.search(req.user.uid, query, 'all', true, true);
-
-        // Increment usage count (counts as 1 discovery)
-        await incrementDiscoveryCount(req.user.uid);
-
-        res.json({
-            baseline: baseline.results,
-            enhanced: enhanced.results
-        });
-    } catch (err: any) {
-        console.error(`[Discovery] Lab error:`, err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.post("/api/discovery/search", authMiddleware, usageGuard('DISCOVERY'), async (req: express.Request, res: express.Response) => {
-    if (!req.user) {
-        return res.status(401).json({ error: "Authentication required for Discovery Search" });
-    }
-    const { query, platform = 'all' } = req.body;
-    if (!query) {
-        return res.status(400).json({ error: "Query is required" });
-    }
-
-    try {
-        console.log(`[Discovery] Starting search for: ${query} (Platform: ${platform})`);
-
-        const platforms: ('reddit' | 'hn')[] | 'all' = platform === 'all' ? 'all' : [platform as 'reddit' | 'hn'];
-        const { results, discoveryPlan } = await discoveryOrchestrator.search(req.user.uid, query, platforms, false, false, req.user.plan === 'past_due' ? 'free' : req.user.plan);
-
-        // Increment usage count for authorized user
-        await incrementDiscoveryCount(req.user.uid);
-
-        res.json({ results, discoveryPlan });
-    } catch (err: any) {
-        console.error(`[Discovery] Search error:`, err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.post("/api/discovery/idea", authMiddleware, usageGuard('DISCOVERY'), async (req: express.Request, res: express.Response) => {
-    if (!req.user) {
-        return res.status(401).json({ error: "Authentication required for Idea Discovery" });
-    }
-    const { idea, communities, competitors, skipCache = false } = req.body;
-    if (!idea) {
-        return res.status(400).json({ error: "Idea is required" });
-    }
-
-    try {
-        console.log(`[Discovery] Starting Idea Discovery for: ${idea}`);
-        const { results, discoveryPlan } = await discoveryOrchestrator.ideaDiscovery(req.user.uid, idea, communities, competitors, skipCache, req.user.plan === 'past_due' ? 'free' : req.user.plan);
-
-        // Increment usage count for authorized user
-        await incrementDiscoveryCount(req.user.uid);
-
-        res.json({ results, discoveryPlan });
-    } catch (err: any) {
-        console.error(`[Discovery] Idea Search error:`, err);
-        res.status(500).json({ error: "Discovery failed" });
-    }
-});
-
-// ── Discovery History ─────────────────────────────────────────────
-
-app.get("/api/discovery/history", authMiddleware, async (req: express.Request, res: express.Response) => {
-    if (!req.user) return res.status(401).json({ error: "Unauthorized" });
-    try {
-        const history = await getDiscoveryHistory(req.user.uid);
-        res.json(history);
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.delete("/api/discovery/history/:id", authMiddleware, async (req: express.Request, res: express.Response) => {
-    if (!req.user) return res.status(401).json({ error: "Unauthorized" });
-    try {
-        await deleteDiscoveryHistory(req.user.uid, req.params.id as string);
-        res.json({ success: true });
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.get("/api/discovery/history/:id/results", authMiddleware, async (req: express.Request, res: express.Response) => {
-    if (!req.user) return res.status(401).json({ error: "Unauthorized" });
-    try {
-        const entry = await import("./server/firestore.js").then(m => m.getDiscoveryHistoryFull(req.user!.uid, req.params.id as string));
-        if (!entry) {
-            return res.status(404).json({ error: "History entry not found" });
-        }
-        res.json({ savedResults: entry.savedResults || [], discoveryPlan: entry.discoveryPlan || null });
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// Bulk Import Metadata Enrichment
-app.post("/api/discovery/metadata", authMiddleware, usageGuard('DISCOVERY'), async (req: express.Request, res: express.Response) => {
-    const { url, source, urls } = req.body;
-
-    // Handle both single URL and bulk array as sent by frontend
-    const urlList = urls || (url ? [url] : []);
-    
-    if (urlList.length === 0) {
-        return res.status(400).json({ error: "URLs are required" });
-    }
-
-    try {
-        const orchestrator = discoveryOrchestrator;
-        
-        // Process in parallel with concurrency limit if needed, but for now just map
-        const results = await Promise.all(urlList.map(async (targetUrl: string) => {
-            const detectedSource = targetUrl.includes('news.ycombinator.com') ? 'hn' : 'reddit';
-            try {
-                const fullData = await orchestrator.fetchFullThread(targetUrl, detectedSource);
-                if (!fullData || !fullData.post) return null;
-                
-                return {
-                    id: Buffer.from(targetUrl).toString('base64'),
-                    title: fullData.post.title || "Unknown Title",
-                    author: fullData.post.author || "unknown",
-                    subreddit: fullData.post.subreddit || (detectedSource === 'hn' ? 'Hacker News' : 'unknown'),
-                    num_comments: fullData.post.num_comments || 0,
-                    created_utc: fullData.post.created_utc || Math.floor(Date.now() / 1000),
-                    url: targetUrl,
-                    source: detectedSource,
-                    score: 0,
-                    isCached: true
-                };
-            } catch (err) {
-                console.warn(`[Discovery] Failed to enrich metadata for ${targetUrl}:`, err);
-                return null;
-            }
-        }));
-
-        const validResults = results.filter(Boolean);
-
-        // Save to History for bulk imports too
-        if (validResults.length > 0) {
-            await saveDiscoveryHistory(req.user!.uid, {
-                type: 'bulk',
-                query: urlList.join('\n'),
-                params: { platforms: ['reddit', 'hn'] },
-                resultsCount: validResults.length,
-                topResults: validResults.slice(0, 5).map(r => ({
-                    title: r!.title,
-                    url: r!.url,
-                    source: r!.source as any,
-                    score: 0
-                }))
-            }).catch(err => console.error("Failed to save bulk history:", err));
-        }
-
-        res.json({ results: validResults });
-    } catch (err: any) {
-        console.error(`[Discovery] Failed bulk enrichment:`, err);
-        res.status(500).json({ error: "Failed to enrich metadata" });
-    }
-});
-
-app.get("/api/extractions", async (req: express.Request, res: express.Response) => {
-    if (!req.user) {
-        res.status(401).json({ error: "Unauthorized" });
-        return;
-    }
-    try {
-        const data = await listExtractions(req.user.uid);
-        res.json(data);
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// ── Diagnostics ──────────────────────────────────────────────────
-app.get("/api/admin/invite-codes", async (req: express.Request, res: express.Response) => {
-    const { secret } = req.query;
-    if (secret !== (process.env.ADMIN_SECRET || "deck-dev-secret")) {
-        return res.status(401).json({ error: "Unauthorized" });
-    }
-    try {
-        const db = getDb();
-        const snapshot = await db.collection("invite_codes").get();
-        const codes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        res.json(codes);
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
+    } catch (err) {
+        console.error("[Waitlist] Failed:", err);
+        res.status(500).json({ error: "Internal server error" });
     }
 });
 
 // ── Health Check ───────────────────────────────────────────────────
 
-app.get("/api/health", async (_req: express.Request, res: express.Response) => {
-    const counts = await analysisQueue.getJobCounts();
-    res.json({
-        status: "ok",
+app.get("/api/health", async (_req, res) => {
+    const checks: Record<string, { status: string; detail?: string }> = {};
+
+    try {
+        const pong = await redis.ping();
+        checks.redis = { status: pong === "PONG" ? "healthy" : "degraded", detail: redis.status };
+    } catch {
+        checks.redis = { status: "unhealthy", detail: redis.status };
+    }
+
+    const fbStatus = getFirebaseStatus();
+    checks.firestore = { status: fbStatus.initialized ? "healthy" : "unhealthy", detail: fbStatus.error || undefined };
+
+    let queueCounts;
+    try {
+        queueCounts = await analysisQueue.getJobCounts();
+        checks.queue = { status: "healthy" };
+    } catch {
+        checks.queue = { status: "unhealthy" };
+    }
+
+    const allHealthy = Object.values(checks).every(c => c.status === "healthy");
+    res.status(allHealthy ? 200 : 503).json({
+        status: allHealthy ? "ok" : "degraded",
         version: TOOL_VERSION,
-        redis: redis.status,
-        firebase: getFirebaseStatus(),
-        queue: counts
+        uptime: Math.floor(process.uptime()),
+        checks,
+        queue: queueCounts,
     });
 });
 
-// ── Error Handler ─────────────────────────────────────────────────
-// ── Admin: Invite Generator ────────────────────────────────────────
-app.get("/api/admin/invite-gen", (req: express.Request, res: express.Response) => {
-    // Relax CSP just for this single page to allow inline scripts/styles for the tool
-    res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;");
-    res.send(`
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Invite Generator | Opinion Deck</title>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-        <style>
-            :root {
-                --bg: #0b0b12;
-                --card: #131320;
-                --input: rgba(255,255,255,0.04);
-                --primary: #ff4500;
-                --primary-glow: rgba(255,69,0,0.3);
-                --text: #ffffff;
-                --text-dim: #8e92a4;
-                --success: #22c55e;
-            }
-            body { 
-                font-family: 'Inter', sans-serif; 
-                background: var(--bg); 
-                background-image: radial-gradient(circle at 50% -20%, #1a1a2e 0%, var(--bg) 80%);
-                color: var(--text); 
-                display: flex; 
-                justify-content: center; 
-                align-items: center; 
-                height: 100vh; 
-                margin: 0; 
-                overflow: hidden;
-            }
-            .card { 
-                background: var(--card); 
-                padding: 48px; 
-                border-radius: 32px; 
-                box-shadow: 0 40px 100px rgba(0,0,0,0.6); 
-                width: 90%; 
-                max-width: 440px; 
-                border: 1px solid rgba(255,255,255,0.08);
-                position: relative;
-                backdrop-filter: blur(10px);
-            }
-            h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.03em; }
-            p { color: var(--text-dim); font-size: 1rem; margin-bottom: 40px; font-weight: 400; }
-            .form-group { margin-bottom: 24px; position: relative; }
-            label { display: block; font-size: 0.75rem; font-weight: 700; color: #6e6e88; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.08em; }
-            input { 
-                width: 100%; 
-                padding: 16px 20px; 
-                background: var(--input); 
-                border: 1.5px solid rgba(255,255,255,0.08); 
-                border-radius: 16px; 
-                color: white; 
-                font-size: 1rem; 
-                box-sizing: border-box;
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                font-weight: 500;
-            }
-            input:focus { outline: none; border-color: var(--primary); background: rgba(255,255,255,0.06); box-shadow: 0 0 20px rgba(255,69,0,0.1); }
-            button.main-btn { 
-                width: 100%; 
-                padding: 18px; 
-                background: var(--primary); 
-                color: white; 
-                border: none; 
-                border-radius: 16px; 
-                font-weight: 800; 
-                cursor: pointer; 
-                font-size: 1.1rem;
-                margin-top: 16px;
-                transition: all 0.2s ease;
-                box-shadow: 0 8px 30px var(--primary-glow);
-            }
-            button.main-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 40px var(--primary-glow); filter: brightness(1.1); }
-            button.main-btn:active { transform: translateY(0); }
-            
-            /* Modal / Overlay */
-            #modal {
-                position: absolute;
-                inset: 0;
-                background: var(--card);
-                border-radius: 32px;
-                padding: 48px;
-                display: none;
-                flex-direction: column;
-                justify-content: center;
-                align-items: center;
-                text-align: center;
-                z-index: 20;
-                animation: fadeIn 0.4s ease;
-            }
-            @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-            
-            .success-icon {
-                width: 64px;
-                height: 64px;
-                background: rgba(34, 197, 94, 0.15);
-                color: var(--success);
-                border-radius: 50%;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                font-size: 2rem;
-                margin-bottom: 24px;
-            }
-            .code-display {
-                background: rgba(255,255,255,0.03);
-                padding: 20px;
-                border-radius: 16px;
-                border: 1px dashed rgba(255,255,255,0.2);
-                width: 100%;
-                margin: 24px 0;
-                font-family: monospace;
-                font-size: 1.2rem;
-                color: var(--primary);
-                font-weight: 800;
-                box-sizing: border-box;
-                word-break: break-all;
-            }
-            .secondary-btn {
-                background: transparent;
-                color: var(--text-dim);
-                border: 1px solid rgba(255,255,255,0.1);
-                padding: 12px 24px;
-                border-radius: 12px;
-                cursor: pointer;
-                font-weight: 600;
-                margin-top: 12px;
-                transition: all 0.2s;
-            }
-            .secondary-btn:hover { background: rgba(255,255,255,0.05); color: white; border-color: rgba(255,255,255,0.2); }
-            
-            #error-msg { 
-                margin-top: 20px; 
-                color: #ef4444; 
-                font-size: 0.9rem; 
-                text-align: center; 
-                font-weight: 500;
-                display: none;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="card">
-            <h1>Beta Access</h1>
-            <p>Generate invitation codes for new testers.</p>
-            
-            <div id="main-form">
-                <div class="form-group">
-                    <label>Admin Secret</label>
-                    <input type="password" id="secret" placeholder="Enter secret key..." autofocus>
-                </div>
-                <div class="form-group">
-                    <label>Invite Code</label>
-                    <input type="text" id="code" placeholder="ALPHA-2026-X">
-                </div>
-                <div class="form-group">
-                    <label>Usage Limit</label>
-                    <input type="number" id="maxUses" value="1">
-                </div>
-                
-                <button id="gen-btn" class="main-btn">Generate Link</button>
-                <div id="error-msg"></div>
-            </div>
+// ── Global Error Handler ──────────────────────────────────────────
 
-            <div id="modal">
-                <div class="success-icon">✓</div>
-                <h2 style="margin: 0; font-weight: 800;">Code Created!</h2>
-                <p style="margin: 8px 0 0 0; font-size: 0.9rem;">Copy the code or the direct signup link.</p>
-                
-                <div id="generated-link" class="code-display"></div>
-                
-                <button id="copy-btn" class="main-btn">Copy Direct Link</button>
-                <button id="reset-btn" class="secondary-btn">Create Another</button>
-            </div>
-        </div>
-
-        <script>
-            let currentCode = '';
-            
-            document.addEventListener('DOMContentLoaded', () => {
-                const btn = document.getElementById('gen-btn');
-                if (btn) btn.addEventListener('click', generate);
-                
-                const cBtn = document.getElementById('copy-btn');
-                if (cBtn) cBtn.addEventListener('click', copyLink);
-                
-                const rBtn = document.getElementById('reset-btn');
-                if (rBtn) rBtn.addEventListener('click', resetForm);
-            });
-
-            async function generate() {
-                const secret = document.getElementById('secret').value;
-                const codeNode = document.getElementById('code');
-                const code = codeNode.value.trim().toUpperCase() || 'BETA-' + Math.random().toString(36).substring(2, 9).toUpperCase();
-                const maxUses = parseInt(document.getElementById('maxUses').value);
-                const errorNode = document.getElementById('error-msg');
-                
-                if (errorNode) {
-                    errorNode.textContent = '';
-                    errorNode.style.display = 'none';
-                }
-                
-                try {
-                    const res = await fetch('/api/admin/create-invite', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ secret, code, maxUses })
-                    });
-                    
-                    const data = await res.json();
-                    if (res.ok && data.success) {
-                        currentCode = code;
-                        const link = window.location.origin + '/login?invite=' + code;
-                        document.getElementById('generated-link').textContent = code;
-                        document.getElementById('modal').style.display = 'flex';
-                    } else {
-                        if (errorNode) {
-                            errorNode.textContent = data.error || 'Invalid secret or code';
-                            errorNode.style.display = 'block';
-                        }
-                    }
-                } catch (err) {
-                    console.error('Error generating code:', err);
-                    if (errorNode) {
-                        errorNode.textContent = 'Connection error. Check console.';
-                        errorNode.style.display = 'block';
-                    }
-                }
-            }
-
-            function copyLink() {
-                const link = window.location.origin + '/login?invite=' + currentCode;
-                navigator.clipboard.writeText(link).then(() => {
-                    const btn = document.getElementById('copy-btn');
-                    const originalText = btn.textContent;
-                    btn.textContent = '📋 Copied Link!';
-                    btn.style.background = '#22c55e';
-                    setTimeout(() => {
-                        btn.textContent = originalText;
-                        btn.style.background = '';
-                    }, 2000);
-                });
-            }
-
-            function resetForm() {
-                document.getElementById('modal').style.display = 'none';
-                document.getElementById('code').value = '';
-                const errorNode = document.getElementById('error-msg');
-                if (errorNode) errorNode.style.display = 'none';
-            }
-        </script>
-    </body>
-    </html>
-    `);
-});
-
-
-app.post("/api/admin/users/:uid/plan", adminMiddleware, async (req: express.Request, res: express.Response) => {
-    try {
-        const { plan } = req.body;
-        const { updateUserPlan } = await import("./server/firestore.js");
-        await updateUserPlan(req.params.uid as string, plan as any);
-        res.json({ success: true });
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.get("/api/admin/tokens", adminMiddleware, async (req: express.Request, res: express.Response) => {
-    try {
-        const tokens = await getBetaTokens();
-        res.json(tokens);
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.post("/api/admin/tokens", adminMiddleware, async (req: express.Request, res: express.Response) => {
-    try {
-        const { code, maxUses } = req.body;
-        await createInviteCode(code, maxUses || 1);
-        res.json({ success: true });
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.post("/api/admin/test-match", adminMiddleware, async (req: express.Request, res: express.Response) => {
-    try {
-        const { title, selftext, websiteContext } = req.body;
-        if (!title || !websiteContext) {
-            return res.status(400).json({ error: "Title and Website Context are required" });
-        }
-
-        const { scoreMarketingOpportunity } = await import("./server/ai.js");
-        const result = await scoreMarketingOpportunity(websiteContext, { 
-            title, 
-            selftext: selftext || "", 
-            subreddit: "tester" 
-        });
-
-        res.json(result);
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.post("/api/admin/waitlist/:id/status", adminMiddleware, async (req: express.Request, res: express.Response) => {
-    try {
-        await updateWaitlistStatus(req.params.id as string, req.body.status);
-        res.json({ success: true });
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// ── Test Alerting System ──────────────────────────────────────────
-app.get("/api/admin/test-alert", adminMiddleware, async (req: express.Request, res: express.Response) => {
-    try {
-        await sendAlert("SYSTEM", "Manual Trigger Test from Admin Terminal", { 
-            executedBy: req.user?.email,
-            ip: req.ip,
-            timestamp: new Date().toISOString()
-        });
-        res.json({ success: true, message: "Alert sent to Telegram" });
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.post("/api/waitlist", async (req: express.Request, res: express.Response) => {
-    // Public endpoint for beta access requests
-    try {
-        const { email } = req.body;
-        if (!email) return res.status(400).json({ error: "Email is required" });
-        await addWaitlistEntry(email);
-        res.json({ success: true });
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// Administrative and diagnostic routes migrated to ./server/admin/router.js
-
-
-app.post("/api/auth/verify-invite", authRateLimiter, async (req: express.Request, res: express.Response) => {
-    const { code } = req.body;
-    if (!code) return res.status(400).json({ error: "Code is required" });
-    
-    try {
-        const result = await verifyInviteCode(code);
-        res.json(result);
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.post("/api/auth/register", authRateLimiter, async (req: express.Request, res: express.Response) => {
-    const { email, password, inviteCode } = req.body;
-    
-    if (!email || !password || !inviteCode) {
-        return res.status(400).json({ error: "Email, password, and invite code are required." });
-    }
-
-    try {
-        const result = await registerUserWithInvite(email, password, inviteCode);
-        if (result.success) {
-            res.json(result);
-        } else {
-            res.status(400).json(result);
-        }
-    } catch (err: any) {
-        console.error("[API] Registration error:", err);
-        res.status(500).json({ error: err.message || "Internal server error." });
-    }
-});
-
-// Final error handler
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     console.error("Unhandled Error:", err);
     res.status(500).json({ error: "Internal server error" });
 });
@@ -1630,63 +157,39 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 // ── Start ──────────────────────────────────────────────────────────
 
 app.listen(PORT, "0.0.0.0", () => {
-    console.log("------------------------------------------------------------------");
-    console.log("REGISTERED ROUTES:");
-    if ((app as any)._router?.stack) {
-        printRoutes((app as any)._router.stack);
-    } else {
-        console.log("   (Route table not available for inspection via _router.stack in this Express version)");
-    }
-    console.log("------------------------------------------------------------------");
-    console.log(`🚀 OpinionDeck Platform Server running on port ${PORT}`);
-    console.log(`   Host: 0.0.0.0 (Required for Cloud Run)`);
-    console.log(`   Redis Status: ${redis.status}`);
+    console.log(`🚀 OpinionDeck running on port ${PORT}`);
+    console.log(`   Redis: ${redis.status}`);
+    initMonitoring().catch(err => console.error("[INIT] Monitoring init failed:", err));
 });
 
 // ── Graceful Shutdown ──────────────────────────────────────────────
 
 async function gracefulShutdown(signal: string) {
-    console.log(`[SHUTDOWN] Received ${signal}. Closing BullMQ components...`);
-
-    // ── Fail-Safe Timeout ──
-    const forceExitTimeout = setTimeout(() => {
-        console.warn("[SHUTDOWN] HANG DETECTED. Forcing hard exit (10s limit)...");
-        process.exit(1);
-    }, 10000);
-    forceExitTimeout.unref(); // Don't let the timeout itself hang the process
-
+    console.log(`[SHUTDOWN] ${signal} received. Closing...`);
+    const forceExit = setTimeout(() => process.exit(1), 10000);
+    forceExit.unref();
     try {
-        // 1. Close Workers first (stop picking up new jobs)
         await Promise.all([
             syncWorker.close(),
             granularAnalysisWorker.close(),
             analysisWorker.close(),
+            monitoringCronWorker.close(),
             monitoringScraperWorker.close(),
-            opportunityMatcherWorker.close()
+            opportunityMatcherWorker.close(),
         ]);
-        console.log("[SHUTDOWN] BullMQ Workers closed (including Monitoring).");
-
-        // 2. Close Queues
         await Promise.all([
             analysisQueue.close(),
             syncQueue.close(),
             granularAnalysisQueue.close(),
-            monitoringScraperQueue.close(),
-            opportunityMatcherQueue.close()
+            monitoringCronQueue.close(),
         ]);
-        console.log("[SHUTDOWN] BullMQ Queues closed (including Monitoring).");
-
-        // 3. Close Redis
         await redis.quit();
-        console.log("[SHUTDOWN] Redis connection closed.");
-
         process.exit(0);
     } catch (err) {
-        console.error("[SHUTDOWN] Error during graceful shutdown:", err);
+        console.error("[SHUTDOWN] Error:", err);
         process.exit(1);
     }
 }
-// Redundant imports and manual initialization removed (now at top-level)
 
 process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));

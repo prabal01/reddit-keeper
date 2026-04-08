@@ -7,7 +7,8 @@ import {
     type PlanConfig,
     type UserDoc,
 } from "../firestore.js";
-import { logContext } from "../utils/logger.js";
+import { logContext, logger } from "../utils/logger.js";
+import { config } from "../config.js";
 
 // Extend Express Request to include user info
 declare global {
@@ -42,8 +43,7 @@ export async function authMiddleware(
     req.user = null;
 
     const authHeader = req.headers.authorization;
-    const isProd = process.env.NODE_ENV === 'production';
-    const devBypass = !isProd && req.headers['x-opiniondeck-dev'] === 'true';
+    const devBypass = !config.isProd && req.headers['x-opiniondeck-dev'] === 'true';
 
     const finish = () => {
         logContext.run({ userId: req.user?.uid }, () => next());
@@ -72,8 +72,8 @@ export async function authMiddleware(
     const adminAuth = getAdminAuth();
 
     if (!adminAuth) {
-        if (process.env.NODE_ENV === 'production') {
-            console.error("CRITICAL: Firebase Auth not initialized in production.");
+        if (config.isProd) {
+            logger.error("CRITICAL: Firebase Auth not initialized in production.");
             return finish(); // Downstream will catch req.user === null and return 401
         }
 
@@ -102,7 +102,7 @@ export async function authMiddleware(
         };
     } catch (err) {
         // Invalid / expired token → treat as unauthenticated
-        console.warn("Auth token verification failed:", (err as Error).message);
+        logger.warn({ err }, "Auth token verification failed");
     }
 
     finish();

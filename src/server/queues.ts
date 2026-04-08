@@ -15,12 +15,13 @@ import {
 import { DiscoveryOrchestrator } from "./discovery/orchestrator.js";
 import { analyzeThreadGranular, analyzeThreads, analyzeDiscoveryBatch } from "./ai.js";
 import { sendAlert } from "./alerts.js";
-
-const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+import { config } from "./config.js";
+import { errMsg } from "./utils/errors.js";
+import { logger } from "./utils/logger.js";
 export const discoveryOrchestrator = new DiscoveryOrchestrator();
 
 export const sharedConnectionConfig = {
-    url: redisUrl,
+    url: config.redisUrl,
     maxRetriesPerRequest: null,
     enableReadyCheck: false
 };
@@ -70,7 +71,7 @@ export const monitoringCronQueue = new Queue("monitoring-cron", {
 
 export const syncWorker = new Worker("reddit-sync", async (job) => {
     const { url, folderId, userUid } = job.data;
-    console.log(`[SyncWorker] Processing thread: ${url} for folder: ${folderId}`);
+    logger.info(`[SyncWorker] Processing thread: ${url} for folder: ${folderId}`);
 
     try {
         const source: 'reddit' | 'hn' = url.includes('news.ycombinator.com') ? 'hn' : 'reddit';
@@ -94,8 +95,8 @@ export const syncWorker = new Worker("reddit-sync", async (job) => {
             subreddit: fullData.subreddit || fullData.post?.subreddit,
             analysisRunId
         });
-    } catch (err: any) {
-        console.error(`[SyncWorker] Failed to sync ${url}:`, err.message);
+    } catch (err: unknown) {
+        logger.error({ err, url }, "[SyncWorker] Failed to sync thread");
         throw err;
     } finally {
         await incrementPendingSyncCount(userUid, folderId, -1);
@@ -160,15 +161,15 @@ export const granularAnalysisWorker = new Worker("granular-analysis", async (job
 
         (job.data as any).completedInsights = insights;
 
-    } catch (err: any) {
-        console.error(`[GranularWorker] Failed for ${threadDocId}:`, err.message);
+    } catch (err: unknown) {
+        logger.error({ err, threadDocId }, "[GranularWorker] Failed to process thread");
         await updateThreadInsight(userUid, folderId, {
             id: threadDocId,
             folderId,
             uid: userUid,
             threadLink: url,
             status: 'failed',
-            error: err.message
+            error: errMsg(err)
         });
         throw err;
     } finally {
@@ -208,7 +209,7 @@ export const granularAnalysisWorker = new Worker("granular-analysis", async (job
                 transaction.update(folderRef, update);
             });
         } catch (finalErr) {
-            console.error(`[GranularWorker] Error in finally block for ${threadId}:`, finalErr);
+            logger.error({ err: finalErr, threadId }, "[GranularWorker] Error in finally block");
         }
     }
 }, {
@@ -254,8 +255,8 @@ export const analysisWorker = new Worker("analysis", async (job) => {
         });
 
         return parsedResult;
-    } catch (err: any) {
-        console.error(`[Worker] Failed analysis for ${folderId}:`, err);
+    } catch (err: unknown) {
+        logger.error({ err, folderId }, "[Worker] Failed analysis");
         throw err;
     }
 }, {
@@ -266,18 +267,18 @@ export const analysisWorker = new Worker("analysis", async (job) => {
 export const monitoringCronWorker = new Worker("monitoring-cron", async () => {
     const db = getDb();
     if (!db) {
-        console.error("[MonitoringWorker] Firebase DB not initialized.");
+        logger.error("[MonitoringWorker] Firebase DB not initialized.");
         return;
     }
 
     try {
-        console.log(`[MonitoringWorker] Starting cron cycle at ${new Date().toISOString()}`);
+        logger.info(`[MonitoringWorker] Starting cron cycle at ${new Date().toISOString()}`);
         const snapshot = await db.collection("folders")
             .where("is_monitoring_active", "==", true)
             .get();
 
         if (snapshot.empty) {
-            console.log("[MonitoringWorker] No active monitoring folders found. Skipping.");
+            logger.info("[MonitoringWorker] No active monitoring folders found. Skipping.");
             return;
         }
 
@@ -291,7 +292,7 @@ export const monitoringCronWorker = new Worker("monitoring-cron", async () => {
                 ? folder.seed_keywords[0] 
                 : folder.name;
 
-            console.log(`[MonitoringWorker] Checking delta for folder: ${folderId} | Keyword: ${keyword}`);
+            logger.info(`[MonitoringWorker] Checking delta for folder: ${folderId} | Keyword: ${keyword}`);
 
             // 1. Fetch current Leads to form the "seen" list
             const leadsSnap = await db.collection("folders").doc(folderId).collection("leads").get();
@@ -315,7 +316,7 @@ export const monitoringCronWorker = new Worker("monitoring-cron", async () => {
             }).slice(0, 15); // Cap to top 15 new ones for AI batching limits
             
             if (newThreadsBatch.length === 0) {
-                console.log(`[MonitoringWorker] No new unseen threads for folder: ${folderId}.`);
+                logger.info(`[MonitoringWorker] No new unseen threads for folder: ${folderId}.`);
                 // Record a "no new data" alert so the user knows the agent checked
                 const noNewAlertRef = db.collection("folders").doc(folderId).collection("alerts").doc();
                 await noNewAlertRef.set({
@@ -332,13 +333,33 @@ export const monitoringCronWorker = new Worker("monitoring-cron", async () => {
                 continue;
             }
 
-            console.log(`[MonitoringWorker] Found ${newThreadsBatch.length} new threads for folder: ${folderId}. Passing to AI.`);
+            logger.info(`[MonitoringWorker] Found ${newThreadsBatch.length} new threads for folder: ${folderId}. Passing to AI.`);
 
-            const threadBatch = newThreadsBatch.map(r => ({
-                id: typeof r.id === 'string' ? r.id : r.url,
-                title: r.title,
-                text: r.url
-            }));
+            // Fetch actual thread content for each result (r.url is just the URL, not content)
+            const threadBatch: { id: string; title: string; text: string }[] = [];
+            for (const r of newThreadsBatch) {
+                try {
+                    const fullThread = await discoveryOrchestrator.fetchFullThread(r.url, r.source as 'reddit' | 'hn');
+                    const selftext = fullThread?.post?.selftext || fullThread?.post?.text || '';
+                    const commentText = (fullThread?.comments || [])
+                        .slice(0, 10)
+                        .map((c: any) => c.body || c.text)
+                        .filter(Boolean)
+                        .join('\n');
+                    threadBatch.push({
+                        id: typeof r.id === 'string' ? r.id : r.url,
+                        title: r.title,
+                        text: selftext + (commentText ? '\n---\nTop Comments:\n' + commentText : '')
+                    });
+                } catch (err: unknown) {
+                    logger.info(`[MonitoringWorker] Failed to fetch full thread for ${r.url}: ${errMsg(err)}. Using title as fallback.`);
+                    threadBatch.push({
+                        id: typeof r.id === 'string' ? r.id : r.url,
+                        title: r.title,
+                        text: r.title
+                    });
+                }
+            }
 
             // 4. AI Processing
             const insights = await analyzeDiscoveryBatch(keyword, threadBatch);
@@ -408,10 +429,10 @@ export const monitoringCronWorker = new Worker("monitoring-cron", async () => {
                 });
             }
             await batch.commit();
-            console.log(`[MonitoringWorker] Updated folder ${folderId} with ${newLeadsCount} new leads, ${newPatternsCount} new patterns.`);
+            logger.info(`[MonitoringWorker] Updated folder ${folderId} with ${newLeadsCount} new leads, ${newPatternsCount} new patterns.`);
         }
-    } catch (err: any) {
-        console.error(`[MonitoringWorker] Cron execution failed:`, err);
+    } catch (err: unknown) {
+        logger.error({ err }, "[MonitoringWorker] Cron execution failed");
     }
 }, {
     connection: sharedConnectionConfig,
@@ -424,7 +445,7 @@ monitoringCronQueue.add("monitor", {}, {
         pattern: "0 */12 * * *" // Every 12 hours
     }
 }).catch(err => {
-    console.error("[MonitoringWorker] Failed to inject recurring job:", err);
+    logger.error({ err }, "[MonitoringWorker] Failed to inject recurring job");
 });
 
-console.log("[INIT] BullMQ Queues and Workers initialized in standalone module.");
+logger.info("[INIT] BullMQ Queues and Workers initialized in standalone module.");

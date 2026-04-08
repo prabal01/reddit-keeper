@@ -1,4 +1,6 @@
 import "dotenv/config";
+import { errMsg } from "./utils/errors.js";
+import { logger } from "./utils/logger.js";
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
@@ -50,11 +52,11 @@ export async function sendAlert(
 
     if (!response.ok) {
       const respText = await response.text();
-      console.error(`[Alerts] Telegram API failed: ${response.status} - ${respText}`);
+      logger.error({ status: response.status, body: respText }, '[Alerts] Telegram API failed');
     } else {
-      console.log(`[Alerts] Alert sent successfully: ${type}`);
+      logger.info({ type }, '[Alerts] Alert sent successfully');
     }
-  } catch (err: any) {
-    console.error(`[Alerts] Failed to send Telegram alert: ${err.message}`);
+  } catch (err: unknown) {
+    logger.error({ err }, '[Alerts] Failed to send Telegram alert');
   }
 }

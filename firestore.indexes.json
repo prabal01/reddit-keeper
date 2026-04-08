@@ -1,0 +1,52 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "folder_threads",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "uid", "order": "ASCENDING" },
+        { "fieldPath": "folderId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "discovery_history",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "uid", "order": "ASCENDING" },
+        { "fieldPath": "extractedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "folder_analyses",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "uid", "order": "ASCENDING" },
+        { "fieldPath": "folderId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "folders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "uid", "order": "ASCENDING" },
+        { "fieldPath": "is_monitoring_active", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "stripeCustomerId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "monitoring_posts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "uid", "order": "ASCENDING" },
+        { "fieldPath": "monitorId", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

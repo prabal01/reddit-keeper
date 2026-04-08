@@ -1,11 +1,12 @@
 import { VertexAI, SchemaType } from "@google-cloud/vertexai";
 import { GoogleAuth } from "google-auth-library";
 import { sendAlert } from "./alerts.js";
+import { logger } from "./utils/logger.js";
 
 const project = process.env.GOOGLE_CLOUD_PROJECT || "redditkeeperprod";
 const location = process.env.GOOGLE_CLOUD_LOCATION || "us-central1";
 
-console.log(`[AI] Initializing Vertex AI... Project: ${project}, Location: ${location}`);
+logger.info(`[AI] Initializing Vertex AI... Project: ${project}, Location: ${location}`);
 
 export const vertexAI = new VertexAI({ project, location });
 
@@ -13,29 +14,31 @@ export const vertexAI = new VertexAI({ project, location });
  * Robust retry wrapper for Vertex AI calls to handle 429 Resource Exhausted errors.
  */
 async function withRetry<T>(fn: () => Promise<T>, maxRetries = 5, baseDelay = 5000): Promise<T> {
-    let lastError: any;
+    let lastError: unknown;
     for (let i = 0; i < maxRetries; i++) {
         try {
             return await fn();
-        } catch (err: any) {
+        } catch (err: unknown) {
             lastError = err;
-            const errorText = JSON.stringify(err).toLowerCase() + (err?.message || '').toLowerCase();
+            const errObj = err as Record<string, any>;
+            const errorText = JSON.stringify(err).toLowerCase() + ((errObj?.message as string) || '').toLowerCase();
             const isRateLimit = errorText.includes('429') ||
                 errorText.includes('resource_exhausted') ||
-                err?.status === 429 ||
-                err?.response?.status === 429;
+                errObj?.status === 429 ||
+                errObj?.response?.status === 429;
 
             if (isRateLimit && i < maxRetries - 1) {
                 // Exponential backoff: 5s, 10s, 20s, 40s...
                 const delay = baseDelay * Math.pow(2, i) + (Math.random() * 2000);
-                console.warn(`[AI] Rate limit hit (429). Retrying in ${Math.round(delay)}ms... (Attempt ${i + 1}/${maxRetries})`);
+                logger.warn(`[AI] Rate limit hit (429). Retrying in ${Math.round(delay)}ms... (Attempt ${i + 1}/${maxRetries})`);
                 await new Promise(resolve => setTimeout(resolve, delay));
                 continue;
             }
             throw err;
         }
     }
-    await sendAlert("AI", `Vertex AI Failed after ${maxRetries} attempts!`, { error: lastError?.message || lastError });
+    const errMsg = lastError instanceof Error ? lastError.message : String(lastError);
+    await sendAlert("AI", `Vertex AI Failed after ${maxRetries} attempts!`, { error: errMsg });
     throw lastError;
 }
 
@@ -383,16 +386,16 @@ export async function expandIdeaToQueries(idea: string, communities?: string[], 
 
         const finalIntent = parsed.intent || { persona: "general users", pain: idea, domain: "software" };
 
-        console.log(`[AI] [IDEA_EXPANSION] Intent Detected:`, finalIntent);
-        console.log(`[AI] [IDEA_EXPANSION] Generated ${finalQueries.length} queries`);
-        finalQueries.forEach((q: string, i: number) => console.log(`  Query ${i + 1}: ${q}`));
+        logger.info({ intent: finalIntent }, `[AI] [IDEA_EXPANSION] Intent Detected`);
+        logger.info(`[AI] [IDEA_EXPANSION] Generated ${finalQueries.length} queries`);
+        finalQueries.forEach((q: string, i: number) => logger.info(`  Query ${i + 1}: ${q}`));
 
         return {
             intent: finalIntent,
             queries: finalQueries
         };
     } catch (error) {
-        console.error("[AI] [IDEA_EXPANSION] Error:", error);
+        logger.error({ err: error }, "[AI] [IDEA_EXPANSION] Error");
         return {
             intent: { persona: "unknown", pain: "unknown", domain: "unknown" },
             queries: [idea]
@@ -480,7 +483,7 @@ ${threadData.map(t => `--- THREAD START ---\nTitle: ${t.title}\nSubreddit: r/${t
 `;
 
     try {
-        console.log(`[AI] Calling Vertex AI with ${threads.length} threads...`);
+        logger.info(`[AI] Calling Vertex AI with ${threads.length} threads...`);
         const result = await withRetry(() => model.generateContent(systemPrompt));
         const response = result.response;
 
@@ -489,7 +492,7 @@ ${threadData.map(t => `--- THREAD START ---\nTitle: ${t.title}\nSubreddit: r/${t
 
         if (!text) throw new Error("No response from Vertex AI");
 
-        console.log("[AI] Raw Response received. Parsing JSON...");
+        logger.info("[AI] Raw Response received. Parsing JSON...");
         const parsed = JSON.parse(text);
 
         // Defensive check
@@ -509,9 +512,9 @@ ${threadData.map(t => `--- THREAD START ---\nTitle: ${t.title}\nSubreddit: r/${t
             analysis: parsed,
             usage: response.usageMetadata
         };
-    } catch (error: any) {
-        console.error("Vertex AI Analysis Error:", error);
-        await sendAlert("AI", `Main Analysis Report Generation Failed!`, { error: error.message });
+    } catch (error) {
+        logger.error({ err: error }, "Vertex AI Analysis Error");
+        await sendAlert("AI", `Main Analysis Report Generation Failed!`, { error: error instanceof Error ? error.message : String(error) });
         throw error;
     }
 }
@@ -561,19 +564,18 @@ ${threadContent}
 `;
 
     try {
-        console.log(`[AI] [GRANULAR] Analyzing thread ${thread.id} via Vertex AI...`);
+        logger.info(`[AI] [GRANULAR] Analyzing thread ${thread.id} via Vertex AI...`);
         const result = await withRetry(() => granularModel.generateContent(systemPrompt));
-        console.log('granual result', result)
         const text = result.response.candidates?.[0]?.content?.parts?.[0]?.text;
 
         if (!text) throw new Error("No response from Vertex AI");
         return JSON.parse(text);
-    } catch (error: any) {
-        console.error(`[AI] [GRANULAR] Error analyzing thread ${thread.id}:`, error);
-        await sendAlert("AI", `Granular Thread Analysis Failed!`, { 
-            error: error.message,
+    } catch (error: unknown) {
+        logger.error({ err: error, threadId: thread.id }, `[AI] [GRANULAR] Error analyzing thread ${thread.id}`);
+        await sendAlert("AI", `Granular Thread Analysis Failed!`, {
+            error: error instanceof Error ? error.message : String(error),
             threadId: thread.id,
-            title: thread.title 
+            title: thread.title
         });
         throw error;
     }
@@ -605,14 +607,14 @@ export async function arbitrateSimilarity(titleA: string, titleB: string) {
             usage: result.response.usageMetadata
         };
     } catch (error) {
-        console.error("[AI] [ARBITRATION] Error:", error);
+        logger.error({ err: error }, "[AI] [ARBITRATION] Error");
         return { areSame: false, reasoning: "Error in arbitration", canonicalTitle: titleA };
     }
 }
 
 export async function getEmbeddings(texts: string[]) {
     try {
-        console.log(`[AI] Generating embeddings for ${texts.length} items...`);
+        logger.info(`[AI] Generating embeddings for ${texts.length} items...`);
 
         const auth = new GoogleAuth({
             scopes: 'https://www.googleapis.com/auth/cloud-platform'
@@ -644,7 +646,7 @@ export async function getEmbeddings(texts: string[]) {
             billableCharacters: totalCharacters
         };
     } catch (error) {
-        console.error("[AI] [EMBEDDING] Error:", error);
+        logger.error({ err: error }, "[AI] [EMBEDDING] Error");
         throw error;
     }
 }
@@ -721,7 +723,7 @@ STRICT INSTRUCTIONS:
 });
 
 export async function synthesizeReport(categories: { painPoints: any[], triggers: any[], outcomes: any[] }, totalThreads: number, totalComments: number) {
-    console.log(`[AI] Starting Stage 5 Ranked Synthesis...`);
+    logger.info(`[AI] Starting Stage 5 Ranked Synthesis...`);
 
     // We only pass the necessary data to the LLM to save tokens and prevent confusion
     const inputContent = JSON.stringify({
@@ -782,7 +784,7 @@ export async function scoreMarketingOpportunity(productContext: string, post: { 
         if (!text) throw new Error("No response from Opportunity Model");
         return JSON.parse(text);
     } catch (error) {
-        console.error("[AI] [OPPORTUNITY_SCORE] Error:", error);
+        logger.error({ err: error }, "[AI] [OPPORTUNITY_SCORE] Error");
         return { relevanceScore: 0, matchReason: "Failed to analyze", suggestedReply: null };
     }
 }
@@ -845,13 +847,13 @@ export async function analyzeDiscoveryBatch(niche: string, threads: { id: string
     `;
     
     try {
-        console.log(`[AI] [DISCOVERY_BATCH] Analyzing ${threads.length} threads...`);
+        logger.info(`[AI] [DISCOVERY_BATCH] Analyzing ${threads.length} threads...`);
         const result = await withRetry(() => discoveryBatchModel.generateContent(prompt));
         const text = result.response.candidates?.[0]?.content?.parts?.[0]?.text;
         if (!text) throw new Error("No response from Discovery Batch Model");
         return JSON.parse(text);
     } catch (error) {
-        console.error("[AI] [DISCOVERY_BATCH] Error:", error);
+        logger.error({ err: error }, "[AI] [DISCOVERY_BATCH] Error");
         return { patterns: [], opportunities: [] };
     }
 }
@@ -875,13 +877,13 @@ export async function extractNicheFromWebsite(url: string, html: string) {
     `;
     
     try {
-        console.log(`[AI] [NICHE_EXTRACTION] Analyzing website for ${url}...`);
+        logger.info(`[AI] [NICHE_EXTRACTION] Analyzing website for ${url}...`);
         const result = await withRetry(() => nicheModel.generateContent(prompt));
         const text = result.response.candidates?.[0]?.content?.parts?.[0]?.text;
         if (!text) throw new Error("No response from Niche Extraction Model");
         return JSON.parse(text);
     } catch (error) {
-        console.error("[AI] [NICHE_EXTRACTION] Error:", error);
+        logger.error({ err: error }, "[AI] [NICHE_EXTRACTION] Error");
         return {
             niche: "Website Insight",
             description: `Extracted from ${url}`,
