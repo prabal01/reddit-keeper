@@ -1,9 +1,12 @@
+import crypto from 'crypto';
 import { getDb } from '../firestore.js';
-import { 
-    MonitoredSubreddit, 
-    UserMonitor, 
-    CachedRedditPost, 
-    MarketingOpportunity 
+import { USER_AGENT } from '../config.js';
+import { errMsg } from '../utils/errors.js';
+import {
+    MonitoredSubreddit,
+    UserMonitor,
+    CachedRedditPost,
+    MarketingOpportunity
 } from './types.js';
 import { logger } from '../utils/logger.js';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -19,35 +22,111 @@ export class MonitoringService {
     private static COL_POSTS = 'monitoring_posts';
     private static COL_OPPORTUNITIES = 'monitoring_opportunities';
 
+    private static monitorDocId(uid: string, monitorId: string): string {
+        return `${uid}_${monitorId}`;
+    }
+
     /**
-     * Get all active monitors across the platform
+     * Get all active monitors across the platform (used by worker)
      */
     static async getAllMonitors(): Promise<UserMonitor[]> {
         const db = getDb();
         const snapshot = await db.collection(this.COL_MONITORS).get();
-        return snapshot.docs.map(doc => doc.data() as UserMonitor);
+        return snapshot.docs.map(doc => {
+            const data = doc.data() as UserMonitor;
+            // Back-compat: old docs keyed by uid only, monitorId defaults to 'default'
+            if (!data.monitorId) data.monitorId = 'default';
+            if (!data.name) data.name = 'Default Monitor';
+            return data;
+        });
     }
 
     /**
-     * Get a specific user's monitor config
+     * Get all monitors for a specific user
      */
-    static async getUserMonitor(uid: string): Promise<UserMonitor | null> {
+    static async getUserMonitors(uid: string): Promise<UserMonitor[]> {
         const db = getDb();
-        const doc = await db.collection(this.COL_MONITORS).doc(uid).get();
+        const snapshot = await db.collection(this.COL_MONITORS)
+            .where('uid', '==', uid)
+            .get();
+        return snapshot.docs.map(doc => {
+            const data = doc.data() as UserMonitor;
+            if (!data.monitorId) data.monitorId = 'default';
+            if (!data.name) data.name = 'Default Monitor';
+            return data;
+        });
+    }
+
+    /**
+     * Count monitors for a user (for plan enforcement)
+     */
+    static async countUserMonitors(uid: string): Promise<number> {
+        const db = getDb();
+        const snapshot = await db.collection(this.COL_MONITORS)
+            .where('uid', '==', uid)
+            .get();
+        return snapshot.size;
+    }
+
+    /**
+     * Get a specific monitor by uid + monitorId
+     */
+    static async getUserMonitor(uid: string, monitorId: string = 'default'): Promise<UserMonitor | null> {
+        const db = getDb();
+        const docId = this.monitorDocId(uid, monitorId);
+        const doc = await db.collection(this.COL_MONITORS).doc(docId).get();
+
+        // Back-compat: try legacy uid-keyed doc if new doc doesn't exist and monitorId is 'default'
+        if (!doc.exists && monitorId === 'default') {
+            const legacyDoc = await db.collection(this.COL_MONITORS).doc(uid).get();
+            if (legacyDoc.exists) {
+                const data = legacyDoc.data() as UserMonitor;
+                data.monitorId = 'default';
+                if (!data.name) data.name = 'Default Monitor';
+                return data;
+            }
+            return null;
+        }
+
         if (!doc.exists) return null;
-        return doc.data() as UserMonitor;
+        const data = doc.data() as UserMonitor;
+        if (!data.monitorId) data.monitorId = monitorId;
+        if (!data.name) data.name = 'Default Monitor';
+        return data;
     }
 
     /**
-     * Save/Update user's monitor config
+     * Save/Update a specific monitor. Creates with generated monitorId if not provided.
+     * Returns the monitorId used.
      */
-    static async saveUserMonitor(uid: string, monitor: Partial<UserMonitor>): Promise<void> {
+    static async saveUserMonitor(uid: string, monitor: Partial<UserMonitor>, monitorId?: string): Promise<string> {
         const db = getDb();
-        await db.collection(this.COL_MONITORS).doc(uid).set({
+        const resolvedId = monitorId || monitor.monitorId || crypto.randomUUID().slice(0, 8);
+        const docId = this.monitorDocId(uid, resolvedId);
+
+        await db.collection(this.COL_MONITORS).doc(docId).set({
             uid,
+            monitorId: resolvedId,
+            name: monitor.name || 'Default Monitor',
             ...monitor,
             createdAt: monitor.createdAt || new Date().toISOString(),
         }, { merge: true });
+
+        return resolvedId;
+    }
+
+    /**
+     * Delete a specific monitor
+     */
+    static async deleteUserMonitor(uid: string, monitorId: string): Promise<void> {
+        const db = getDb();
+        const docId = this.monitorDocId(uid, monitorId);
+        const docRef = db.collection(this.COL_MONITORS).doc(docId);
+        const doc = await docRef.get();
+
+        if (doc.exists && doc.data()?.uid === uid) {
+            await docRef.delete();
+        }
     }
 
     /**
@@ -91,19 +170,36 @@ export class MonitoringService {
     /**
      * Get user's opportunities
      */
-    static async getUserOpportunities(uid: string): Promise<MarketingOpportunity[]> {
+    static async getUserOpportunities(uid: string, limit = 200): Promise<MarketingOpportunity[]> {
         const db = getDb();
         try {
             const snapshot = await db.collection(this.COL_OPPORTUNITIES)
                 .where('uid', '==', uid)
+                .orderBy('createdAt', 'desc')
+                .limit(limit)
                 .get();
-            
-            const docs = snapshot.docs.map(doc => doc.data() as MarketingOpportunity);
-            // Sort in memory for V1 to avoid index requirement errors
-            return docs.sort((a, b) => b.createdAt - a.createdAt);
-        } catch (err: any) {
+
+            return snapshot.docs.map(doc => doc.data() as MarketingOpportunity);
+        } catch (err: unknown) {
             logger.error({ err, uid }, "Failed to fetch user opportunities");
-            return []; // Fail gracefully with empty array
+            return [];
+        }
+    }
+
+    /**
+     * Fetch all opportunities for a user without limit — used for CSV export only.
+     */
+    static async getAllUserOpportunities(uid: string): Promise<MarketingOpportunity[]> {
+        const db = getDb();
+        try {
+            const snapshot = await db.collection(this.COL_OPPORTUNITIES)
+                .where('uid', '==', uid)
+                .orderBy('createdAt', 'desc')
+                .get();
+            return snapshot.docs.map(doc => doc.data() as MarketingOpportunity);
+        } catch (err: unknown) {
+            logger.error({ err, uid }, "Failed to fetch all user opportunities for export");
+            return [];
         }
     }
 
@@ -114,10 +210,29 @@ export class MonitoringService {
         const db = getDb();
         const docRef = db.collection(this.COL_OPPORTUNITIES).doc(opportunityId);
         const doc = await docRef.get();
-        
+
         if (doc.exists && doc.data()?.uid === uid) {
             await docRef.update({ status });
         }
+    }
+
+    /**
+     * Delete multiple opportunities for a user
+     */
+    static async deleteOpportunities(uid: string, opportunityIds: string[]): Promise<void> {
+        const db = getDb();
+
+        // Verify all opportunities belong to this user before deletion
+        const snapshot = await db.collection(this.COL_OPPORTUNITIES)
+            .where('uid', '==', uid)
+            .where('__name__', 'in', opportunityIds)
+            .get();
+
+        const batch = db.batch();
+        for (const doc of snapshot.docs) {
+            batch.delete(doc.ref);
+        }
+        await batch.commit();
     }
 
     /**
@@ -128,7 +243,7 @@ export class MonitoringService {
             logger.info({ action: 'SCRAPE_URL', url }, `Scraping URL for context...`);
             const response = await fetch(url, {
                 headers: {
-                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+                    'User-Agent': USER_AGENT
                 }
             });
 
@@ -158,9 +273,9 @@ export class MonitoringService {
             if (!summary) throw new Error("AI failed to generate summary");
             return summary.trim();
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             logger.error({ err, url }, "Failed to scrape and summarize URL");
-            throw new Error(`Failed to extract context from URL: ${err.message}`);
+            throw new Error(`Failed to extract context from URL: ${errMsg(err)}`);
         }
     }
 
@@ -227,7 +342,7 @@ export class MonitoringService {
 
             return suggestions.filter(Boolean);
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             logger.error({ err, context }, "Failed to search subreddits with AI");
             return []; 
         }

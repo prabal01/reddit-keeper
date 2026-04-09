@@ -2,12 +2,13 @@ import { Queue, Worker } from 'bullmq';
 import { MonitoringService } from './service.js';
 import { DiscoveryOrchestrator } from '../discovery/orchestrator.js';
 import { logger } from '../utils/logger.js';
+import { errMsg } from '../utils/errors.js';
 import { redis } from '../middleware/rateLimiter.js';
 import crypto from 'crypto';
+import { config } from '../config.js';
 
-const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
 const sharedConnectionConfig = {
-    url: redisUrl,
+    url: config.redisUrl,
     maxRetriesPerRequest: null,
     enableReadyCheck: false
 };
@@ -45,7 +46,7 @@ export const monitoringScraperWorker = new Worker("monitoring-scraper", async (j
     const allMonitors = await MonitoringService.getAllMonitors();
     const subredditSet = new Set<string>();
     allMonitors.forEach(m => m.subreddits.forEach(s => subredditSet.add(s.toLowerCase().trim())));
-    
+
     const uniqueSubreddits = Array.from(subredditSet);
     logger.info({ action: 'MONITORING_SUBREDDITS_IDENTIFIED', count: uniqueSubreddits.length }, `[Monitoring] Found ${uniqueSubreddits.length} unique subreddits to monitor.`);
 
@@ -54,22 +55,22 @@ export const monitoringScraperWorker = new Worker("monitoring-scraper", async (j
             // 1. Check Redis for 8-hour cooldown to avoid redundant fetches
             const cooldownKey = `monitoring:cooldown:${sub}`;
             const onCooldown = await redis.get(cooldownKey);
-            
+
             if (onCooldown) {
                 logger.info({ action: 'MONITORING_SUBREDDIT_SKIP', subreddit: sub }, `[Monitoring] skipping r/${sub} - already fetched within 8h window.`);
                 continue;
             }
 
             logger.info({ action: 'MONITORING_SUBREDDIT_FETCH', subreddit: sub }, `[Monitoring] Fetching r/${sub}...`);
-            
+
             const { RedditDiscoveryService } = await import('../discovery/reddit.service.js');
             const redditService = new RedditDiscoveryService();
-            
+
             const results = await redditService.fetchSubredditNew(sub, 100);
             logger.info({ action: 'MONITORING_SUBREDDIT_FETCH_COUNT', subreddit: sub, count: results?.length || 0 }, `[Monitoring] Fetched ${results?.length || 0} posts for r/${sub}`);
-            
+
             if (!results || results.length === 0) {
-                // If we hit a snag, maybe don't set cooldown to allow retry? 
+                // If we hit a snag, maybe don't set cooldown to allow retry?
                 // Using 1 hour cooldown for empty results to prevent thrashing
                 await redis.set(cooldownKey, 'empty', 'EX', 3600);
                 continue;
@@ -86,7 +87,8 @@ export const monitoringScraperWorker = new Worker("monitoring-scraper", async (j
                     url: post.url,
                     num_comments: post.num_comments,
                     created_utc: post.created_utc,
-                    fetchedAt: new Date().toISOString()
+                    fetchedAt: new Date().toISOString(),
+                    source: 'reddit_local'
                 });
             }
 
@@ -95,18 +97,21 @@ export const monitoringScraperWorker = new Worker("monitoring-scraper", async (j
 
             logger.info({ action: 'MONITORING_SUBREDDIT_CACHED', subreddit: sub, count: results.length }, `[Monitoring] Cached ${results.length} posts for r/${sub}`);
 
-        } catch (err: any) {
-            logger.error({ action: 'MONITORING_SUBREDDIT_ERROR', subreddit: sub, err: err.message }, `[Monitoring] Failed to scrape r/${sub}`);
+        } catch (err: unknown) {
+            logger.error({ action: 'MONITORING_SUBREDDIT_ERROR', subreddit: sub, err: errMsg(err) }, `[Monitoring] Failed to scrape r/${sub}`);
+            // Set a 1-hour cooldown on error to prevent retry spam
+            await redis.set(`monitoring:cooldown:${sub}`, 'error', 'EX', 3600).catch(() => {});
         }
     }
 
-    // 3. Trigger Matcher jobs for all users
-    // We send one job per user so they can run in parallel
+    // 3. Trigger Matcher jobs per monitor (one job per monitor, not per user)
     for (const monitor of allMonitors) {
-        await opportunityMatcherQueue.add(`match-${monitor.uid}`, { 
+        const jobId = `match-${monitor.uid}-${monitor.monitorId}`;
+        await opportunityMatcherQueue.add(jobId, {
             uid: monitor.uid,
+            monitorId: monitor.monitorId,
             subreddits: monitor.subreddits
-        });
+        }, { jobId });
     }
 
     return { subredditsCount: uniqueSubreddits.length, monitorsTriggered: allMonitors.length };
@@ -123,11 +128,11 @@ export const monitoringScraperWorker = new Worker("monitoring-scraper", async (j
 // ── Matcher Worker ────────────────────────────────────────────────
 
 export const opportunityMatcherWorker = new Worker("opportunity-matcher", async (job) => {
-    const { uid, subreddits } = job.data;
-    const monitor = await MonitoringService.getUserMonitor(uid);
+    const { uid, monitorId = 'default', subreddits } = job.data;
+    const monitor = await MonitoringService.getUserMonitor(uid, monitorId);
     if (!monitor || !monitor.websiteContext) return;
 
-    logger.info({ action: 'MONITORING_MATCH_START', uid }, `[Monitoring] Matching posts for user ${uid}...`);
+    logger.info({ action: 'MONITORING_MATCH_START', uid, monitorId }, `[Monitoring] Matching posts for monitor ${monitorId} of user ${uid}...`);
 
     // 1. Get posts for the user's subreddits from the last 7 days
     const posts = await MonitoringService.getPostsForSubreddits(subreddits, 7);
@@ -138,7 +143,7 @@ export const opportunityMatcherWorker = new Worker("opportunity-matcher", async 
     const existingPostIds = new Set(existingOppDocs.map(o => o.postId));
     
     const newPosts = posts.filter(p => !existingPostIds.has(p.id)).slice(0, 20);
-    logger.info({ action: 'MONITORING_NEW_POSTS_FOUND', uid, count: newPosts.length }, `[Monitoring] Found ${newPosts.length} new posts to score for ${uid}.`);
+    logger.info({ action: 'MONITORING_NEW_POSTS_FOUND', uid, monitorId, count: newPosts.length }, `[Monitoring] Found ${newPosts.length} new posts to score for monitor ${monitorId} of ${uid}.`);
 
     const { scoreMarketingOpportunity } = await import('../ai.js');
 
@@ -160,11 +165,12 @@ export const opportunityMatcherWorker = new Worker("opportunity-matcher", async 
 
             if (result.relevanceScore >= 50) {
                 await MonitoringService.saveOpportunity({
-                    id: `${uid}_${post.id}`,
+                    id: `${uid}_${monitorId}_${post.id}`,
                     uid,
                     postId: post.id,
                     postTitle: post.title,
                     postSubreddit: post.subreddit,
+                    postAuthor: post.author,
                     postUrl: post.url,
                     relevanceScore: result.relevanceScore,
                     matchReason: result.matchReason,
@@ -175,8 +181,8 @@ export const opportunityMatcherWorker = new Worker("opportunity-matcher", async 
                 });
                 logger.info({ action: 'MONITORING_OPPORTUNITY_SAVED', uid, postId: post.id, score: result.relevanceScore }, `[Monitoring] Saved opportunity for ${uid}`);
             }
-        } catch (err: any) {
-            logger.error({ action: 'MONITORING_MATCH_ERROR', uid, postId: post.id, err: err.message }, `[Monitoring] Failed to score post ${post.id}`);
+        } catch (err: unknown) {
+            logger.error({ action: 'MONITORING_MATCH_ERROR', uid, postId: post.id, err: errMsg(err) }, `[Monitoring] Failed to score post ${post.id}`);
         }
     }
 

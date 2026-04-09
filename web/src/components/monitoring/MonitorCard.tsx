@@ -13,11 +13,11 @@ interface MonitorCardProps {
     lastScanTime?: string | null;
 }
 
-export const MonitorCard: React.FC<MonitorCardProps> = ({ 
-    folder, 
-    leadCount = 0, 
-    patternCount = 0, 
-    lastScanTime 
+export const MonitorCard: React.FC<MonitorCardProps> = ({
+    folder,
+    leadCount = 0,
+    patternCount = 0,
+    lastScanTime,
 }) => {
     const navigate = useNavigate();
     const keyword = folder.seed_keywords?.[0] || folder.name;

@@ -8,6 +8,8 @@ export interface MonitoredSubreddit {
 
 export interface UserMonitor {
     uid: string;
+    monitorId: string;      // unique per user, used as doc ID suffix
+    name: string;           // user-defined label
     websiteContext: string;
     subreddits: string[];
     createdAt: string;
@@ -24,6 +26,7 @@ export interface CachedRedditPost {
     num_comments: number;
     created_utc: number;
     fetchedAt: string;
+    source?: 'arctic_shift' | 'pullpush' | 'reddit_local' | 'justserp';
 }
 
 export interface MarketingOpportunity {
@@ -32,6 +35,7 @@ export interface MarketingOpportunity {
     postId: string;
     postTitle: string;
     postSubreddit: string;
+    postAuthor: string; // Reddit username of post author
     postUrl: string;
     relevanceScore: number; // 0-100
     matchReason: string;
@@ -39,4 +43,17 @@ export interface MarketingOpportunity {
     status: 'new' | 'saved' | 'hidden' | 'dismissed';
     matchedAt: string;
     createdAt: number; // post creation time for sorting
+}
+
+export interface JustSerpQuotaCounter {
+    count: number;
+    cap: number;
+    date: string;
+}
+
+export interface SerpUsageLog {
+    source: 'justserp';
+    keyword: string;
+    timestamp: string;
+    cost_estimate: number;
 }

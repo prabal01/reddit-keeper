@@ -21,12 +21,21 @@ export interface PlanConfig {
     analysisLimit: number;
     savedThreadLimit: number;
     commentDepth: number;
+    monitorLimit: number;
+    subredditsPerMonitor: number;
+    teamSeats: number;
 }
+
+export type PlanType = "free" | "trial" | "starter" | "pro" | "professional" | "beta" | "enterprise" | "past_due";
 
 export interface UserUsage {
     discoveryCount: number;
     analysisCount: number;
     savedThreadCount: number;
+    monitorCount: number;
+    totalSubreddits: number;
+    leadsFound: number;
+    newLeadsCount: number;
 }
 
 // ── Auth header helper ─────────────────────────────────────────────
@@ -103,6 +112,15 @@ export async function fetchThread(options: FetchOptions): Promise<FetchResult> {
 
 // ── Fetch Folder Analysis ──────────────────────────────────────────
 
+export async function deactivateMonitor(folderId: string): Promise<void> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE}/folders/${folderId}/deactivate`, {
+        method: 'PATCH',
+        headers,
+    });
+    if (!res.ok) throw new Error('Failed to deactivate monitor');
+}
+
 export async function fetchFolderAnalysis(folderId: string): Promise<any | null> {
     const headers = await getAuthHeaders();
     const response = await fetch(`${API_BASE}/folders/${folderId}/analysis`, {
@@ -163,4 +181,21 @@ export async function createRazorpayOrder(): Promise<any> {
     }
 
     return response.json();
+}
+
+export async function createDodoCheckout(plan: 'starter' | 'professional'): Promise<void> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE}/payments/dodo/create-session`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ plan }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || 'Failed to create checkout session');
+    }
+
+    const { checkout_url } = await response.json();
+    window.location.href = checkout_url;
 }

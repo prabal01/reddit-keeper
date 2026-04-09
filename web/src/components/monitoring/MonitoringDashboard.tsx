@@ -11,8 +11,8 @@ import { Badge } from '../common/Badge';
 import './MonitoringDashboard.css';
 
 export const MonitoringDashboard: React.FC = () => {
-    const { user } = useAuth();
-    const { folders, getFolderAlerts, getFolderPatterns, getFolderLeads } = useFolders();
+    const { user, config, openUpgradeModal } = useAuth();
+    const { folders, loading: foldersLoading, getFolderAlerts, getFolderPatterns, getFolderLeads, fetchFolders } = useFolders();
     const navigate = useNavigate();
 
     const [query, setQuery] = useState('');
@@ -21,6 +21,7 @@ export const MonitoringDashboard: React.FC = () => {
 
     // Propose & Confirm State
     const [confirmStep, setConfirmStep] = useState<'input' | 'proposing' | 'review' | 'starting' | 'success'>('input');
+    const [limitError, setLimitError] = useState<string | null>(null);
     const [proposedContext, setProposedContext] = useState<{
         isUrl: boolean;
         niche: string;
@@ -89,6 +90,14 @@ export const MonitoringDashboard: React.FC = () => {
     const handleGetProposals = async () => {
         const trimmed = query.trim();
         if (!trimmed) return;
+        setLimitError(null);
+
+        // Pre-check monitor limit before any API call
+        if (config && activeMonitors.length >= config.monitorLimit) {
+            setLimitError(`You've reached your limit of ${config.monitorLimit} active monitor${config.monitorLimit === 1 ? '' : 's'}.`);
+            return;
+        }
+
         setConfirmStep('proposing');
         
         try {
@@ -136,11 +145,21 @@ export const MonitoringDashboard: React.FC = () => {
                 })
             });
 
-            if (!response.ok) throw new Error('Failed to start monitor');
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                if (data.code === 'MONITOR_LIMIT_REACHED') {
+                    setLimitError(data.error);
+                    setConfirmStep('input');
+                    return;
+                }
+                throw new Error('Failed to start monitor');
+            }
             const data = await response.json();
             
             if (data.folderId) {
                 setConfirmStep('success');
+                // Refresh folders so FolderDetail can find the new folder immediately
+                await fetchFolders();
                 // Give the user a moment of 'Zen' before redirecting
                 setTimeout(() => {
                     navigate(`/folders/${data.folderId}`);
@@ -175,6 +194,17 @@ export const MonitoringDashboard: React.FC = () => {
                 </Subtitle>
 
                 {/* Main Input Bar */}
+                {limitError && confirmStep === 'input' && (
+                    <div className="md-limit-error fadeInUp text-center mb-4 flex flex-col items-center gap-2">
+                        <span className="text-red-400 text-sm">{limitError}</span>
+                        <button
+                            className="text-xs px-3 py-1.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30 transition-colors"
+                            onClick={openUpgradeModal}
+                        >
+                            Upgrade plan to add more monitors
+                        </button>
+                    </div>
+                )}
                 {confirmStep === 'input' && (
                     <div className="md-input-bar fadeInUp">
                         <div className="md-input-wrapper">
@@ -304,6 +334,25 @@ export const MonitoringDashboard: React.FC = () => {
                         <div className="md-redirect-timer">Redirecting to project folder...</div>
                     </div>
                 </div>
+            ) : foldersLoading ? (
+                /* Loading state — prevents empty flash on first load */
+                <section className="md-monitors-section">
+                    <div className="md-monitors-grid">
+                        {[1, 2, 3].map(i => (
+                            <div key={i} className="w-full p-6 rounded-2xl bg-(--bg-secondary) border border-(--border-light) animate-pulse">
+                                <div className="flex justify-between mb-6">
+                                    <div className="h-3 w-24 rounded bg-(--border-light)" />
+                                    <div className="h-5 w-10 rounded-full bg-(--border-light)" />
+                                </div>
+                                <div className="h-5 w-40 rounded bg-(--border-light) mb-6" />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="h-8 rounded bg-(--border-light)" />
+                                    <div className="h-8 rounded bg-(--border-light)" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
             ) : activeMonitors.length > 0 ? (
                 /* Active Monitors Grid */
                 <section className="md-monitors-section">

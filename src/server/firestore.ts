@@ -1,6 +1,7 @@
 import { initializeApp, cert, type ServiceAccount } from "firebase-admin/app";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
 import { getAuth, type Auth } from "firebase-admin/auth";
+import { errMsg, errCode } from "./utils/errors.js";
 import { getStorage, type Storage } from "firebase-admin/storage";
 import { createHash } from "crypto";
 import * as fs from "fs";
@@ -26,8 +27,8 @@ export function initFirebase(): void {
         if (firebaseServiceAccount.trim().startsWith('{')) {
             try {
                 serviceAccount = JSON.parse(firebaseServiceAccount);
-            } catch (err: any) {
-                initStatus.error = `JSON Parse Error: ${err.message}`;
+            } catch (err: unknown) {
+                initStatus.error = `JSON Parse Error: ${errMsg(err)}`;
                 console.error("❌ Failed to parse FIREBASE_SERVICE_ACCOUNT JSON from environment.");
             }
         } else {
@@ -35,8 +36,8 @@ export function initFirebase(): void {
             if (fs.existsSync(resolved)) {
                 try {
                     serviceAccount = JSON.parse(fs.readFileSync(resolved, "utf-8"));
-                } catch (err: any) {
-                    initStatus.error = `File Parse Error: ${err.message}`;
+                } catch (err: unknown) {
+                    initStatus.error = `File Parse Error: ${errMsg(err)}`;
                     console.error(`❌ Failed to parse service-account.json at ${resolved}`);
                 }
             } else {
@@ -51,8 +52,8 @@ export function initFirebase(): void {
             initStatus.source = "file";
             try {
                 serviceAccount = JSON.parse(fs.readFileSync(defaultPath, "utf-8"));
-            } catch (err: any) {
-                initStatus.error = `Default File Parse Error: ${err.message}`;
+            } catch (err: unknown) {
+                initStatus.error = `Default File Parse Error: ${errMsg(err)}`;
                 console.error("❌ Failed to parse default service-account.json");
             }
         } else {
@@ -75,12 +76,12 @@ export function initFirebase(): void {
             initStatus.error = null;
             console.log(`✅ Firebase initialized successfully. Project: ${serviceAccount.projectId}`);
             console.log("✅ Storage Bucket:", BUCKET);
-        } catch (err: any) {
-            initStatus.error = `Init Error: ${err.message}`;
-            console.error("❌ Firebase initialization failed:", err.message);
+        } catch (err: unknown) {
+            initStatus.error = `Init Error: ${errMsg(err)}`;
+            console.error("❌ Firebase initialization failed:", errMsg(err));
             // In production, we want to know if this fails immediately.
             if (process.env.NODE_ENV === 'production') {
-                throw new Error("CRITICAL: Firebase initialization failed in production: " + err.message);
+                throw new Error("CRITICAL: Firebase initialization failed in production: " + errMsg(err));
             }
         }
     }
@@ -105,25 +106,28 @@ export function getAdminStorage(): Storage {
 // ── Plan Config types ──────────────────────────────────────────────
 
 export interface PlanConfig {
-    commentLimit: number;       // -1 = unlimited
-    rateLimit: number;          // requests per minute
-    rateLimitWindow: number;    // seconds
+    commentLimit: number;           // -1 = unlimited
+    rateLimit: number;              // requests per minute
+    rateLimitWindow: number;        // seconds
     maxMoreCommentsBatches: number; // -1 = unlimited
     bulkDownload: boolean;
     apiAccess: boolean;
     exportHistory: boolean;
     exportHistoryDays: number;
     priorityQueue: boolean;
-    discoveryLimit: number;      // 30 scans/search for Pro, 3 for Free
-    analysisLimit: number;       // 10 reports for Pro, 1 for Free
-    savedThreadLimit: number;    // 500 for Pro, 5 for Free
-    commentDepth: number;        // 500 for Pro, 50 for Free
+    discoveryLimit: number;         // monthly discovery searches
+    analysisLimit: number;          // monthly AI reports
+    savedThreadLimit: number;       // total saved threads
+    commentDepth: number;           // max comment depth
+    monitorLimit: number;           // -1 = unlimited, max active monitors
+    subredditsPerMonitor: number;   // -1 = unlimited, max subreddits per monitor
+    teamSeats: number;              // -1 = unlimited
 }
 
 export interface UserDoc {
     uid: string;
     email: string;
-    plan: "free" | "pro" | "beta" | "past_due";
+    plan: "free" | "trial" | "starter" | "pro" | "professional" | "beta" | "enterprise" | "past_due";
     configOverrides: Partial<PlanConfig>;
     stripeCustomerId: string | null;
     stripeSubscriptionId: string | null;
@@ -220,9 +224,12 @@ export async function getPatternsInFolder(uid: string, folderId: string) {
     return snapshot.docs.map(doc => doc.data() as Pattern);
 }
 
-export async function getLeadsInFolder(uid: string, folderId: string) {
+export async function getLeadsInFolder(uid: string, folderId: string, limit = 200) {
     if (!db) return [];
-    const snapshot = await db.collection("folders").doc(folderId).collection("leads").get();
+    const snapshot = await db.collection("folders").doc(folderId).collection("leads")
+        .orderBy("saved_at", "desc")
+        .limit(limit)
+        .get();
     return snapshot.docs.map(doc => doc.data() as Lead);
 }
 
@@ -281,7 +288,7 @@ export interface DiscoveryHistoryEntry {
 
 const DEFAULT_FREE_CONFIG: PlanConfig = {
     commentLimit: 50,
-    rateLimit: 25, // Increased from 10 to allow dashboard load + some navigation
+    rateLimit: 25,
     rateLimitWindow: 60,
     maxMoreCommentsBatches: 3,
     bulkDownload: false,
@@ -293,11 +300,71 @@ const DEFAULT_FREE_CONFIG: PlanConfig = {
     analysisLimit: 1,
     savedThreadLimit: 5,
     commentDepth: 50,
+    monitorLimit: 0,
+    subredditsPerMonitor: 0,
+    teamSeats: 1,
+};
+
+const DEFAULT_TRIAL_CONFIG: PlanConfig = {
+    commentLimit: 50,
+    rateLimit: 30,
+    rateLimitWindow: 60,
+    maxMoreCommentsBatches: 3,
+    bulkDownload: false,
+    apiAccess: false,
+    exportHistory: true,
+    exportHistoryDays: 3,
+    priorityQueue: false,
+    discoveryLimit: 3,
+    analysisLimit: 1,
+    savedThreadLimit: 5,
+    commentDepth: 50,
+    monitorLimit: 3,
+    subredditsPerMonitor: 10,
+    teamSeats: 1,
+};
+
+const DEFAULT_STARTER_CONFIG: PlanConfig = {
+    commentLimit: 50,
+    rateLimit: 30,
+    rateLimitWindow: 60,
+    maxMoreCommentsBatches: 3,
+    bulkDownload: false,
+    apiAccess: false,
+    exportHistory: true,
+    exportHistoryDays: 7,
+    priorityQueue: false,
+    discoveryLimit: 3,
+    analysisLimit: 1,
+    savedThreadLimit: 5,
+    commentDepth: 50,
+    monitorLimit: 3,
+    subredditsPerMonitor: 10,
+    teamSeats: 1,
+};
+
+const DEFAULT_PROFESSIONAL_CONFIG: PlanConfig = {
+    commentLimit: 5000,
+    rateLimit: 100,
+    rateLimitWindow: 60,
+    maxMoreCommentsBatches: -1,
+    bulkDownload: true,
+    apiAccess: false,
+    exportHistory: true,
+    exportHistoryDays: 90,
+    priorityQueue: true,
+    discoveryLimit: 30,
+    analysisLimit: 10,
+    savedThreadLimit: 500,
+    commentDepth: 500,
+    monitorLimit: 10,
+    subredditsPerMonitor: 20,
+    teamSeats: 3,
 };
 
 const DEFAULT_PRO_CONFIG: PlanConfig = {
     commentLimit: 5000,
-    rateLimit: 60, // Increased from 30
+    rateLimit: 60,
     rateLimitWindow: 60,
     maxMoreCommentsBatches: -1,
     bulkDownload: true,
@@ -309,11 +376,33 @@ const DEFAULT_PRO_CONFIG: PlanConfig = {
     analysisLimit: 10,
     savedThreadLimit: 500,
     commentDepth: 500,
+    monitorLimit: 10,
+    subredditsPerMonitor: 20,
+    teamSeats: 3,
+};
+
+const DEFAULT_ENTERPRISE_CONFIG: PlanConfig = {
+    commentLimit: -1,
+    rateLimit: 300,
+    rateLimitWindow: 60,
+    maxMoreCommentsBatches: -1,
+    bulkDownload: true,
+    apiAccess: true,
+    exportHistory: true,
+    exportHistoryDays: -1,
+    priorityQueue: true,
+    discoveryLimit: -1,
+    analysisLimit: -1,
+    savedThreadLimit: -1,
+    commentDepth: -1,
+    monitorLimit: -1,
+    subredditsPerMonitor: -1,
+    teamSeats: -1,
 };
 
 const DEFAULT_BETA_CONFIG: PlanConfig = {
     commentLimit: 500,
-    rateLimit: 40, // Increased from 20
+    rateLimit: 40,
     rateLimitWindow: 60,
     maxMoreCommentsBatches: 5,
     bulkDownload: true,
@@ -325,6 +414,9 @@ const DEFAULT_BETA_CONFIG: PlanConfig = {
     analysisLimit: 5,
     savedThreadLimit: 30,
     commentDepth: 100,
+    monitorLimit: 5,
+    subredditsPerMonitor: 15,
+    teamSeats: 2,
 };
 
 // ── Plan config cache (5-min TTL) ──────────────────────────────────
@@ -342,14 +434,22 @@ export async function getPlanConfig(plan: string): Promise<PlanConfig> {
         throw new Error("Firebase DB not initialized. Cannot fetch plan config.");
     }
 
+    const getDefaultConfig = (p: string): PlanConfig => {
+        switch (p) {
+            case "trial":        return DEFAULT_TRIAL_CONFIG;
+            case "starter":     return DEFAULT_STARTER_CONFIG;
+            case "pro":         return DEFAULT_PRO_CONFIG;
+            case "professional": return DEFAULT_PROFESSIONAL_CONFIG;
+            case "enterprise":  return DEFAULT_ENTERPRISE_CONFIG;
+            case "beta":        return DEFAULT_BETA_CONFIG;
+            default:            return DEFAULT_FREE_CONFIG;
+        }
+    };
+
     try {
         const doc = await db.collection("plan_configs").doc(plan).get();
         if (doc.exists) {
-            let defaults = DEFAULT_FREE_CONFIG;
-            if (plan === "pro") defaults = DEFAULT_PRO_CONFIG;
-            else if (plan === "beta") defaults = DEFAULT_BETA_CONFIG;
-            
-            const config = { ...defaults, ...doc.data() } as PlanConfig;
+            const config = { ...getDefaultConfig(plan), ...doc.data() } as PlanConfig;
             planConfigCache.set(plan, { config, cachedAt: Date.now() });
             return config;
         }
@@ -357,11 +457,7 @@ export async function getPlanConfig(plan: string): Promise<PlanConfig> {
         console.error(`Failed to load plan config for "${plan}":`, err);
     }
 
-    // Fallback to defaults
-    let fallback = DEFAULT_FREE_CONFIG;
-    if (plan === "pro") fallback = DEFAULT_PRO_CONFIG;
-    else if (plan === "beta") fallback = DEFAULT_BETA_CONFIG;
-    
+    const fallback = getDefaultConfig(plan);
     planConfigCache.set(plan, { config: fallback, cachedAt: Date.now() });
     return fallback;
 }
@@ -466,7 +562,7 @@ export async function getOrCreateUser(
 
 export async function updateUserPlan(
     uid: string,
-    plan: "free" | "pro" | "beta" | "past_due",
+    plan: UserDoc["plan"],
     stripeData?: {
         stripeCustomerId?: string;
         stripeSubscriptionId?: string;
@@ -1275,6 +1371,55 @@ export async function createInviteCode(code: string, maxUses: number): Promise<{
     }
 }
 
+// ── Open Registration (Trial Plan) ─────────────────────────────────────────────
+
+export async function registerUser(email: string, password: string): Promise<{ success: boolean; customToken?: string; error?: string }> {
+    if (!db || !auth) return { success: false, error: "Firebase services not initialized." };
+
+    try {
+        let userRecord;
+        try {
+            userRecord = await auth.createUser({
+                email,
+                password,
+                emailVerified: false,
+                disabled: false,
+            });
+        } catch (err: unknown) {
+            if (errCode(err) === 'auth/email-already-exists') {
+                return { success: false, error: "An account with this email already exists." };
+            }
+            throw err;
+        }
+
+        const userRef = db.collection("users").doc(userRecord.uid);
+        const userDoc: UserDoc = {
+            uid: userRecord.uid,
+            email: email.toLowerCase(),
+            plan: "trial",
+            configOverrides: {},
+            stripeCustomerId: null,
+            stripeSubscriptionId: null,
+            createdAt: new Date().toISOString(),
+            fetchCount: 0,
+            discoveryCount: 0,
+            analysisCount: 0,
+            savedThreadCount: 0
+        };
+
+        await userRef.set(userDoc);
+        const customToken = await auth.createCustomToken(userRecord.uid);
+        return { success: true, customToken };
+    } catch (err: unknown) {
+        console.error("[FIRESTORE] Registration failed:", err);
+        return { success: false, error: errMsg(err) || "An unexpected error occurred during registration." };
+    }
+}
+
+// NOTE: Invite code system is preserved for future use as discount coupons.
+// Not currently exposed in the user-facing signup flow.
+// Admin endpoints to manage codes remain active in /api/admin/tokens.
+
 /**
  * atomicRegistration is a helper to ensure invite code usage and user creation are synchronized.
  */
@@ -1310,8 +1455,8 @@ export async function registerUserWithInvite(email: string, password: string, in
                     emailVerified: false,
                     disabled: false,
                 });
-            } catch (err: any) {
-                if (err.code === 'auth/email-already-exists') {
+            } catch (err: unknown) {
+                if (errCode(err) === 'auth/email-already-exists') {
                     return { success: false, error: "An account with this email already exists." };
                 }
                 throw err; 
@@ -1348,8 +1493,8 @@ export async function registerUserWithInvite(email: string, password: string, in
         });
 
         return result;
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error("[FIRESTORE] Registration transaction failed:", err);
-        return { success: false, error: err.message || "An unexpected error occurred during registration." };
+        return { success: false, error: errMsg(err) || "An unexpected error occurred during registration." };
     }
 }
