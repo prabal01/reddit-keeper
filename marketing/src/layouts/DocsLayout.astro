@@ -1,0 +1,546 @@
+---
+import Layout from './Layout.astro';
+
+interface Props {
+    title: string;
+    description: string;
+    section?: string;
+}
+
+const { title, description, section } = Astro.props;
+
+const nav = [
+    {
+        label: 'Getting Started',
+        items: [
+            { label: 'Introduction', href: '/docs/getting-started/introduction' },
+            { label: 'Quick Start', href: '/docs/getting-started/quick-start' },
+        ],
+    },
+    {
+        label: 'Features',
+        items: [
+            { label: 'Discovery Lab', href: '/docs/features/discovery-lab' },
+            { label: 'Monitoring', href: '/docs/features/monitoring' },
+            { label: 'Folders & Decks', href: '/docs/features/folders' },
+            { label: 'Analysis Engine', href: '/docs/features/analysis' },
+            { label: 'Chrome Extension', href: '/docs/features/chrome-extension' },
+        ],
+    },
+    {
+        label: 'Plans',
+        items: [
+            { label: 'Pricing & Limits', href: '/docs/plans/pricing' },
+        ],
+    },
+    {
+        label: 'Reference',
+        items: [
+            { label: 'FAQ', href: '/docs/reference/faq' },
+        ],
+    },
+];
+
+const currentPath = Astro.url.pathname.replace(/\/$/, '');
+
+// Build breadcrumb
+const segments = currentPath.split('/').filter(Boolean); // ['docs', 'features', 'discovery-lab']
+const sectionLabel = nav.find(s => s.items.some(i => i.href === currentPath))?.label ?? section;
+const pageLabel = nav.flatMap(s => s.items).find(i => i.href === currentPath)?.label ?? title;
+---
+
+<Layout title={`${title} — OpinionDeck Docs`} description={description}>
+    <div class="docs-wrapper">
+        <!-- Mobile sidebar toggle -->
+        <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Open navigation">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <line x1="3" y1="12" x2="21" y2="12"/>
+                <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+            <span>Menu</span>
+        </button>
+
+        <!-- Sidebar -->
+        <aside class="docs-sidebar" id="docs-sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-label">Documentation</span>
+                <button class="sidebar-close" id="sidebar-close" aria-label="Close navigation">✕</button>
+            </div>
+            <nav class="sidebar-nav">
+                {nav.map(section => (
+                    <div class="nav-section">
+                        <div class="nav-section-label">{section.label}</div>
+                        <ul class="nav-items">
+                            {section.items.map(item => (
+                                <li>
+                                    <a
+                                        href={item.href}
+                                        class={`nav-link ${currentPath === item.href ? 'active' : ''}`}
+                                    >
+                                        {item.label}
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                ))}
+            </nav>
+        </aside>
+
+        <!-- Overlay for mobile -->
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <!-- Main content -->
+        <main class="docs-main">
+            <!-- Breadcrumb -->
+            <nav class="breadcrumb" aria-label="Breadcrumb">
+                <a href="/">Home</a>
+                <span class="bc-sep">›</span>
+                <a href="/docs/getting-started/introduction">Docs</a>
+                {sectionLabel && (
+                    <>
+                        <span class="bc-sep">›</span>
+                        <span>{sectionLabel}</span>
+                    </>
+                )}
+                <span class="bc-sep">›</span>
+                <span class="bc-current">{pageLabel}</span>
+            </nav>
+
+            <article class="docs-content prose">
+                <slot />
+            </article>
+
+            <!-- Page footer navigation -->
+            <div class="docs-page-footer">
+                <a href="https://github.com/prabal01/opinion-deck" class="edit-link" target="_blank" rel="noopener">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Suggest an edit
+                </a>
+            </div>
+        </main>
+    </div>
+</Layout>
+
+<script>
+    const toggle = document.getElementById('sidebar-toggle');
+    const close = document.getElementById('sidebar-close');
+    const sidebar = document.getElementById('docs-sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+
+    function openSidebar() {
+        sidebar?.classList.add('open');
+        overlay?.classList.add('visible');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeSidebar() {
+        sidebar?.classList.remove('open');
+        overlay?.classList.remove('visible');
+        document.body.style.overflow = '';
+    }
+
+    toggle?.addEventListener('click', openSidebar);
+    close?.addEventListener('click', closeSidebar);
+    overlay?.addEventListener('click', closeSidebar);
+</script>
+
+<style>
+    .docs-wrapper {
+        display: flex;
+        min-height: calc(100vh - 64px);
+        max-width: 1300px;
+        margin: 0 auto;
+        padding: 0 24px;
+        gap: 48px;
+    }
+
+    /* ── Sidebar ─────────────────────────────────── */
+    .docs-sidebar {
+        width: 240px;
+        flex-shrink: 0;
+        padding: 32px 0;
+        position: sticky;
+        top: 64px;
+        height: calc(100vh - 64px);
+        overflow-y: auto;
+        border-right: 1px solid var(--border);
+    }
+
+    .sidebar-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        padding-right: 16px;
+    }
+
+    .sidebar-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-tertiary);
+    }
+
+    .sidebar-close {
+        display: none;
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 1rem;
+        padding: 4px;
+    }
+
+    .sidebar-nav {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    .nav-section-label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-tertiary);
+        margin-bottom: 6px;
+        padding-right: 16px;
+    }
+
+    .nav-items {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+    }
+
+    .nav-link {
+        display: block;
+        padding: 6px 12px 6px 0;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        border-radius: var(--radius-sm);
+        transition: color 0.15s, background 0.15s;
+        text-decoration: none;
+    }
+
+    .nav-link:hover {
+        color: var(--text-primary);
+        opacity: 1;
+    }
+
+    .nav-link.active {
+        color: var(--bg-accent);
+        font-weight: 600;
+    }
+
+    /* ── Main Content ─────────────────────────────── */
+    .docs-main {
+        flex: 1;
+        min-width: 0;
+        padding: 32px 0 64px;
+        max-width: 800px;
+    }
+
+    /* Breadcrumb */
+    .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.8rem;
+        color: var(--text-tertiary);
+        margin-bottom: 32px;
+        flex-wrap: wrap;
+    }
+
+    .breadcrumb a {
+        color: var(--text-tertiary);
+        text-decoration: none;
+    }
+
+    .breadcrumb a:hover {
+        color: var(--text-secondary);
+        opacity: 1;
+    }
+
+    .bc-sep {
+        color: var(--text-tertiary);
+    }
+
+    .bc-current {
+        color: var(--text-primary);
+        font-weight: 500;
+    }
+
+    /* Prose / markdown content */
+    .prose {
+        color: var(--text-primary);
+        line-height: 1.75;
+    }
+
+    .prose :global(h1) {
+        font-size: 2rem;
+        font-weight: 800;
+        line-height: 1.2;
+        margin: 0 0 8px;
+        color: var(--text-primary);
+    }
+
+    .prose :global(h2) {
+        font-size: 1.35rem;
+        font-weight: 700;
+        margin: 40px 0 12px;
+        color: var(--text-primary);
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .prose :global(h3) {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 28px 0 8px;
+        color: var(--text-primary);
+    }
+
+    .prose :global(h4) {
+        font-size: 0.95rem;
+        font-weight: 600;
+        margin: 20px 0 6px;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .prose :global(p) {
+        margin: 0 0 16px;
+        color: var(--text-secondary);
+    }
+
+    .prose :global(ul), .prose :global(ol) {
+        margin: 0 0 16px;
+        padding-left: 1.5rem;
+        color: var(--text-secondary);
+    }
+
+    .prose :global(li) {
+        margin-bottom: 6px;
+    }
+
+    .prose :global(a) {
+        color: var(--bg-accent);
+        text-decoration: underline;
+        text-decoration-color: rgba(255, 69, 0, 0.3);
+    }
+
+    .prose :global(code) {
+        font-family: 'SF Mono', 'Fira Code', monospace;
+        font-size: 0.85em;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 2px 6px;
+        color: var(--text-primary);
+    }
+
+    .prose :global(pre) {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 20px;
+        overflow-x: auto;
+        margin: 0 0 24px;
+    }
+
+    .prose :global(pre code) {
+        background: none;
+        border: none;
+        padding: 0;
+        font-size: 0.875rem;
+    }
+
+    .prose :global(blockquote) {
+        border-left: 3px solid var(--bg-accent);
+        margin: 0 0 20px;
+        padding: 12px 20px;
+        background: var(--bg-tertiary);
+        border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+        color: var(--text-secondary);
+        font-style: italic;
+    }
+
+    .prose :global(table) {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 0 0 24px;
+        font-size: 0.875rem;
+    }
+
+    .prose :global(th) {
+        background: var(--bg-tertiary);
+        padding: 10px 14px;
+        text-align: left;
+        font-weight: 600;
+        border: 1px solid var(--border);
+        color: var(--text-primary);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .prose :global(td) {
+        padding: 10px 14px;
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+    }
+
+    .prose :global(tr:hover td) {
+        background: var(--bg-hover);
+    }
+
+    .prose :global(hr) {
+        border: none;
+        border-top: 1px solid var(--border);
+        margin: 32px 0;
+    }
+
+    /* Screenshot placeholders */
+    .prose :global(.screenshot-placeholder) {
+        background: var(--bg-secondary);
+        border: 2px dashed var(--border);
+        border-radius: var(--radius-md);
+        padding: 48px 24px;
+        text-align: center;
+        margin: 24px 0;
+        color: var(--text-tertiary);
+        font-size: 0.85rem;
+    }
+
+    .prose :global(.screenshot-placeholder figcaption) {
+        margin-top: 8px;
+        font-size: 0.78rem;
+        color: var(--text-tertiary);
+    }
+
+    /* Callout / tip blocks */
+    .prose :global(.callout) {
+        display: flex;
+        gap: 12px;
+        padding: 14px 18px;
+        border-radius: var(--radius-md);
+        margin: 20px 0;
+        font-size: 0.9rem;
+    }
+
+    .prose :global(.callout-tip) {
+        background: rgba(34, 197, 94, 0.08);
+        border: 1px solid rgba(34, 197, 94, 0.25);
+        color: var(--text-secondary);
+    }
+
+    .prose :global(.callout-note) {
+        background: rgba(96, 165, 250, 0.08);
+        border: 1px solid rgba(96, 165, 250, 0.25);
+        color: var(--text-secondary);
+    }
+
+    .prose :global(.callout-warning) {
+        background: rgba(245, 158, 11, 0.08);
+        border: 1px solid rgba(245, 158, 11, 0.25);
+        color: var(--text-secondary);
+    }
+
+    /* Page footer */
+    .docs-page-footer {
+        margin-top: 48px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border);
+    }
+
+    .edit-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.8rem;
+        color: var(--text-tertiary);
+        text-decoration: none;
+    }
+
+    .edit-link:hover {
+        color: var(--text-secondary);
+        opacity: 1;
+    }
+
+    /* Mobile toggle */
+    .sidebar-toggle {
+        display: none;
+        align-items: center;
+        gap: 8px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+        padding: 8px 14px;
+        border-radius: var(--radius-sm);
+        font-size: 0.875rem;
+        cursor: pointer;
+        margin-bottom: 16px;
+        font-family: inherit;
+        font-weight: 500;
+    }
+
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 49;
+    }
+
+    .sidebar-overlay.visible {
+        display: block;
+    }
+
+    /* ── Responsive ─────────────────────────────── */
+    @media (max-width: 900px) {
+        .docs-wrapper {
+            padding: 0 16px;
+            gap: 0;
+        }
+
+        .sidebar-toggle {
+            display: flex;
+        }
+
+        .docs-sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 280px;
+            background: var(--bg-primary);
+            z-index: 50;
+            padding: 24px 20px;
+            border-right: 1px solid var(--border);
+            transform: translateX(-100%);
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-y: auto;
+        }
+
+        .docs-sidebar.open {
+            transform: translateX(0);
+        }
+
+        .sidebar-close {
+            display: block;
+        }
+
+        .docs-main {
+            padding-top: 8px;
+            max-width: 100%;
+        }
+    }
+</style>

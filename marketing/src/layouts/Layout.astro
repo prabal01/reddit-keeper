@@ -44,6 +44,7 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
 					<span class="logo-tagline">Strategic Market Intelligence</span>
 				</a>
 				<div class="header-actions">
+                    <a href="/docs" class="nav-docs-link">Docs</a>
                     <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle theme">
                         <div class="sun-icon"><Sun size={20} /></div>
                         <div class="moon-icon"><Moon size={20} /></div>
@@ -160,6 +161,20 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
         display: flex;
         align-items: center;
         gap: 16px;
+    }
+
+    .nav-docs-link {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        text-decoration: none;
+        padding: 6px 4px;
+        transition: color 0.15s;
+    }
+
+    .nav-docs-link:hover {
+        color: var(--text-primary);
+        opacity: 1;
     }
 
     .theme-toggle-btn {
