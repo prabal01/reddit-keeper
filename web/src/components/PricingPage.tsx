@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { H2, Subtitle } from "./common/Typography";
 import { UIButton } from "./common/UIButton";
+import { createDodoCheckout } from "../lib/api";
 
 const FEATURES = [
     { name: "Monitors", trial: "3", starter: "3", pro: "10", enterprise: "Unlimited", highlight: true },
@@ -19,6 +21,19 @@ export function PricingPage() {
     const isStarter = plan === "starter";
     const isPro = plan === "pro" || plan === "professional";
     const isEnterprise = plan === "enterprise";
+    const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+
+    const handleUpgrade = async (targetPlan: 'starter' | 'professional') => {
+        setCheckoutLoading(targetPlan);
+        try {
+            await createDodoCheckout(targetPlan);
+        } catch (err: any) {
+            console.error('Checkout failed:', err);
+            alert(err.message || 'Failed to start checkout. Please try again.');
+        } finally {
+            setCheckoutLoading(null);
+        }
+    };
 
     return (
         <section className="pricing-section" id="pricing" aria-labelledby="pricing-heading">
@@ -81,9 +96,10 @@ export function PricingPage() {
                         <UIButton
                             variant="primary"
                             className="w-full"
-                            onClick={() => window.location.href = "mailto:hello@opiniondeck.com?subject=Upgrade to Starter"}
+                            disabled={checkoutLoading === 'starter'}
+                            onClick={() => handleUpgrade('starter')}
                         >
-                            Upgrade to Starter →
+                            {checkoutLoading === 'starter' ? 'Loading...' : 'Upgrade to Starter →'}
                         </UIButton>
                     )}
                 </div>
@@ -119,9 +135,10 @@ export function PricingPage() {
                         <UIButton
                             variant="primary"
                             className="w-full"
-                            onClick={() => window.location.href = "mailto:hello@opiniondeck.com?subject=Upgrade to Professional"}
+                            disabled={checkoutLoading === 'professional'}
+                            onClick={() => handleUpgrade('professional')}
                         >
-                            Upgrade to Professional →
+                            {checkoutLoading === 'professional' ? 'Loading...' : 'Upgrade to Professional →'}
                         </UIButton>
                     )}
                 </div>

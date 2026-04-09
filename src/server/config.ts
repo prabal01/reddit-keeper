@@ -34,10 +34,17 @@ export const config = {
     // Admin
     adminSecret: process.env.ADMIN_SECRET,
 
-    // Payments
+    // Payments — Razorpay
     razorpayKeyId: process.env.RAZORPAY_KEY_ID,
     razorpayKeySecret: process.env.RAZORPAY_KEY_SECRET,
     razorpayWebhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET,
+
+    // Payments — Dodo
+    dodoApiKey: process.env.DODO_PAYMENTS_API_KEY,
+    dodoWebhookSecret: process.env.DODO_WEBHOOK_SECRET,
+    dodoStarterProductId: process.env.DODO_STARTER_PRODUCT_ID,
+    dodoProProductId: process.env.DODO_PRO_PRODUCT_ID,
+    dodoEnvironment: process.env.DODO_ENVIRONMENT || 'test_mode',
 
     // Integrations
     telegramBotToken: process.env.TELEGRAM_BOT_TOKEN,

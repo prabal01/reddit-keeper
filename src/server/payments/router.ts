@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import express from 'express';
 import { createFoundingOrder, verifySignature } from './razorpay.js';
+import { createDodoCheckoutSession, verifyDodoWebhookSignature, type DodoPlan } from './dodo.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { config } from '../config.js';
 import { logger } from '../utils/logger.js';
@@ -45,6 +46,54 @@ router.post('/webhook', express.json(), async (req: Request, res: Response) => {
     }
 
     res.json({ status: 'ok' });
+});
+
+// ── Dodo Payments ──────────────────────────────────────────────────────────────
+
+router.post('/dodo/create-session', authMiddleware, async (req: Request, res: Response) => {
+    if (!req.user) return void res.status(401).json({ error: 'Please sign in to upgrade.' });
+    const { plan } = req.body as { plan?: DodoPlan };
+    if (!plan || !['starter', 'professional'].includes(plan)) {
+        return void res.status(400).json({ error: 'Invalid plan. Must be "starter" or "professional".' });
+    }
+    try {
+        const session = await createDodoCheckoutSession(req.user.uid, plan, req.user.email);
+        res.json(session);
+    } catch (err: unknown) {
+        logger.error({ err }, 'POST /api/payments/dodo/create-session failed');
+        res.status(500).json({ error: 'Failed to create checkout session.' });
+    }
+});
+
+router.post('/dodo/webhook', express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
+    try {
+        const rawBody = req.body.toString();
+        const headers = {
+            'webhook-id': req.headers['webhook-id'] as string,
+            'webhook-signature': req.headers['webhook-signature'] as string,
+            'webhook-timestamp': req.headers['webhook-timestamp'] as string,
+        };
+
+        const event = verifyDodoWebhookSignature(rawBody, headers);
+        logger.info({ type: event.type }, 'Dodo webhook received');
+
+        if (event.type === 'payment.succeeded' || event.type === 'subscription.active') {
+            const userId = event.data?.metadata?.userId || event.data?.payment?.metadata?.userId;
+            const plan = event.data?.metadata?.plan || event.data?.payment?.metadata?.plan;
+            if (userId && plan) {
+                logger.info({ userId, plan }, 'Upgrading user via Dodo payment');
+                const { updateUserPlan } = await import('../firestore.js');
+                await updateUserPlan(userId, plan as any);
+            } else {
+                logger.warn({ event }, 'Dodo webhook: missing userId or plan in metadata');
+            }
+        }
+
+        res.json({ status: 'ok' });
+    } catch (err: unknown) {
+        logger.error({ err }, 'Dodo webhook processing failed');
+        res.status(400).json({ error: 'Webhook processing failed' });
+    }
 });
 
 export default router;
