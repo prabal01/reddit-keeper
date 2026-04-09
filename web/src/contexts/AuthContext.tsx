@@ -17,7 +17,7 @@ import {
     type User,
 } from "firebase/auth";
 import { auth, googleProvider } from "../lib/firebase";
-import { API_BASE, type PlanConfig, type UserUsage } from "../lib/api";
+import { API_BASE, type PlanConfig, type PlanType, type UserUsage } from "../lib/api";
 
 
 interface AuthUser {
@@ -30,13 +30,13 @@ interface AuthUser {
 
 interface AuthContextType {
     user: AuthUser | null;
-    plan: "free" | "pro" | "beta" | "past_due" | null;
+    plan: PlanType | null;
     config: PlanConfig | null;
     usage: UserUsage | null;
     loading: boolean;
     firebaseConfigured: boolean;
     signInWithGoogle: () => Promise<void>;
-    registerWithEmail: (email: string, password: string, inviteCode: string) => Promise<void>;
+    registerWithEmail: (email: string, password: string) => Promise<void>;
     loginWithEmail: (email: string, password: string) => Promise<void>;
     sendVerificationEmail: () => Promise<void>;
     refreshUser: () => Promise<AuthUser | undefined>;
@@ -54,7 +54,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<AuthUser | null>(null);
-    const [plan, setPlan] = useState<"free" | "pro" | "beta" | "past_due" | null>(null);
+    const [plan, setPlan] = useState<PlanType | null>(null);
     const [config, setConfig] = useState<PlanConfig | null>(null);
     const [usage, setUsage] = useState<UserUsage | null>(null);
     const [loading, setLoading] = useState(!!auth); // only loading if Firebase is configured
@@ -197,13 +197,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     }, []);
 
-    const registerWithEmail = useCallback(async (email: string, password: string, inviteCode: string) => {
+    const registerWithEmail = useCallback(async (email: string, password: string) => {
         if (!auth) throw new Error("Firebase not initialized");
-        
+
         const response = await fetch(`${API_BASE}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password, inviteCode }),
+            body: JSON.stringify({ email, password }),
         });
 
         const data = await response.json();
