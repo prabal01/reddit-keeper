@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useLocation, NavLink, useNavigate } from 'react-router-dom';
 import { BRANDING } from '../constants/branding';
-import { Globe, Search, Star, History as HistoryIcon, ChevronDown, ChevronRight, X, Shield, Settings } from 'lucide-react';
+import { Globe, Search, Star, History as HistoryIcon, ChevronDown, ChevronRight, X, Shield, Settings, Users } from 'lucide-react';
 import { UsageProgress } from './UsageProgress';
 import { useDiscoveryContext } from './discovery/contexts/DiscoveryContext';
 import { H1, Metadata } from './common/Typography';
@@ -49,6 +49,10 @@ export const Sidebar: React.FC = () => {
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full border-2 border-(--sidebar-bg)" />
                     </div>
                     <span className="link-text">Monitoring</span>
+                </NavLink>
+
+                <NavLink to="/leads" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                    <Users size={18} /> <span className="link-text">Leads</span>
                 </NavLink>
 
                 {/* Discovery and Decks hidden for MVP - uncomment to show */}
@@ -117,7 +121,7 @@ export const Sidebar: React.FC = () => {
                     to="/pricing"
                     className={({ isActive }) => isActive ? 'nav-link active premium-link' : 'nav-link premium-link'}
                 >
-                    <Star size={20} className="premium-star" /> <span className="link-text">Beta Program</span>
+                    <Star size={20} className="premium-star" /> <span className="link-text">Upgrade Plan</span>
                 </NavLink>
 
                 {user && user.email && import.meta.env.VITE_ADMIN_EMAILS?.includes(user.email) && (

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Mail, RefreshCw, LogOut, CheckCircle2, Sparkles } from 'lucide-react';
+import { Mail, RefreshCw, LogOut, CheckCircle2 } from 'lucide-react';
 import { BRANDING } from '../constants/branding';
 import { toast } from 'react-hot-toast';
 
@@ -183,10 +183,6 @@ export function VerificationGate() {
                     </button>
                 </div>
 
-                <div style={{ marginTop: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#33334d', fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                    <Sparkles size={12} />
-                    <span>Beta Access Point</span>
-                </div>
             </div>
         </div>
     );

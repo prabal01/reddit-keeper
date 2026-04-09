@@ -545,6 +545,7 @@ a.lead-author:hover {
     overflow: hidden;
     margin-bottom: 20px;
     background: rgba(255, 255, 255, 0.01);
+    padding: 20px;
 }
 
 /* Header stats row */

@@ -113,6 +113,34 @@
     background: var(--bg-hover);
 }
 
+.btn-danger {
+    padding: 8px 16px;
+    background: rgba(239, 68, 68, 0.1);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.18);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #fca5a5;
+}
+
+.btn-secondary.small,
+.btn-danger.small,
+.btn-primary.small {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+}
+
 /* PREMIUM ANALYZE BUTTON */
 .analyze-btn {
     padding: 10px 24px;

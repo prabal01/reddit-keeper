@@ -62,12 +62,12 @@ const FolderContext = createContext<FolderContextType | undefined>(undefined);
 
 export const FolderProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [folders, setFolders] = useState<Folder[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { user, getIdToken, refreshPlan } = useAuth();
 
     const fetchFolders = useCallback(async () => {
-        if (!user) return;
+        if (!user) { setLoading(false); return; }
         setLoading(true);
         setError(null);
         try {

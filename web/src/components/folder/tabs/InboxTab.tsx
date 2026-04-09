@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Download, ChevronDown, ChevronUp, Activity, Users } from 'lucide-react';
+import { Download, ChevronDown, ChevronUp, Activity, Users, RefreshCw } from 'lucide-react';
 import { LeadCard } from '../LeadCard';
 import { MonitoringAlertsFeed } from '../MonitoringAlertsFeed';
 import { UIButton } from '../../common/UIButton';
@@ -9,7 +9,9 @@ import type { Lead, PersonLead } from '../../../contexts/FolderContext';
 interface FeedTabProps {
     leads: Lead[];
     alerts: any[];
+    folderId: string;
     onUpdateLeadStatus: (leadIds: string[], status: 'new' | 'contacted' | 'ignored') => Promise<void>;
+    onRefreshLeads?: () => void;
 }
 
 const exportToCSV = (groupedLeads: PersonLead[]) => {
@@ -37,8 +39,30 @@ const exportToCSV = (groupedLeads: PersonLead[]) => {
     URL.revokeObjectURL(url);
 };
 
-export const InboxTab: React.FC<FeedTabProps> = ({ leads, alerts, onUpdateLeadStatus }) => {
+export const InboxTab: React.FC<FeedTabProps> = ({ leads, alerts, folderId, onUpdateLeadStatus, onRefreshLeads }) => {
     const [showActivity, setShowActivity] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
+
+    const hasAnonymousLeads = leads.some(l => !l.author || l.author === 'unknown');
+
+    const handleRefreshAuthors = async () => {
+        setRefreshing(true);
+        try {
+            const { getAuth } = await import('firebase/auth');
+            const token = await getAuth().currentUser?.getIdToken();
+            const API_BASE = window.location.origin.includes('localhost') ? 'http://localhost:3001/api' : '/api';
+            const res = await fetch(`${API_BASE}/folders/${folderId}/leads/backfill-authors`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (data.updated > 0) onRefreshLeads?.();
+        } catch (err) {
+            console.error('Failed to refresh authors', err);
+        } finally {
+            setRefreshing(false);
+        }
+    };
 
     const groupedLeads = useMemo<PersonLead[]>(() => {
         const map = new Map<string, PersonLead>();
@@ -84,6 +108,25 @@ export const InboxTab: React.FC<FeedTabProps> = ({ leads, alerts, onUpdateLeadSt
 
     return (
         <div className="animate-fade-in space-y-6">
+            {/* Resolve Usernames banner */}
+            {hasAnonymousLeads && (
+                <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-sm">
+                    <div className="flex items-center gap-2 text-amber-400 font-medium">
+                        <RefreshCw size={14} />
+                        <span>Some prospects don't have usernames yet.</span>
+                    </div>
+                    <UIButton
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleRefreshAuthors}
+                        disabled={refreshing}
+                        icon={<RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />}
+                    >
+                        {refreshing ? 'Resolving...' : 'Resolve Usernames →'}
+                    </UIButton>
+                </div>
+            )}
+
             {/* Summary + Export */}
             <div className="lead-feed-summary flex justify-between items-center py-2 border-b border-(--border-light)/50 pb-6">
                 <div className="flex items-center gap-2">

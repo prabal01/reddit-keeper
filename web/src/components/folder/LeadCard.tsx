@@ -22,8 +22,11 @@ const INTENT_CONFIG: Record<string, { label: string; className: string }> = {
 
 export const LeadCard: React.FC<LeadCardProps> = ({ person, onUpdateStatus }) => {
     const score = normalizeScore(person.maxScore);
-    const isAnonymous = person.author === 'unknown';
+    const isAnonymous = !person.author || person.author === 'unknown';
     const profileUrl = isAnonymous ? null : `https://reddit.com/u/${person.author}`;
+    const displayName = isAnonymous
+        ? (person.threads[0]?.title?.substring(0, 60) || 'Reddit Thread')
+        : `u/${person.author}`;
     const visibleThreads = person.threads.slice(0, 3);
     const hiddenCount = person.threads.length - visibleThreads.length;
 
@@ -50,7 +53,9 @@ export const LeadCard: React.FC<LeadCardProps> = ({ person, onUpdateStatus }) =>
                     <div className="lead-author-info">
                         <div className="flex items-center gap-2">
                             {isAnonymous ? (
-                                <span className="font-bold text-(--text-primary)">Anonymous</span>
+                                <span className="font-bold text-(--text-primary) line-clamp-1 max-w-xs" title={displayName}>
+                                    {displayName}
+                                </span>
                             ) : (
                                 <a
                                     href={profileUrl!}

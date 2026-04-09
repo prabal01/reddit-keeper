@@ -20,6 +20,7 @@ import { UpgradeModal } from "./components/UpgradeModal";
 import { PricingPage } from "./components/PricingPage";
 import { Breadcrumbs } from "./components/common/Breadcrumbs";
 import { MonitoringDashboard } from "./components/monitoring/MonitoringDashboard";
+import { LeadsManagement } from "./components/monitoring/LeadsManagement";
 
 import { LoginView } from "./components/LoginView";
 import { VerificationGate } from "./components/VerificationGate";
@@ -293,6 +294,11 @@ function AppContent() {
                 </RequireAuth>
               } />
               <Route path="/monitoring" element={<Navigate to="/" replace />} />
+              <Route path="/leads" element={
+                <RequireAuth>
+                  <LeadsManagement />
+                </RequireAuth>
+              } />
               {/* Research alias handled by Navigate above */}
               <Route path="/folders/:folderId" element={
                 <RequireAuth>

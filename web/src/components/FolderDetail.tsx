@@ -7,7 +7,7 @@ import { PremiumLoader } from './PremiumLoader';
 import './Folders.css';
 import './AnalysisResults.css';
 import './folder/Folder.css';
-import { fetchFolderAnalysis, aggregateInsights } from '../lib/api';
+import { fetchFolderAnalysis, aggregateInsights, deactivateMonitor } from '../lib/api';
 import { Loader2, AlertCircle, X, AlertTriangle, Sparkles, ExternalLink } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Badge } from './common/Badge';
@@ -167,9 +167,15 @@ export const FolderDetail: React.FC = () => {
 
     const handleDelete = async () => {
         if (!folder) return;
-        if (confirm('Are you sure you want to delete this folder? All saved threads will be lost.')) {
-            await deleteFolder(folder.id);
+        try {
+            if ((folder as any).is_monitoring_active) {
+                await deactivateMonitor(folder.id);
+            } else {
+                await deleteFolder(folder.id);
+            }
             navigate('/');
+        } catch (err) {
+            toast.error('Failed to remove monitor. Please try again.');
         }
     };
 
@@ -347,7 +353,11 @@ export const FolderDetail: React.FC = () => {
                         <InboxTab
                             leads={leads}
                             alerts={alerts}
+                            folderId={folderId!}
                             onUpdateLeadStatus={handleBatchUpdateLeadStatus}
+                            onRefreshLeads={() => {
+                                getFolderLeads(folderId!).then(data => setLeads(data || []));
+                            }}
                         />
                     )}
 
