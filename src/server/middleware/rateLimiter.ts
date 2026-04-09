@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from "express";
 import { Redis } from "ioredis";
+import { config } from "../config.js";
 
 // Initialize Redis Client
-// Uses REDIS_URL from .env (e.g., redis://:password@host:port)
-const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
+const redis = new Redis(config.redisUrl, {
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
     retryStrategy(times) {

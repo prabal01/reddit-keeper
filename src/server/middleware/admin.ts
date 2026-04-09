@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import { logger } from "../utils/logger.js";
 
 export function adminMiddleware(req: Request, res: Response, next: NextFunction): void {
     if (!req.user) {
@@ -12,7 +13,7 @@ export function adminMiddleware(req: Request, res: Response, next: NextFunction)
     const userEmail = req.user.email?.toLowerCase();
 
     if (!userEmail || !adminEmails.includes(userEmail)) {
-        console.warn(`[Admin] Unauthorized access attempt: 
+        logger.warn(`[Admin] Unauthorized access attempt: 
           - User Email: ${userEmail}
           - User UID: ${req.user.uid}
           - Allowed Emails (count): ${adminEmails.length}

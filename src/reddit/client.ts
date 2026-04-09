@@ -18,10 +18,7 @@ import {
 } from "./tree-builder.js";
 
 import { sendAlert } from "../server/alerts.js";
-
-const TOOL_VERSION = "1.0.1";
-const USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36";
-const RATE_LIMIT_DELAY = 1000; // 1 second between requests
+import { USER_AGENT, RATE_LIMIT_DELAY, TOOL_VERSION } from "../server/config.js";
 
 type ProgressCallback = (message: string) => void;
 
