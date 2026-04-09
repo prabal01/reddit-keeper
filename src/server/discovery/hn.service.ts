@@ -3,6 +3,7 @@ import { redis } from '../middleware/rateLimiter.js';
 import { DiscoveryResult, IDiscoveryService } from './types.js';
 import { getGlobalConfig } from '../firestore.js';
 import { logger } from '../utils/logger.js';
+import { USER_AGENT } from '../config.js';
 
 export class HnDiscoveryService implements IDiscoveryService {
     private BASE_URL = 'https://hn.algolia.com/api/v1';
@@ -252,7 +253,7 @@ export class HnDiscoveryService implements IDiscoveryService {
                 const searchUrl = `${this.BASE_URL}/search?query=${encodeURIComponent(query)}&tags=story&hitsPerPage=30`;
                 logger.info({ platform: 'hn', action: 'API_FETCH_IDEA', url: searchUrl, searchTerm: query });
                 const res = await fetch(searchUrl, {
-                    headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
+                    headers: { 'User-Agent': USER_AGENT }
                 });
 
                 const bodyText = await res.text();
@@ -307,7 +308,7 @@ export class HnDiscoveryService implements IDiscoveryService {
                 try {
                     const searchUrl = `${this.BASE_URL}/search?query=${encodeURIComponent(broadQuery)}&tags=story&hitsPerPage=50`;
                     const res = await fetch(searchUrl, {
-                        headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
+                        headers: { 'User-Agent': USER_AGENT }
                     });
                     if (res.ok) {
                         const data: any = await res.json();

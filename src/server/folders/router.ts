@@ -18,6 +18,12 @@ import {
     getMonitoringAlerts,
     type SavedThread,
 } from '../firestore.js';
+import { PullPushService } from '../discovery/pullpush.service.js';
+import { ArcticShiftService } from '../discovery/arctic-shift.service.js';
+
+const pullPushService = new PullPushService();
+const arcticShiftService = new ArcticShiftService();
+const extractRedditId = (url: string) => url?.match(/comments\/([a-z0-9]+)/)?.[1] ?? null;
 import { authMiddleware } from '../middleware/auth.js';
 import { usageGuard } from '../middleware/usageGuard.js';
 import { granularAnalysisQueue, syncQueue } from '../queues.js';
@@ -59,6 +65,24 @@ router.delete('/:id', async (req: Request, res: Response) => {
         res.json({ success: true });
     } catch (err: unknown) {
         logger.error({ err }, 'DELETE /api/folders/:id failed');
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+router.patch('/:id/deactivate', authMiddleware, async (req: Request, res: Response) => {
+    if (!req.user) return void res.status(401).json({ error: 'Unauthorized' });
+    try {
+        const db = getDb();
+        if (!db) return void res.status(500).json({ error: 'Database unavailable' });
+        const ref = db.collection('folders').doc(req.params.id as string);
+        const doc = await ref.get();
+        if (!doc.exists || doc.data()?.uid !== req.user.uid) {
+            return void res.status(404).json({ error: 'Monitor not found' });
+        }
+        await ref.update({ is_monitoring_active: false });
+        res.json({ success: true });
+    } catch (err: unknown) {
+        logger.error({ err }, 'PATCH /api/folders/:id/deactivate failed');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -244,6 +268,82 @@ router.get('/:id/leads', async (req: Request, res: Response) => {
         res.json(leads);
     } catch (err: unknown) {
         logger.error({ err }, 'GET /api/folders/:id/leads failed');
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+router.post('/:id/leads/backfill-authors', async (req: Request, res: Response) => {
+    if (!req.user) return void res.status(401).json({ error: 'Unauthorized' });
+    try {
+        const db = getDb();
+        if (!db) throw new Error('DB not initialized');
+        const folderId = req.params.id as string;
+
+        // Verify ownership
+        const folderDoc = await db.collection('folders').doc(folderId).get();
+        if (!folderDoc.exists || folderDoc.data()?.uid !== req.user.uid) {
+            return void res.status(403).json({ error: 'Forbidden' });
+        }
+
+        // Fetch all leads missing an author
+        const leadsSnap = await db.collection('folders').doc(folderId).collection('leads').get();
+        const leadsToFix = leadsSnap.docs.filter(d => {
+            const author = d.data().author;
+            return !author || author === 'unknown';
+        });
+
+        if (leadsToFix.length === 0) {
+            return void res.json({ updated: 0, message: 'All leads already have authors' });
+        }
+
+        // Build id → doc map
+        const idToDoc = new Map<string, FirebaseFirestore.QueryDocumentSnapshot>();
+        for (const doc of leadsToFix) {
+            const id = extractRedditId(doc.data().thread_url || '');
+            if (id) idToDoc.set(id, doc);
+        }
+
+        const idsToEnrich = Array.from(idToDoc.keys());
+        const resolvedIds = new Set<string>();
+        const authorMap = new Map<string, string>(); // shortId → author
+
+        // Step A: PullPush
+        if (idsToEnrich.length > 0) {
+            const ppResults = await pullPushService.getSubmissionsByIds(idsToEnrich);
+            for (const item of ppResults) {
+                if (item.author && item.author !== 'unknown') {
+                    authorMap.set(item.id, item.author);
+                    resolvedIds.add(item.id);
+                }
+            }
+        }
+
+        // Step B: Arctic Shift for any missed
+        const stillUnresolved = idsToEnrich.filter(id => !resolvedIds.has(id));
+        if (stillUnresolved.length > 0) {
+            const asResults = await arcticShiftService.getPostsByIds(stillUnresolved);
+            for (const item of asResults) {
+                if (item.author && item.author !== 'unknown') {
+                    authorMap.set(item.id, item.author);
+                    resolvedIds.add(item.id);
+                }
+            }
+        }
+
+        // Write updates to Firestore
+        const batch = db.batch();
+        let updated = 0;
+        for (const [shortId, author] of authorMap.entries()) {
+            const doc = idToDoc.get(shortId);
+            if (doc) {
+                batch.update(doc.ref, { author });
+                updated++;
+            }
+        }
+        if (updated > 0) await batch.commit();
+
+        res.json({ updated, total: leadsToFix.length });
+    } catch (err: unknown) {
         res.status(500).json({ error: 'Internal server error' });
     }
 });

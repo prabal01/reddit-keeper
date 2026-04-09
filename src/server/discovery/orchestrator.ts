@@ -2,18 +2,23 @@ import { RedditDiscoveryService } from './reddit.service.js';
 import { HnDiscoveryService } from './hn.service.js';
 import { DiscoveryBrain } from './brain.js';
 import { GoogleDiscoveryService } from './google.service.js';
+import { PullPushService } from './pullpush.service.js';
+import { ArcticShiftService } from './arctic-shift.service.js';
 import { DiscoveryResult, DiscoveryPlan, DiscoveryResponse } from './types.js';
 import { logger } from '../utils/logger.js';
+import { errMsg } from '../utils/errors.js';
 import { redis } from '../middleware/rateLimiter.js';
-import { getGlobalConfig, saveDiscoveryHistory } from '../firestore.js';
+import { getGlobalConfig, saveDiscoveryHistory, getDb } from '../firestore.js';
 
 export class DiscoveryOrchestrator {
     private redditService = new RedditDiscoveryService();
     private hnService = new HnDiscoveryService();
     private googleService = new GoogleDiscoveryService();
     private brain = new DiscoveryBrain();
+    private pullPushService = new PullPushService();
+    private arcticShiftService = new ArcticShiftService();
 
-    async search(uid: string, query: string, platforms: ('reddit' | 'hn')[] | 'all' = 'all', useAiBrain = false, skipCache = false, plan: 'free' | 'pro' | 'beta' = 'free'): Promise<DiscoveryResponse> {
+    async search(uid: string, query: string, platforms: ('reddit' | 'hn')[] | 'all' = 'all', useAiBrain = false, skipCache = false, plan: string = 'free'): Promise<DiscoveryResponse> {
         logger.info({ action: 'SEARCH_START', uid, searchTerm: query, platforms, useAiBrain, skipCache }, `Searching for "${query}" (AI Brain: ${useAiBrain}, SkipCache: ${skipCache})`);
 
         const platformList: ('reddit' | 'hn')[] = platforms === 'all' ? ['reddit', 'hn'] : platforms;
@@ -105,7 +110,7 @@ export class DiscoveryOrchestrator {
         return response;
     }
 
-    async ideaDiscovery(uid: string, idea: string, communities?: string[], competitors?: string[], skipCache = false, plan: 'free' | 'pro' | 'beta' = 'free'): Promise<DiscoveryResponse> {
+    async ideaDiscovery(uid: string, idea: string, communities?: string[], competitors?: string[], skipCache = false, plan: string = 'free'): Promise<DiscoveryResponse> {
         const cacheKey = `discovery:idea:${Buffer.from(idea.trim().toLowerCase()).toString('base64')}:v6`;
 
         if (!skipCache) {
@@ -146,7 +151,8 @@ export class DiscoveryOrchestrator {
         const { expandIdeaToQueries } = await import('../ai.js');
 
         // Dynamic Query Density based on Plan
-        const queryCount = plan === 'free' ? 1 : 3;
+        const freePlans = ['free', 'trial', 'starter', 'past_due'];
+        const queryCount = freePlans.includes(plan) ? 1 : 3;
         const { intent, queries } = await expandIdeaToQueries(idea, communities, competitors, queryCount);
 
         logger.info({ queries }, `Generated ${queries.length} queries for ${plan} plan`);
@@ -259,8 +265,29 @@ export class DiscoveryOrchestrator {
 
     private async justSerpBaseline(query: string): Promise<DiscoveryResponse> {
         const JUST_SERP_KEY = process.env.JUST_SERP_KEY;
+        const JUSTSERP_DAILY_CAP = parseInt(process.env.JUSTSERP_DAILY_CAP || '50', 10);
+
         if (!JUST_SERP_KEY) {
             logger.error("JUST_SERP_KEY is missing");
+            return { results: [], discoveryPlan: this.emptyPlan() };
+        }
+
+        // Check quota before calling JustSERP
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        const db = getDb();
+        const quotaDocRef = db.collection('quota_counters').doc(`justserp_${today}`);
+
+        try {
+            const quotaDoc = await quotaDocRef.get();
+            const quotaData = quotaDoc.data() || { count: 0, cap: JUSTSERP_DAILY_CAP, date: today };
+
+            if (quotaData.count >= JUSTSERP_DAILY_CAP) {
+                logger.warn({ platform: 'justserp', action: 'QUOTA_EXHAUSTED', count: quotaData.count, cap: JUSTSERP_DAILY_CAP }, `JustSERP daily cap reached (${quotaData.count}/${JUSTSERP_DAILY_CAP}). Returning empty.`);
+                return { results: [], discoveryPlan: this.emptyPlan() };
+            }
+        } catch (err: unknown) {
+            logger.error({ err: errMsg(err), action: 'QUOTA_CHECK_ERROR' }, `Failed to check JustSERP quota`);
+            // On error, fail gracefully and don't call JustSERP
             return { results: [], discoveryPlan: this.emptyPlan() };
         }
 
@@ -277,6 +304,25 @@ export class DiscoveryOrchestrator {
             if (!response.ok) {
                 logger.error({ status: response.status, statusText: response.statusText }, "JustSerp API call failed");
                 return { results: [], discoveryPlan: this.emptyPlan() };
+            }
+
+            // Increment quota counter and log usage
+            try {
+                await quotaDocRef.set({
+                    count: (await quotaDocRef.get()).data()?.count || 0 + 1,
+                    cap: JUSTSERP_DAILY_CAP,
+                    date: today
+                }, { merge: true });
+
+                // Log to serp_usage collection
+                await db.collection('serp_usage').add({
+                    source: 'justserp',
+                    keyword: query,
+                    timestamp: new Date().toISOString(),
+                    cost_estimate: 0.01
+                });
+            } catch (logErr: any) {
+                logger.error({ err: logErr.message, action: 'QUOTA_LOG_ERROR' }, `Failed to log JustSERP usage`);
             }
 
             const data: any = await response.json();
@@ -305,7 +351,7 @@ export class DiscoveryOrchestrator {
                     id: r.link,
                     title: r.title,
                     url: r.link,
-                    subreddit: r.link.includes('/r/') ? `r/${r.link.split('/r/')[1].split('/')[0]}` : (source === 'hn' ? 'Hacker News' : 'Web'),
+                    subreddit: r.link.includes('/r/') ? r.link.split('/r/')[1].split('/')[0] : (source === 'hn' ? 'Hacker News' : 'Web'),
                     author: 'unknown',
                     source,
                     num_comments: numComments,
@@ -401,14 +447,64 @@ export class DiscoveryOrchestrator {
                 (r.num_comments === 0 || r.author === 'unknown') && (r.source === 'reddit' || r.source === 'hn')
             );
 
-            if (needsEnrichment.length > 0) {
-                logger.info({
-                    action: 'ENRICHMENT_PHASE_START',
-                    totalChecked: topToEnrich.length,
-                    toEnrich: needsEnrichment.length
-                }, `Enriching metadata for ${needsEnrichment.length} results...`);
+            if (needsEnrichment.length === 0) return;
 
-                await Promise.all(needsEnrichment.map(async (r) => {
+            logger.info({
+                action: 'ENRICHMENT_PHASE_START',
+                totalChecked: topToEnrich.length,
+                toEnrich: needsEnrichment.length
+            }, `Enriching metadata for ${needsEnrichment.length} results...`);
+
+            // Extract Reddit post IDs (short base36 IDs from URLs like /comments/abc123/)
+            const extractId = (url: string) => url.match(/comments\/([a-z0-9]+)/)?.[1] ?? null;
+
+            const redditResults = needsEnrichment.filter(r => r.source === 'reddit');
+            const redditIds = redditResults.map(r => extractId(r.url)).filter((id): id is string => id !== null);
+
+            // Build a lookup map: shortId → result object (for applying enrichment data)
+            const idToResult = new Map<string, DiscoveryResult>();
+            for (const r of redditResults) {
+                const id = extractId(r.url);
+                if (id) idToResult.set(id, r);
+            }
+
+            // --- Step 1: PullPush (works from datacenter IPs, no proxy needed) ---
+            const resolvedIds = new Set<string>();
+            if (redditIds.length > 0) {
+                const pullPushData = await this.pullPushService.getSubmissionsByIds(redditIds);
+                for (const item of pullPushData) {
+                    const r = idToResult.get(item.id);
+                    if (r && item.author && item.author !== 'unknown') {
+                        r.author = item.author;
+                        r.num_comments = item.num_comments || r.num_comments;
+                        r.isCached = true;
+                        resolvedIds.add(item.id);
+                    }
+                }
+                logger.info({ action: 'ENRICHMENT_PULLPUSH', resolved: resolvedIds.size, total: redditIds.length }, `PullPush resolved ${resolvedIds.size}/${redditIds.length} authors`);
+            }
+
+            // --- Step 2: Arctic Shift for IDs PullPush missed ---
+            const unresolved = redditIds.filter(id => !resolvedIds.has(id));
+            if (unresolved.length > 0) {
+                const arcticData = await this.arcticShiftService.getPostsByIds(unresolved);
+                for (const item of arcticData) {
+                    const r = idToResult.get(item.id);
+                    if (r && item.author && item.author !== 'unknown') {
+                        r.author = item.author;
+                        r.num_comments = item.num_comments || r.num_comments;
+                        r.isCached = true;
+                        resolvedIds.add(item.id);
+                    }
+                }
+                logger.info({ action: 'ENRICHMENT_ARCTIC_SHIFT', resolved: resolvedIds.size, total: redditIds.length }, `Arctic Shift resolved ${resolvedIds.size - (redditIds.length - unresolved.length)}/${unresolved.length} additional authors`);
+            }
+
+            // --- Step 3: Fall back to full thread fetch (proxy/fetcher/direct) for anything still unresolved ---
+            const stillUnresolved = needsEnrichment.filter(r => r.author === 'unknown');
+            if (stillUnresolved.length > 0) {
+                logger.info({ action: 'ENRICHMENT_FALLBACK', count: stillUnresolved.length }, `Falling back to Reddit fetcher for ${stillUnresolved.length} results`);
+                await Promise.all(stillUnresolved.map(async (r) => {
                     try {
                         const fullData = await this.fetchFullThread(r.url, r.source);
                         if (fullData && fullData.post) {
@@ -417,7 +513,7 @@ export class DiscoveryOrchestrator {
                             r.isCached = true;
                         }
                     } catch (err) {
-                        logger.warn({ url: r.url }, "Failed to enrich metadata for result");
+                        logger.warn({ url: r.url }, "Fallback enrichment failed for result");
                     }
                 }));
             }

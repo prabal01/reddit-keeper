@@ -3,14 +3,35 @@ import { redis } from '../middleware/rateLimiter.js';
 import { DiscoveryResult, IDiscoveryService } from './types.js';
 import { getGlobalConfig } from '../firestore.js';
 import { logger } from '../utils/logger.js';
+import { USER_AGENT } from '../config.js';
+import { errMsg } from '../utils/errors.js';
+import { ArcticShiftService } from './arctic-shift.service.js';
+import { PullPushService } from './pullpush.service.js';
 
 export class RedditDiscoveryService implements IDiscoveryService {
     private lastRequestTime = 0;
+    // PullPush: Reddit-wide search (for discovery with no subreddit context)
+    // Arctic Shift: Subreddit-specific search (for monitoring workflows with known subreddits)
+    private arcticShiftService = new ArcticShiftService();
+    private pullPushService = new PullPushService();
 
     /**
-     * Helper to fetch data via the resilient-reddit-fetcher service or direct fetch (legacy).
+     * Helper to fetch data via residential proxy, local fetcher, or direct fetch.
+     * Priority: Proxy > Local Fetcher > Direct Fetch
      */
     private async fetchJson(url: string): Promise<any> {
+        // PRIORITY 1: Residential Proxy (if configured)
+        const proxyHost = process.env.PROXY_HOST;
+        const proxyPort = process.env.PROXY_PORT;
+        const proxyUser = process.env.PROXY_USER;
+        const proxyPass = process.env.PROXY_PASS;
+
+        if (proxyHost && proxyPort && proxyUser && proxyPass) {
+            logger.info({ platform: 'reddit', action: 'FETCH_VIA_PROXY', host: proxyHost }, `Fetching via residential proxy...`);
+            return this.fetchViaProxy(url, proxyHost, proxyPort, proxyUser, proxyPass);
+        }
+
+        // PRIORITY 2: Local fetcher service (home IP)
         const serviceUrl = process.env.REDDIT_SERVICE_URL;
         const internalSecret = process.env.INTERNAL_FETCH_SECRET;
 
@@ -33,11 +54,12 @@ export class RedditDiscoveryService implements IDiscoveryService {
             return await response.json();
         }
 
-        // LEGACY FALLBACK
+        // PRIORITY 3: Direct fetch (will fail on datacenter IPs)
+        logger.warn({ platform: 'reddit', action: 'FETCH_DIRECT', url }, `No proxy or fetcher configured. Attempting direct fetch (may fail on datacenter IPs).`);
         await this.waitIfNecessary();
         const res = await fetch(url.includes('.json') ? url : `${url.split('?')[0].replace(/\/$/, '')}.json`, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'User-Agent': USER_AGENT,
                 'Accept': 'application/json',
                 'Referer': 'https://www.reddit.com/'
             }
@@ -45,6 +67,41 @@ export class RedditDiscoveryService implements IDiscoveryService {
 
         if (!res.ok) throw new Error(`HTTP_${res.status}: ${res.statusText}`);
         return await res.json();
+    }
+
+    /**
+     * Fetch via residential SOCKS5 proxy
+     */
+    private async fetchViaProxy(
+        url: string,
+        host: string,
+        port: string,
+        user: string,
+        pass: string
+    ): Promise<any> {
+        try {
+            const { SocksProxyAgent } = await import('socks-proxy-agent');
+            const socksUrl = `socks5://${user}:${pass}@${host}:${port}`;
+            const agent = new SocksProxyAgent(socksUrl);
+
+            await this.waitIfNecessary();
+            const finalUrl = url.includes('.json') ? url : `${url.split('?')[0].replace(/\/$/, '')}.json`;
+
+            const res = await fetch(finalUrl, {
+                agent,
+                headers: {
+                    'User-Agent': USER_AGENT,
+                    'Accept': 'application/json',
+                    'Referer': 'https://www.reddit.com/'
+                }
+            });
+
+            if (!res.ok) throw new Error(`HTTP_${res.status}: ${res.statusText}`);
+            return await res.json();
+        } catch (err: unknown) {
+            logger.error({ platform: 'reddit', action: 'PROXY_FETCH_ERROR', err: errMsg(err) }, `Proxy fetch failed`);
+            throw err;
+        }
     }
 
     private async waitIfNecessary() {
@@ -80,61 +137,27 @@ export class RedditDiscoveryService implements IDiscoveryService {
         }
 
         const compLower = cleanCompetitor.toLowerCase();
-        const queries = customQueries || [
-            `title:${cleanCompetitor} + frustrated`,
-            `title:${cleanCompetitor} + alternative`,
-            `title:${cleanCompetitor} + vs`,
-            `title:${cleanCompetitor} + review`,
-            `title:${cleanCompetitor} + sucks`,
-            `"${cleanCompetitor}" + annoying`,
-            `"${cleanCompetitor}" + problems`,
-            `"${cleanCompetitor}"`
-        ];
-
-        const allResultsMap = new Map<string, DiscoveryResult>();
+        let allResultsMap = new Map<string, DiscoveryResult>();
         let scannedCount = 0;
 
-        const noiseFilter = "-subreddit:BestofRedditorUpdates -subreddit:nosleep -subreddit:AITAH -subreddit:relationship_advice -subreddit:AmItheAsshole -subreddit:horrorstories -subreddit:Novelnews -subreddit:AskMenAdvice -subreddit:BORUpdates -subreddit:AnotherEdenGlobal -subreddit:FemFragLab -subreddit:BTSnark";
+        // For discovery (Reddit-wide search with no subreddit context), use PullPush
+        // Arctic Shift requires a subreddit, so it's used only for monitoring workflows
+        logger.info({ platform: 'reddit', action: 'LAYER1_PULLPUSH_START', keyword: cleanCompetitor }, `Layer 1: Searching via PullPush (Reddit-wide)...`);
+        const pullPushResults = await this.pullPushService.searchSubmissions(cleanCompetitor, undefined, 100);
 
-        for (const rawQuery of queries) {
-            const safeCompetitor = cleanCompetitor.includes(' ') ? `"${cleanCompetitor}"` : cleanCompetitor;
-            const antiPromo = `-"I built" -"launched"`;
-            const query = `${rawQuery} ${antiPromo} ${noiseFilter}`;
-            try {
-                const searchUrl = `https://www.reddit.com/search.json?q=${encodeURIComponent(query)}&sort=relevance&t=year&limit=25`;
-                logger.info({ platform: 'reddit', action: 'API_FETCH', url: searchUrl, searchTerm: query });
-                
-                const data = await this.fetchJson(searchUrl);
-                const children = data.data?.children || [];
-                scannedCount += children.length;
-
-                for (const child of children) {
-                    const post = child.data;
-                    const { score, markers } = this.calculateRelevanceScore(post, compLower);
-
-                    if (score > 1000) {
-                        const result: DiscoveryResult = {
-                            id: post.id,
-                            title: post.title,
-                            author: post.author,
-                            subreddit: post.subreddit,
-                            ups: post.ups,
-                            num_comments: post.num_comments,
-                            created_utc: post.created_utc,
-                            url: `https://www.reddit.com${post.permalink}`,
-                            source: 'reddit',
-                            score,
-                            intentMarkers: markers
-                        };
-
-                        if (!allResultsMap.has(post.id) || allResultsMap.get(post.id)!.score < score) {
-                            allResultsMap.set(post.id, result);
-                        }
-                    }
+        if (pullPushResults.length > 0) {
+            logger.info({ platform: 'reddit', action: 'LAYER1_PULLPUSH_SUCCESS', count: pullPushResults.length }, `PullPush returned ${pullPushResults.length} results`);
+            for (const result of pullPushResults) {
+                if (!allResultsMap.has(result.id) || allResultsMap.get(result.id)!.score < result.score) {
+                    allResultsMap.set(result.id, result);
                 }
-            } catch (err) {
-                logger.error({ err, platform: 'reddit', query }, `Search error for "${query}"`);
             }
+            scannedCount += pullPushResults.length;
+        } else {
+            // PullPush returned 0 results — return empty.
+            // For MVP discovery, we rely on PullPush (Reddit-wide search).
+            // Arctic Shift is reserved for monitoring workflows with specific subreddits.
+            logger.info({ platform: 'reddit', action: 'NO_RESULTS_FOUND', keyword: cleanCompetitor }, `PullPush returned 0 results for "${cleanCompetitor}"`);
         }
 
         const finalResults = Array.from(allResultsMap.values())
@@ -322,8 +345,8 @@ export class RedditDiscoveryService implements IDiscoveryService {
                 num_comments: child.data.num_comments,
                 created_utc: child.data.created_utc
             }));
-        } catch (err: any) {
-            logger.error({ action: 'REDDIT_SUBREDDIT_FETCH_ERROR', subreddit, err: err.message }, `Failed to fetch r/${subreddit}`);
+        } catch (err: unknown) {
+            logger.error({ action: 'REDDIT_SUBREDDIT_FETCH_ERROR', subreddit, err: errMsg(err) }, `Failed to fetch r/${subreddit}`);
             throw err;
         }
     }

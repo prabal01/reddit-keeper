@@ -2,6 +2,8 @@ import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth.js';
 import { usageGuard } from '../middleware/usageGuard.js';
 import { DiscoveryOrchestrator } from './orchestrator.js';
+import { PullPushService } from './pullpush.service.js';
+import { ArcticShiftService } from './arctic-shift.service.js';
 import { analyzeDiscoveryBatch } from '../ai.js';
 import {
     createFolder, getDb,
@@ -13,6 +15,11 @@ import { USER_AGENT } from '../config.js';
 
 const router = Router();
 const orchestrator = new DiscoveryOrchestrator();
+const pullPushService = new PullPushService();
+const arcticShiftService = new ArcticShiftService();
+
+/** Extract short Reddit base36 ID from a thread URL */
+const extractRedditId = (url: string) => url.match(/comments\/([a-z0-9]+)/)?.[1] ?? null;
 
 // Helper to scrape and extract niche
 async function getProposeIntelligence(query: string) {
@@ -107,8 +114,74 @@ router.post('/start', authMiddleware, async (req: Request, res: Response) => {
         // 3. AI Processing
         const insights = await analyzeDiscoveryBatch(query, threadBatch);
 
+        // 3.5 Targeted author enrichment for threads that will become leads
+        // enrichMetadata() only covers the top `enrichmentLimit` (default 10), but AI may pick
+        // opportunities from results 11–30. We do a focused PullPush → Arctic Shift lookup
+        // for exactly the threads referenced by the AI's opportunities.
+        if (insights.opportunities && Array.isArray(insights.opportunities)) {
+            // Build a map of thread ID → result object for all opportunity threads
+            const oppThreadMap = new Map<string, any>();
+            for (const opp of insights.opportunities) {
+                const r = topResults.find(t => (typeof t.id === 'string' ? t.id : t.url) === opp.thread_id);
+                if (r && (!r.author || r.author === 'unknown')) {
+                    const shortId = extractRedditId(r.url);
+                    if (shortId) oppThreadMap.set(shortId, r);
+                }
+            }
+
+            const idsToEnrich = Array.from(oppThreadMap.keys());
+            if (idsToEnrich.length > 0) {
+                logger.info({ action: 'LEAD_AUTHOR_ENRICH_START', count: idsToEnrich.length }, `Enriching authors for ${idsToEnrich.length} lead threads`);
+
+                // Step A: PullPush (works from datacenter IPs)
+                const resolvedIds = new Set<string>();
+                const ppResults = await pullPushService.getSubmissionsByIds(idsToEnrich);
+                for (const item of ppResults) {
+                    if (item.author && item.author !== 'unknown' && oppThreadMap.has(item.id)) {
+                        oppThreadMap.get(item.id).author = item.author;
+                        oppThreadMap.get(item.id).num_comments = item.num_comments || oppThreadMap.get(item.id).num_comments;
+                        resolvedIds.add(item.id);
+                    }
+                }
+
+                // Step B: Arctic Shift for any PullPush missed
+                const stillUnresolved = idsToEnrich.filter(id => !resolvedIds.has(id));
+                if (stillUnresolved.length > 0) {
+                    const asResults = await arcticShiftService.getPostsByIds(stillUnresolved);
+                    for (const item of asResults) {
+                        if (item.author && item.author !== 'unknown' && oppThreadMap.has(item.id)) {
+                            oppThreadMap.get(item.id).author = item.author;
+                            resolvedIds.add(item.id);
+                        }
+                    }
+                }
+
+                logger.info({ action: 'LEAD_AUTHOR_ENRICH_DONE', resolved: resolvedIds.size, total: idsToEnrich.length }, `Resolved ${resolvedIds.size}/${idsToEnrich.length} lead authors`);
+            }
+        }
+
         // 4. Create Folder & save data
         const isUrl = query.startsWith('http') || query.includes('.com') || query.includes('.io') || query.includes('.ai');
+
+        // Enforce monitor count limit
+        if (req.user.config.monitorLimit !== -1) {
+            const dbInst = getDb();
+            if (dbInst) {
+                const snap = await dbInst.collection('folders')
+                    .where('uid', '==', uid)
+                    .where('is_monitoring_active', '==', true)
+                    .count()
+                    .get();
+                if (snap.data().count >= req.user.config.monitorLimit) {
+                    return res.status(403).json({
+                        error: `Monitor limit reached. Your plan allows ${req.user.config.monitorLimit} active monitor(s).`,
+                        code: 'MONITOR_LIMIT_REACHED',
+                        limit: req.user.config.monitorLimit,
+                    });
+                }
+            }
+        }
+
         const folder = await createFolder(uid, query, "Monitoring Job", isUrl ? query : undefined);
         
         // 4.1 Update folder to mark as active monitoring
@@ -151,7 +224,11 @@ router.post('/start', authMiddleware, async (req: Request, res: Response) => {
                         status: "new",
                         saved_at: new Date().toISOString(),
                         thread_url: originalThread?.url || opp.thread_id,
-                        thread_title: originalThread?.title || "Unknown Thread"
+                        thread_title: originalThread?.title || "Unknown Thread",
+                        author: originalThread?.author && originalThread.author !== 'unknown' ? originalThread.author : null,
+                        subreddit: originalThread?.subreddit ? originalThread.subreddit.replace(/^r\//, '') : null,
+                        relevance_score: opp.relevanceScore || opp.relevance_score || 50,
+                        intent_markers: opp.intentMarkers || opp.intent_markers || []
                     };
                     
                     const leadRef = db.collection("folders").doc(folder.id).collection("leads").doc(leadId);
