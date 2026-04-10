@@ -1,6 +1,10 @@
 import { Queue, Worker } from 'bullmq';
 import { MonitoringService } from './service.js';
 import { DiscoveryOrchestrator } from '../discovery/orchestrator.js';
+import { RedditDiscoveryService } from '../discovery/reddit.service.js';
+import { PullPushService } from '../discovery/pullpush.service.js';
+import { ArcticShiftService } from '../discovery/arctic-shift.service.js';
+import { getGlobalConfig } from '../firestore.js';
 import { logger } from '../utils/logger.js';
 import { errMsg } from '../utils/errors.js';
 import { redis } from '../middleware/rateLimiter.js';
@@ -35,12 +39,21 @@ export const opportunityMatcherQueue = new Queue("opportunity-matcher", {
     }
 });
 
-// ── Scraper Worker ────────────────────────────────────────────────
+// ── Shared Service Instances ──────────────────────────────────────
 
 const discoveryOrchestrator = new DiscoveryOrchestrator();
+const redditService = new RedditDiscoveryService();
+const pullPushService = new PullPushService();
+const arcticShiftService = new ArcticShiftService();
+
+// ── Scraper Worker ────────────────────────────────────────────────
 
 export const monitoringScraperWorker = new Worker("monitoring-scraper", async (job) => {
     logger.info({ action: 'MONITORING_SCRAPE_START' }, `[Monitoring] Starting global scrape cycle...`);
+    const globalConfig = await getGlobalConfig();
+    const cooldownHours = globalConfig.monitoring_subreddit_cooldown_hours;
+    const freshnessThreshold = globalConfig.monitoring_freshness_threshold_hours;
+    const minArchivePosts = globalConfig.monitoring_min_archive_posts;
 
     // 1. Get all unique subreddits across all users
     const allMonitors = await MonitoringService.getAllMonitors();
@@ -52,32 +65,91 @@ export const monitoringScraperWorker = new Worker("monitoring-scraper", async (j
 
     for (const sub of uniqueSubreddits) {
         try {
-            // 1. Check Redis for 8-hour cooldown to avoid redundant fetches
+            // 1. Check Redis cooldown to avoid redundant fetches
             const cooldownKey = `monitoring:cooldown:${sub}`;
             const onCooldown = await redis.get(cooldownKey);
 
             if (onCooldown) {
-                logger.info({ action: 'MONITORING_SUBREDDIT_SKIP', subreddit: sub }, `[Monitoring] skipping r/${sub} - already fetched within 8h window.`);
+                logger.info({ action: 'MONITORING_SUBREDDIT_SKIP', subreddit: sub }, `[Monitoring] skipping r/${sub} - on cooldown.`);
                 continue;
             }
 
             logger.info({ action: 'MONITORING_SUBREDDIT_FETCH', subreddit: sub }, `[Monitoring] Fetching r/${sub}...`);
 
-            const { RedditDiscoveryService } = await import('../discovery/reddit.service.js');
-            const redditService = new RedditDiscoveryService();
+            // ── Three-Tier Fetch: Archive First, Proxy Fallback ──
+            let posts: any[] = [];
 
-            const results = await redditService.fetchSubredditNew(sub, 100);
-            logger.info({ action: 'MONITORING_SUBREDDIT_FETCH_COUNT', subreddit: sub, count: results?.length || 0 }, `[Monitoring] Fetched ${results?.length || 0} posts for r/${sub}`);
+            // Tier 1: PullPush (free, works from datacenter IPs)
+            try {
+                const ppResults = await pullPushService.searchSubmissions('', sub, 100);
+                if (ppResults && ppResults.length > 0) {
+                    posts = ppResults.map(r => ({
+                        id: r.id, title: r.title, selftext: '',
+                        subreddit: r.subreddit || sub, author: r.author || 'unknown',
+                        url: r.url, num_comments: r.num_comments || 0,
+                        created_utc: r.created_utc || Math.floor(Date.now() / 1000)
+                    }));
+                    logger.info({ action: 'MONITORING_TIER1_PULLPUSH', subreddit: sub, count: posts.length }, `[Monitoring] PullPush returned ${posts.length} posts`);
+                }
+            } catch (err: unknown) {
+                logger.warn({ subreddit: sub, err: errMsg(err) }, '[Monitoring] PullPush failed, trying Arctic Shift');
+            }
 
-            if (!results || results.length === 0) {
-                // If we hit a snag, maybe don't set cooldown to allow retry?
-                // Using 1 hour cooldown for empty results to prevent thrashing
+            // Tier 2: ArcticShift supplement (free, different archive)
+            if (posts.length < minArchivePosts) {
+                try {
+                    const asResults = await arcticShiftService.searchPosts('', sub, 100);
+                    if (asResults && asResults.length > 0) {
+                        const existingIds = new Set(posts.map(p => p.id));
+                        const newFromArctic = asResults
+                            .filter(r => !existingIds.has(r.id))
+                            .map(r => ({
+                                id: r.id, title: r.title, selftext: '',
+                                subreddit: r.subreddit || sub, author: r.author || 'unknown',
+                                url: r.url, num_comments: r.num_comments || 0,
+                                created_utc: r.created_utc || Math.floor(Date.now() / 1000)
+                            }));
+                        posts = [...posts, ...newFromArctic];
+                        logger.info({ action: 'MONITORING_TIER2_ARCTICSHIFT', subreddit: sub, added: newFromArctic.length }, `[Monitoring] Arctic Shift added ${newFromArctic.length} posts`);
+                    }
+                } catch (err: unknown) {
+                    logger.warn({ subreddit: sub, err: errMsg(err) }, '[Monitoring] Arctic Shift failed');
+                }
+            }
+
+            // Tier 3: Check freshness - proxy fallback only if archives seem stale
+            const now = Math.floor(Date.now() / 1000);
+            const recentCutoff = now - (freshnessThreshold * 3600);
+            const recentPosts = posts.filter(p => p.created_utc > recentCutoff);
+
+            if (recentPosts.length < minArchivePosts && globalConfig.proxy_fallback_enabled) {
+                logger.info({ action: 'MONITORING_TIER3_PROXY', subreddit: sub, archiveRecent: recentPosts.length },
+                    `[Monitoring] Archives stale (${recentPosts.length} recent), falling back to proxy for r/${sub}`);
+                try {
+                    const proxyResults = await redditService.fetchSubredditNew(sub, 100);
+                    if (proxyResults && proxyResults.length > 0) {
+                        posts = proxyResults.map((p: any) => ({
+                            id: p.id, title: p.title, selftext: p.selftext || '',
+                            subreddit: sub, author: p.author || 'unknown',
+                            url: p.url, num_comments: p.num_comments || 0,
+                            created_utc: p.created_utc || Math.floor(Date.now() / 1000)
+                        }));
+                        logger.info({ action: 'MONITORING_PROXY_SUCCESS', subreddit: sub, count: posts.length }, `[Monitoring] Proxy returned ${posts.length} posts`);
+                    }
+                } catch (err: unknown) {
+                    logger.error({ subreddit: sub, err: errMsg(err) }, '[Monitoring] Proxy fallback also failed');
+                }
+            }
+
+            logger.info({ action: 'MONITORING_SUBREDDIT_FETCH_COUNT', subreddit: sub, count: posts.length }, `[Monitoring] Total ${posts.length} posts for r/${sub}`);
+
+            if (posts.length === 0) {
                 await redis.set(cooldownKey, 'empty', 'EX', 3600);
                 continue;
             }
 
             // 2. Upsert posts to global cache
-            for (const post of results) {
+            for (const post of posts) {
                 await MonitoringService.upsertCachedPost({
                     id: post.id,
                     title: post.title,
@@ -88,18 +160,17 @@ export const monitoringScraperWorker = new Worker("monitoring-scraper", async (j
                     num_comments: post.num_comments,
                     created_utc: post.created_utc,
                     fetchedAt: new Date().toISOString(),
-                    source: 'reddit_local'
+                    source: 'archive_first'
                 });
             }
 
-            // 3. Set 8-hour cooldown after successful fetch
-            await redis.set(cooldownKey, 'cached', 'EX', 8 * 3600);
+            // 3. Set cooldown after successful fetch
+            await redis.set(cooldownKey, 'cached', 'EX', cooldownHours * 3600);
 
-            logger.info({ action: 'MONITORING_SUBREDDIT_CACHED', subreddit: sub, count: results.length }, `[Monitoring] Cached ${results.length} posts for r/${sub}`);
+            logger.info({ action: 'MONITORING_SUBREDDIT_CACHED', subreddit: sub, count: posts.length }, `[Monitoring] Cached ${posts.length} posts for r/${sub}`);
 
         } catch (err: unknown) {
             logger.error({ action: 'MONITORING_SUBREDDIT_ERROR', subreddit: sub, err: errMsg(err) }, `[Monitoring] Failed to scrape r/${sub}`);
-            // Set a 1-hour cooldown on error to prevent retry spam
             await redis.set(`monitoring:cooldown:${sub}`, 'error', 'EX', 3600).catch(() => {});
         }
     }
@@ -142,51 +213,59 @@ export const opportunityMatcherWorker = new Worker("opportunity-matcher", async 
     const existingOppDocs = await MonitoringService.getUserOpportunities(uid);
     const existingPostIds = new Set(existingOppDocs.map(o => o.postId));
     
-    const newPosts = posts.filter(p => !existingPostIds.has(p.id)).slice(0, 20);
+    const globalConfig = await getGlobalConfig();
+    const maxToScore = globalConfig.monitoring_max_posts_to_score;
+    const batchSize = globalConfig.monitoring_scoring_batch_size;
+
+    const newPosts = posts.filter(p => !existingPostIds.has(p.id)).slice(0, maxToScore);
     logger.info({ action: 'MONITORING_NEW_POSTS_FOUND', uid, monitorId, count: newPosts.length }, `[Monitoring] Found ${newPosts.length} new posts to score for monitor ${monitorId} of ${uid}.`);
 
-    const { scoreMarketingOpportunity } = await import('../ai.js');
+    const { scoreMarketingOpportunityBatch } = await import('../ai.js');
 
-    for (const post of newPosts) {
+    let scored = 0;
+    for (let i = 0; i < newPosts.length; i += batchSize) {
+        const batch = newPosts.slice(i, i + batchSize);
         try {
-            const result = await scoreMarketingOpportunity(monitor.websiteContext, {
-                title: post.title,
-                selftext: post.selftext,
-                subreddit: post.subreddit
-            });
+            const results = await scoreMarketingOpportunityBatch(
+                monitor.websiteContext,
+                batch.map(p => ({ id: p.id, title: p.title, selftext: p.selftext || '', subreddit: p.subreddit }))
+            );
 
-            logger.info({ 
-                action: 'MONITORING_SCORING_RESULT', 
-                uid, 
-                subreddit: post.subreddit,
-                score: result.relevanceScore,
-                reason: result.matchReason 
-            }, `[Monitoring] Scored r/${post.subreddit} post: ${result.relevanceScore}% match. Reason: ${result.matchReason}`);
+            for (const result of results) {
+                const post = batch.find(p => p.id === result.id);
+                if (!post) continue;
 
-            if (result.relevanceScore >= 50) {
-                await MonitoringService.saveOpportunity({
-                    id: `${uid}_${monitorId}_${post.id}`,
-                    uid,
-                    postId: post.id,
-                    postTitle: post.title,
-                    postSubreddit: post.subreddit,
-                    postAuthor: post.author,
-                    postUrl: post.url,
-                    relevanceScore: result.relevanceScore,
-                    matchReason: result.matchReason,
-                    suggestedReply: result.suggestedReply,
-                    status: 'new',
-                    matchedAt: new Date().toISOString(),
-                    createdAt: post.created_utc
-                });
-                logger.info({ action: 'MONITORING_OPPORTUNITY_SAVED', uid, postId: post.id, score: result.relevanceScore }, `[Monitoring] Saved opportunity for ${uid}`);
+                logger.info({
+                    action: 'MONITORING_SCORING_RESULT', uid,
+                    subreddit: post.subreddit, score: result.relevanceScore, reason: result.matchReason
+                }, `[Monitoring] Scored r/${post.subreddit} post: ${result.relevanceScore}% match.`);
+
+                if (result.relevanceScore >= 50) {
+                    await MonitoringService.saveOpportunity({
+                        id: `${uid}_${monitorId}_${post.id}`,
+                        uid,
+                        postId: post.id,
+                        postTitle: post.title,
+                        postSubreddit: post.subreddit,
+                        postAuthor: post.author,
+                        postUrl: post.url,
+                        relevanceScore: result.relevanceScore,
+                        matchReason: result.matchReason,
+                        suggestedReply: result.suggestedReply,
+                        status: 'new',
+                        matchedAt: new Date().toISOString(),
+                        createdAt: post.created_utc
+                    });
+                    logger.info({ action: 'MONITORING_OPPORTUNITY_SAVED', uid, postId: post.id, score: result.relevanceScore }, `[Monitoring] Saved opportunity for ${uid}`);
+                }
+                scored++;
             }
         } catch (err: unknown) {
-            logger.error({ action: 'MONITORING_MATCH_ERROR', uid, postId: post.id, err: errMsg(err) }, `[Monitoring] Failed to score post ${post.id}`);
+            logger.error({ action: 'MONITORING_MATCH_BATCH_ERROR', uid, batchStart: i, err: errMsg(err) }, `[Monitoring] Failed to score batch starting at ${i}`);
         }
     }
 
-    return { scored: newPosts.length };
+    return { scored };
 
 }, {
     connection: sharedConnectionConfig,

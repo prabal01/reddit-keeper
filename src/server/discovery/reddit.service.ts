@@ -3,7 +3,7 @@ import { redis } from '../middleware/rateLimiter.js';
 import { DiscoveryResult, IDiscoveryService } from './types.js';
 import { getGlobalConfig } from '../firestore.js';
 import { logger } from '../utils/logger.js';
-import { USER_AGENT } from '../config.js';
+import { getRandomUserAgent } from '../config.js';
 import { errMsg } from '../utils/errors.js';
 import { ArcticShiftService } from './arctic-shift.service.js';
 import { PullPushService } from './pullpush.service.js';
@@ -14,6 +14,23 @@ export class RedditDiscoveryService implements IDiscoveryService {
     // Arctic Shift: Subreddit-specific search (for monitoring workflows with known subreddits)
     private arcticShiftService = new ArcticShiftService();
     private pullPushService = new PullPushService();
+
+    /** Full browser-like headers for every Reddit request, with rotated UA. */
+    private browserHeaders(): Record<string, string> {
+        return {
+            'User-Agent': getRandomUserAgent(),
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Referer': 'https://www.reddit.com/',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+            'Sec-Fetch-Dest': 'empty',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Site': 'same-origin',
+            'DNT': '1',
+        };
+    }
 
     /**
      * Helper to fetch data via residential proxy, local fetcher, or direct fetch.
@@ -58,11 +75,7 @@ export class RedditDiscoveryService implements IDiscoveryService {
         logger.warn({ platform: 'reddit', action: 'FETCH_DIRECT', url }, `No proxy or fetcher configured. Attempting direct fetch (may fail on datacenter IPs).`);
         await this.waitIfNecessary();
         const res = await fetch(url.includes('.json') ? url : `${url.split('?')[0].replace(/\/$/, '')}.json`, {
-            headers: {
-                'User-Agent': USER_AGENT,
-                'Accept': 'application/json',
-                'Referer': 'https://www.reddit.com/'
-            }
+            headers: this.browserHeaders()
         });
 
         if (!res.ok) throw new Error(`HTTP_${res.status}: ${res.statusText}`);
@@ -70,7 +83,8 @@ export class RedditDiscoveryService implements IDiscoveryService {
     }
 
     /**
-     * Fetch via residential SOCKS5 proxy
+     * Fetch via IPRoyal residential HTTP proxy
+     * Format: http://user:pass@host:port
      */
     private async fetchViaProxy(
         url: string,
@@ -80,20 +94,16 @@ export class RedditDiscoveryService implements IDiscoveryService {
         pass: string
     ): Promise<any> {
         try {
-            const { SocksProxyAgent } = await import('socks-proxy-agent');
-            const socksUrl = `socks5://${user}:${pass}@${host}:${port}`;
-            const agent = new SocksProxyAgent(socksUrl);
+            const { HttpsProxyAgent } = await import('https-proxy-agent');
+            const proxyUrl = `http://${user}:${pass}@${host}:${port}`;
+            const agent = new HttpsProxyAgent(proxyUrl);
 
             await this.waitIfNecessary();
             const finalUrl = url.includes('.json') ? url : `${url.split('?')[0].replace(/\/$/, '')}.json`;
 
             const res = await fetch(finalUrl, {
                 agent,
-                headers: {
-                    'User-Agent': USER_AGENT,
-                    'Accept': 'application/json',
-                    'Referer': 'https://www.reddit.com/'
-                }
+                headers: this.browserHeaders()
             });
 
             if (!res.ok) throw new Error(`HTTP_${res.status}: ${res.statusText}`);

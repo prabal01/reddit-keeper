@@ -7,14 +7,10 @@ import helmet from "helmet";
 import { redis } from "./server/middleware/rateLimiter.js";
 import { initFirebase, getFirebaseStatus } from "./server/firestore.js";
 import {
-    analysisQueue,
     syncQueue,
     granularAnalysisQueue,
-    monitoringCronQueue,
     syncWorker,
     granularAnalysisWorker,
-    analysisWorker,
-    monitoringCronWorker,
 } from "./server/queues.js";
 import { authMiddleware } from "./server/middleware/auth.js";
 import { rateLimiterMiddleware } from "./server/middleware/rateLimiter.js";
@@ -131,7 +127,7 @@ app.get("/api/health", async (_req, res) => {
 
     let queueCounts;
     try {
-        queueCounts = await analysisQueue.getJobCounts();
+        queueCounts = await syncQueue.getJobCounts();
         checks.queue = { status: "healthy" };
     } catch {
         checks.queue = { status: "unhealthy" };
@@ -172,16 +168,12 @@ async function gracefulShutdown(signal: string) {
         await Promise.all([
             syncWorker.close(),
             granularAnalysisWorker.close(),
-            analysisWorker.close(),
-            monitoringCronWorker.close(),
             monitoringScraperWorker.close(),
             opportunityMatcherWorker.close(),
         ]);
         await Promise.all([
-            analysisQueue.close(),
             syncQueue.close(),
             granularAnalysisQueue.close(),
-            monitoringCronQueue.close(),
         ]);
         await redis.quit();
         process.exit(0);

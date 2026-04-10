@@ -1,7 +1,10 @@
 import { VertexAI, SchemaType } from "@google-cloud/vertexai";
 import { GoogleAuth } from "google-auth-library";
+import crypto from "crypto";
 import { sendAlert } from "./alerts.js";
 import { logger } from "./utils/logger.js";
+import { redis } from "./middleware/rateLimiter.js";
+import { getGlobalConfig } from "./firestore.js";
 
 const project = process.env.GOOGLE_CLOUD_PROJECT || "redditkeeperprod";
 const location = process.env.GOOGLE_CLOUD_LOCATION || "us-central1";
@@ -616,33 +619,65 @@ export async function getEmbeddings(texts: string[]) {
     try {
         logger.info(`[AI] Generating embeddings for ${texts.length} items...`);
 
-        const auth = new GoogleAuth({
-            scopes: 'https://www.googleapis.com/auth/cloud-platform'
-        });
-        const client = await auth.getClient();
-        const projectId = await auth.getProjectId();
-        const location = 'us-central1';
-        const model = 'text-embedding-004';
+        const globalConfig = await getGlobalConfig();
+        const cacheTtl = globalConfig.embedding_cache_ttl;
 
-        const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${model}:predict`;
+        // Check Redis cache for each text
+        const cacheKeys = texts.map(t => `embedding:v1:${crypto.createHash('md5').update(t).digest('hex')}`);
+        const cached = await Promise.all(cacheKeys.map(k => redis.get(k)));
 
-        const instances = texts.map(text => ({ content: text }));
-        const response = await withRetry(() => client.request({
-            url,
-            method: 'POST',
-            data: { instances }
-        })) as any;
+        const uncachedIndices: number[] = [];
+        const results: { values: number[] }[] = new Array(texts.length);
 
-        if (!response.data?.predictions) {
-            throw new Error("No predictions returned from Vertex AI Embeddings");
+        for (let i = 0; i < texts.length; i++) {
+            if (cached[i]) {
+                results[i] = JSON.parse(cached[i]!);
+            } else {
+                uncachedIndices.push(i);
+            }
+        }
+
+        if (uncachedIndices.length > 0) {
+            logger.info(`[AI] Cache hit ${texts.length - uncachedIndices.length}/${texts.length}, fetching ${uncachedIndices.length} embeddings from API`);
+
+            const auth = new GoogleAuth({
+                scopes: 'https://www.googleapis.com/auth/cloud-platform'
+            });
+            const client = await auth.getClient();
+            const projectId = await auth.getProjectId();
+            const location = 'us-central1';
+            const model = 'text-embedding-004';
+
+            const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${model}:predict`;
+
+            const instances = uncachedIndices.map(i => ({ content: texts[i] }));
+            const response = await withRetry(() => client.request({
+                url,
+                method: 'POST',
+                data: { instances }
+            })) as any;
+
+            if (!response.data?.predictions) {
+                throw new Error("No predictions returned from Vertex AI Embeddings");
+            }
+
+            // Store results and cache them
+            const pipeline = redis.pipeline();
+            for (let j = 0; j < uncachedIndices.length; j++) {
+                const idx = uncachedIndices[j];
+                const embedding = { values: response.data.predictions[j].embeddings.values };
+                results[idx] = embedding;
+                pipeline.setex(cacheKeys[idx], cacheTtl, JSON.stringify(embedding));
+            }
+            await pipeline.exec();
+        } else {
+            logger.info(`[AI] All ${texts.length} embeddings served from cache`);
         }
 
         const totalCharacters = texts.reduce((sum, text) => sum + text.length, 0);
 
         return {
-            embeddings: response.data.predictions.map((p: any) => ({
-                values: p.embeddings.values
-            })),
+            embeddings: results,
             billableCharacters: totalCharacters
         };
     } catch (error) {
@@ -786,6 +821,59 @@ export async function scoreMarketingOpportunity(productContext: string, post: { 
     } catch (error) {
         logger.error({ err: error }, "[AI] [OPPORTUNITY_SCORE] Error");
         return { relevanceScore: 0, matchReason: "Failed to analyze", suggestedReply: null };
+    }
+}
+
+export async function scoreMarketingOpportunityBatch(
+    productContext: string,
+    posts: { id: string; title: string; selftext: string; subreddit: string }[]
+): Promise<{ id: string; relevanceScore: number; matchReason: string; suggestedReply: string | null }[]> {
+    if (posts.length === 0) return [];
+    if (posts.length === 1) {
+        const result = await scoreMarketingOpportunity(productContext, posts[0]);
+        return [{ id: posts[0].id, ...result }];
+    }
+
+    const postsBlock = posts.map((p, i) =>
+        `[POST ${i + 1}] (id: ${p.id})\nTitle: ${p.title}\nSubreddit: r/${p.subreddit}\nContent: ${p.selftext || '(no body)'}`
+    ).join('\n\n');
+
+    const prompt = `
+    You are a growth marketing expert. Evaluate if the following Reddit posts are "Marketing Opportunities" for a specific product.
+
+    PRODUCT CONTEXT:
+    "${productContext}"
+
+    ${postsBlock}
+
+    YOUR TASK for EACH post:
+    1. Relevance Score (0-100): How relevant is this post to the product?
+    - 0-30: No relevance.
+    - 31-70: Tangential or related domain but no immediate intent.
+    - 71-100: High relevance. Direct pain point or category search.
+
+    2. Match Reason: A 1-sentence explanation.
+
+    3. Suggested Reply: A SHORT (1-2 sentence) non-spammy, helpful reply. If relevance < 70, return null.
+
+    Return a JSON array with one object per post, in the same order. Each object must have: id (string), relevanceScore (number), matchReason (string), suggestedReply (string or null).
+    `;
+
+    try {
+        const result = await withRetry(() => opportunityModel.generateContent(prompt));
+        const text = result.response.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) throw new Error("No response from Opportunity Model (batch)");
+        const parsed = JSON.parse(text);
+        const results = Array.isArray(parsed) ? parsed : parsed.results || parsed.posts || [parsed];
+
+        // Ensure we have a result for every post, fill missing with defaults
+        return posts.map(p => {
+            const match = results.find((r: any) => r.id === p.id);
+            return match || { id: p.id, relevanceScore: 0, matchReason: "Not scored", suggestedReply: null };
+        });
+    } catch (error) {
+        logger.error({ err: error }, "[AI] [OPPORTUNITY_SCORE_BATCH] Error");
+        return posts.map(p => ({ id: p.id, relevanceScore: 0, matchReason: "Failed to analyze", suggestedReply: null }));
     }
 }
 

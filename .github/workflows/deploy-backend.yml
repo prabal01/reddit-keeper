@@ -37,7 +37,7 @@ jobs:
           AXIOM_DATASET: ${{ secrets.AXIOM_DATASET }}
           GOOGLE_SEARCH_CX: ${{ secrets.GOOGLE_SEARCH_CX }}
           GOOGLE_SEARCH_API_KEY: ${{ secrets.GOOGLE_SEARCH_API_KEY }}
-          JUST_SERP_KEY: ${{ secrets.JUST_SERP_KEY }}
+          SEARLO_API_KEY: ${{ secrets.SEARLO_API_KEY }}
           RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
           RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
           RAZORPAY_WEBHOOK_SECRET: ${{ secrets.RAZORPAY_WEBHOOK_SECRET }}
@@ -51,6 +51,10 @@ jobs:
           REDDIT_SERVICE_URL: ${{ secrets.REDDIT_SERVICE_URL }}
           INTERNAL_FETCH_SECRET: ${{ secrets.INTERNAL_FETCH_SECRET }}
           REDDIT_USER_AGENT: ${{ secrets.REDDIT_USER_AGENT }}
+          PROXY_HOST: ${{ secrets.PROXY_HOST }}
+          PROXY_PORT: ${{ secrets.PROXY_PORT }}
+          PROXY_USER: ${{ secrets.PROXY_USER }}
+          PROXY_PASS: ${{ secrets.PROXY_PASS }}
         run: |-
           node -e '
             const fs = require("fs");
@@ -66,7 +70,7 @@ jobs:
               AXIOM_DATASET: process.env.AXIOM_DATASET,
               GOOGLE_SEARCH_CX: process.env.GOOGLE_SEARCH_CX,
               GOOGLE_SEARCH_API_KEY: process.env.GOOGLE_SEARCH_API_KEY,
-              JUST_SERP_KEY: process.env.JUST_SERP_KEY,
+              SEARLO_API_KEY: process.env.SEARLO_API_KEY,
               RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID,
               RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET,
               RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET,
@@ -79,7 +83,11 @@ jobs:
               SCHEDULER_SECRET: process.env.SCHEDULER_SECRET,
               REDDIT_SERVICE_URL: process.env.REDDIT_SERVICE_URL,
               INTERNAL_FETCH_SECRET: process.env.INTERNAL_FETCH_SECRET,
-              REDDIT_USER_AGENT: process.env.REDDIT_USER_AGENT
+              REDDIT_USER_AGENT: process.env.REDDIT_USER_AGENT,
+              PROXY_HOST: process.env.PROXY_HOST,
+              PROXY_PORT: process.env.PROXY_PORT,
+              PROXY_USER: process.env.PROXY_USER,
+              PROXY_PASS: process.env.PROXY_PASS
             };
             fs.writeFileSync("env.json", JSON.stringify(env));
           '

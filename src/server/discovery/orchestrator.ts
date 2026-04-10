@@ -1,24 +1,22 @@
 import { RedditDiscoveryService } from './reddit.service.js';
 import { HnDiscoveryService } from './hn.service.js';
 import { DiscoveryBrain } from './brain.js';
-import { GoogleDiscoveryService } from './google.service.js';
 import { PullPushService } from './pullpush.service.js';
 import { ArcticShiftService } from './arctic-shift.service.js';
 import { DiscoveryResult, DiscoveryPlan, DiscoveryResponse } from './types.js';
 import { logger } from '../utils/logger.js';
 import { errMsg } from '../utils/errors.js';
 import { redis } from '../middleware/rateLimiter.js';
-import { getGlobalConfig, saveDiscoveryHistory, getDb } from '../firestore.js';
+import { getGlobalConfig, saveDiscoveryHistory, getDb, getPlanConfig } from '../firestore.js';
 
 export class DiscoveryOrchestrator {
     private redditService = new RedditDiscoveryService();
     private hnService = new HnDiscoveryService();
-    private googleService = new GoogleDiscoveryService();
     private brain = new DiscoveryBrain();
     private pullPushService = new PullPushService();
     private arcticShiftService = new ArcticShiftService();
 
-    async search(uid: string, query: string, platforms: ('reddit' | 'hn')[] | 'all' = 'all', useAiBrain = false, skipCache = false, plan: string = 'free'): Promise<DiscoveryResponse> {
+    async search(uid: string, query: string, platforms: ('reddit' | 'hn')[] | 'all' = 'all', useAiBrain = false, skipCache = false, plan: string = 'free', _depth = 0): Promise<DiscoveryResponse> {
         logger.info({ action: 'SEARCH_START', uid, searchTerm: query, platforms, useAiBrain, skipCache }, `Searching for "${query}" (AI Brain: ${useAiBrain}, SkipCache: ${skipCache})`);
 
         const platformList: ('reddit' | 'hn')[] = platforms === 'all' ? ['reddit', 'hn'] : platforms;
@@ -56,15 +54,19 @@ export class DiscoveryOrchestrator {
         // If no high-signal results, attempt Context Boosting (Query Ambiguity)
         const highSignalCount = allResults.filter(r => r.score > 1000).length;
         if (highSignalCount === 0 && !query.includes('software') && !query.includes('app') && !query.includes('tool')) {
+            if (_depth >= 1) {
+                logger.warn({ action: 'CONTEXT_BOOST_MAX_DEPTH', searchTerm: query }, 'Recursion depth limit reached, falling back to SERP');
+                return this.searloBaseline(query);
+            }
             logger.info({ action: 'CONTEXT_BOOST', searchTerm: query }, `Low signal for "${query}". Attempting Context Boost...`);
-            const boostedQuery = `${query} software OR app OR tool`; // Try to force tech context
-            return this.search(uid, boostedQuery, platforms); // Recursive call with boosted query
+            const boostedQuery = `${query} software OR app OR tool`;
+            return this.search(uid, boostedQuery, platforms, useAiBrain, skipCache, plan, _depth + 1);
         }
 
-        // If STILL no results even after boosting, fallback to JustSerp baseline
+        // If STILL no results even after boosting, fallback to SERP baseline
         if (allResults.length === 0) {
-            logger.info({ action: 'FALLBACK_JUSTSERP', searchTerm: query }, `No results found. Falling back to JustSerp...`);
-            return this.justSerpBaseline(query);
+            logger.info({ action: 'FALLBACK_SERP', searchTerm: query }, `No results found. Falling back to Searlo SERP...`);
+            return this.searloBaseline(query);
         }
 
         const sortedResults = allResults.sort((a, b) => b.score - a.score);
@@ -147,19 +149,19 @@ export class DiscoveryOrchestrator {
             }
         }
 
-        logger.info({ action: 'IDEA_DISCOVERY_START_SERPER_PRIMARY', idea, skipCache, plan }, `Master Query phase starting via Serper...`);
+        logger.info({ action: 'IDEA_DISCOVERY_START_SEARLO_PRIMARY', idea, skipCache, plan }, `Master Query phase starting via Searlo...`);
         const { expandIdeaToQueries } = await import('../ai.js');
 
-        // Dynamic Query Density based on Plan
-        const freePlans = ['free', 'trial', 'starter', 'past_due'];
-        const queryCount = freePlans.includes(plan) ? 1 : 3;
+        // Dynamic Query Density based on Plan (driven from Firestore PlanConfig)
+        const planConfig = await getPlanConfig(plan);
+        const queryCount = planConfig.serpQueriesPerDiscovery;
         const { intent, queries } = await expandIdeaToQueries(idea, communities, competitors, queryCount);
 
         logger.info({ queries }, `Generated ${queries.length} queries for ${plan} plan`);
 
-        // 2. Primary Phase (JustSerp API) - Parallel for Pro
+        // 2. Primary Phase (Searlo SERP API) - Parallel for Pro
         const serpResponses = await Promise.all(
-            queries.map(q => this.justSerpBaseline(q))
+            queries.map(q => this.searloBaseline(q))
         );
 
         let allResults: DiscoveryResult[] = [];
@@ -172,7 +174,7 @@ export class DiscoveryOrchestrator {
 
         // 3. Fallback Enhancement: If signal is too low, expand search to direct platform APIs
         if (allResults.length < 3) {
-            logger.info({ action: 'DEEP_SEARCH_TRIGGERED', count: allResults.length }, "Low signal from JustSerp. Expanding to platform-specific deep search...");
+            logger.info({ action: 'DEEP_SEARCH_TRIGGERED', count: allResults.length }, "Low signal from Searlo. Expanding to platform-specific deep search...");
             const [redditResp, hnResp] = await Promise.all([
                 this.redditService.ideaDiscovery(idea, [idea], skipCache, intent).catch((err: Error) => {
                     logger.error({ err, platform: 'reddit' }, "Reddit fallback CRASHED");
@@ -197,7 +199,7 @@ export class DiscoveryOrchestrator {
             })
             .sort((a, b) => b.score - a.score);
 
-        // 5. Enrichment Phase: Fetch metadata for top results (especially from JustSerp)
+        // 5. Enrichment Phase: Fetch metadata for top results missing author/comments
         await this.enrichMetadata(finalResults);
 
         logger.info({
@@ -263,121 +265,184 @@ export class DiscoveryOrchestrator {
         return response;
     }
 
-    private async justSerpBaseline(query: string): Promise<DiscoveryResponse> {
-        const JUST_SERP_KEY = process.env.JUST_SERP_KEY;
-        const JUSTSERP_DAILY_CAP = parseInt(process.env.JUSTSERP_DAILY_CAP || '50', 10);
+    private parseSerpDescription(desc: string): { author: string; upvotes: number; numComments: number } {
+        let author = 'unknown', upvotes = 0, numComments = 0;
+        if (!desc) return { author, upvotes, numComments };
 
-        if (!JUST_SERP_KEY) {
-            logger.error("JUST_SERP_KEY is missing");
+        const authorMatch = desc.match(/Posted by u\/(\S+)/);
+        if (authorMatch) author = authorMatch[1];
+
+        const votesMatch = desc.match(/([\d,]+)\s+votes?/);
+        if (votesMatch) upvotes = parseInt(votesMatch[1].replace(/,/g, ''), 10);
+
+        const commentsMatch = desc.match(/([\d,]+)\s+comments?/);
+        if (commentsMatch) numComments = parseInt(commentsMatch[1].replace(/,/g, ''), 10);
+
+        return { author, upvotes, numComments };
+    }
+
+    private async searloBaseline(query: string): Promise<DiscoveryResponse> {
+        const SEARLO_API_KEY = process.env.SEARLO_API_KEY;
+        const globalConfig = await getGlobalConfig();
+        const dailyCap = globalConfig.searlo_daily_cap;
+        const maxRetries = globalConfig.searlo_max_retries;
+        const responseCacheTtl = globalConfig.searlo_response_cache_ttl;
+
+        if (!SEARLO_API_KEY) {
+            logger.error("SEARLO_API_KEY is missing");
             return { results: [], discoveryPlan: this.emptyPlan() };
         }
 
-        // Check quota before calling JustSERP
-        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        // Check Redis cache first
+        const serpCacheKey = `searlo:response:${Buffer.from(query.trim().toLowerCase()).toString('base64')}`;
+        try {
+            const cached = await redis.get(serpCacheKey);
+            if (cached) {
+                logger.info({ platform: 'searlo', action: 'CACHE_HIT', query }, 'Returning cached Searlo response');
+                return JSON.parse(cached);
+            }
+        } catch (err) {
+            logger.warn({ err }, 'Searlo cache read error');
+        }
+
+        // Check quota before calling Searlo
+        const today = new Date().toISOString().split('T')[0];
         const db = getDb();
-        const quotaDocRef = db.collection('quota_counters').doc(`justserp_${today}`);
+        const quotaDocRef = db.collection('quota_counters').doc(`searlo_${today}`);
 
         try {
             const quotaDoc = await quotaDocRef.get();
-            const quotaData = quotaDoc.data() || { count: 0, cap: JUSTSERP_DAILY_CAP, date: today };
+            const quotaData = quotaDoc.data() || { count: 0, cap: dailyCap, date: today };
 
-            if (quotaData.count >= JUSTSERP_DAILY_CAP) {
-                logger.warn({ platform: 'justserp', action: 'QUOTA_EXHAUSTED', count: quotaData.count, cap: JUSTSERP_DAILY_CAP }, `JustSERP daily cap reached (${quotaData.count}/${JUSTSERP_DAILY_CAP}). Returning empty.`);
+            if (quotaData.count >= dailyCap) {
+                logger.warn({ platform: 'searlo', action: 'QUOTA_EXHAUSTED', count: quotaData.count, cap: dailyCap }, `Searlo daily cap reached (${quotaData.count}/${dailyCap}). Returning empty.`);
                 return { results: [], discoveryPlan: this.emptyPlan() };
             }
         } catch (err: unknown) {
-            logger.error({ err: errMsg(err), action: 'QUOTA_CHECK_ERROR' }, `Failed to check JustSERP quota`);
-            // On error, fail gracefully and don't call JustSERP
+            logger.error({ err: errMsg(err), action: 'QUOTA_CHECK_ERROR' }, `Failed to check Searlo quota`);
             return { results: [], discoveryPlan: this.emptyPlan() };
         }
 
-        const justSerpUrl = "https://api.justserp.com/v1/search";
-        logger.info({ platform: 'justserp', action: 'API_FETCH', url: justSerpUrl, searchTerm: query });
+        const searloUrl = "https://api.searlo.tech/api/v1/search";
+        const searchQuery = `${query} site:reddit.com`;
+        logger.info({ platform: 'searlo', action: 'API_FETCH', searchTerm: searchQuery });
 
-        try {
-            const response = await fetch(justSerpUrl, {
-                method: "POST",
-                headers: { "X-API-KEY": JUST_SERP_KEY, "Content-Type": "application/json" },
-                body: JSON.stringify({ keyword: query, num: 20 })
-            });
-
-            if (!response.ok) {
-                logger.error({ status: response.status, statusText: response.statusText }, "JustSerp API call failed");
-                return { results: [], discoveryPlan: this.emptyPlan() };
-            }
-
-            // Increment quota counter and log usage
+        // Retry loop for transient failures
+        let lastError: Error | null = null;
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
             try {
-                await quotaDocRef.set({
-                    count: (await quotaDocRef.get()).data()?.count || 0 + 1,
-                    cap: JUSTSERP_DAILY_CAP,
-                    date: today
-                }, { merge: true });
+                const url = new URL(searloUrl);
+                url.searchParams.set('q', searchQuery);
+                url.searchParams.set('limit', '10');
+                url.searchParams.set('page', '1');
 
-                // Log to serp_usage collection
-                await db.collection('serp_usage').add({
-                    source: 'justserp',
-                    keyword: query,
-                    timestamp: new Date().toISOString(),
-                    cost_estimate: 0.01
+                const response = await fetch(url.toString(), {
+                    method: 'GET',
+                    headers: { 'X-API-Key': SEARLO_API_KEY, 'Content-Type': 'application/json' }
                 });
-            } catch (logErr: any) {
-                logger.error({ err: logErr.message, action: 'QUOTA_LOG_ERROR' }, `Failed to log JustSERP usage`);
-            }
 
-            const data: any = await response.json();
-            const organic = data.organic_results || [];
+                if (response.status >= 500 && attempt < maxRetries) {
+                    const delay = 2000 * Math.pow(2, attempt);
+                    logger.warn({ status: response.status, attempt }, `Searlo 5xx, retrying in ${delay}ms`);
+                    await new Promise(r => setTimeout(r, delay));
+                    continue;
+                }
 
-            const rawResults: DiscoveryResult[] = organic.map((r: any) => {
-                const source = r.link.includes('news.ycombinator.com') ? 'hn' : (r.link.includes('reddit.com') ? 'reddit' : 'google');
+                if (!response.ok) {
+                    logger.error({ status: response.status, statusText: response.statusText }, "Searlo API call failed");
+                    return { results: [], discoveryPlan: this.emptyPlan() };
+                }
 
-                // Optimized parsing for comment counts from displayedLink (e.g., "120+ comments")
-                let numComments = 0;
-                if (source === 'reddit' && r.displayedLink) {
-                    const match = r.displayedLink.match(/(\d+)\+? comments/);
-                    if (match) {
-                        numComments = parseInt(match[1], 10);
+                // Increment quota counter and log usage (only on success)
+                try {
+                    const { FieldValue } = await import('firebase-admin/firestore');
+                    await quotaDocRef.set({
+                        count: FieldValue.increment(1),
+                        cap: dailyCap,
+                        date: today
+                    }, { merge: true });
+
+                    await db.collection('serp_usage').add({
+                        source: 'searlo',
+                        keyword: query,
+                        timestamp: new Date().toISOString(),
+                        cost_estimate: 0.01
+                    });
+                } catch (logErr: any) {
+                    logger.error({ err: logErr.message, action: 'QUOTA_LOG_ERROR' }, `Failed to log Searlo usage`);
+                }
+
+                const data: any = await response.json();
+                const organic = data.organic || [];
+
+                const rawResults: DiscoveryResult[] = organic.map((r: any) => {
+                    const source = r.link.includes('news.ycombinator.com') ? 'hn' : (r.link.includes('reddit.com') ? 'reddit' : 'google');
+
+                    // Parse rich metadata from Searlo description (author, votes, comments)
+                    const { author, upvotes, numComments } = this.parseSerpDescription(r.description);
+
+                    const markers = ['general_discussion'];
+                    if (numComments > 50) markers.push('high_engagement');
+                    if (upvotes > 100) markers.push('high_engagement');
+                    const titleLower = r.title.toLowerCase();
+                    if (titleLower.includes('how') || titleLower.includes('help') || titleLower.includes('?')) markers.push('question');
+                    if (titleLower.includes('alternative') || titleLower.includes('vs') || titleLower.includes('better')) markers.push('alternative');
+                    if (titleLower.includes('sucks') || titleLower.includes('hate') || titleLower.includes('annoy')) markers.push('frustration');
+
+                    // Use upvotes as ranking signal instead of hardcoded score
+                    const engagementScore = (upvotes * 10) + (numComments * 50);
+                    const baseScore = source !== 'google' ? 5000 : 2000;
+
+                    return {
+                        id: r.link,
+                        title: r.title,
+                        url: r.link,
+                        subreddit: r.link.includes('/r/') ? r.link.split('/r/')[1].split('/')[0] : (source === 'hn' ? 'Hacker News' : 'Web'),
+                        author,
+                        source,
+                        num_comments: numComments,
+                        created_utc: Math.floor(Date.now() / 1000),
+                        score: baseScore + engagementScore,
+                        intentMarkers: markers
+                    } as DiscoveryResult;
+                });
+
+                const result: DiscoveryResponse = {
+                    results: rawResults,
+                    discoveryPlan: {
+                        scannedCount: organic.length,
+                        totalFound: rawResults.length,
+                        cachedCount: 0,
+                        newCount: rawResults.length,
+                        estimatedSyncTime: rawResults.length * 1.5,
+                        isFromCache: false,
+                        recommendedPath: rawResults.slice(0, 5).map((r: DiscoveryResult) => r.title)
                     }
+                };
+
+                // Cache the SERP response
+                try {
+                    await redis.setex(serpCacheKey, responseCacheTtl, JSON.stringify(result));
+                } catch (err) {
+                    logger.warn({ err }, 'Searlo cache save error');
                 }
 
-                const markers = ['general_discussion'];
-                if (numComments > 50) markers.push('high_engagement');
-                const titleLower = r.title.toLowerCase();
-                if (titleLower.includes('how') || titleLower.includes('help') || titleLower.includes('?')) markers.push('question');
-                if (titleLower.includes('alternative') || titleLower.includes('vs') || titleLower.includes('better')) markers.push('alternative');
-                if (titleLower.includes('sucks') || titleLower.includes('hate') || titleLower.includes('annoy')) markers.push('frustration');
-
-                return {
-                    id: r.link,
-                    title: r.title,
-                    url: r.link,
-                    subreddit: r.link.includes('/r/') ? r.link.split('/r/')[1].split('/')[0] : (source === 'hn' ? 'Hacker News' : 'Web'),
-                    author: 'unknown',
-                    source,
-                    num_comments: numComments,
-                    created_utc: Math.floor(Date.now() / 1000),
-                    score: source !== 'google' ? 8000 : 5000,
-                    intentMarkers: markers
-                } as DiscoveryResult;
-            });
-
-            return {
-                results: rawResults,
-                discoveryPlan: {
-                    scannedCount: organic.length,
-                    totalFound: rawResults.length,
-                    cachedCount: 0,
-                    newCount: rawResults.length,
-                    estimatedSyncTime: rawResults.length * 1.5,
-                    isFromCache: false,
-                    recommendedPath: rawResults.slice(0, 5).map((r: DiscoveryResult) => r.title)
+                return result;
+            } catch (err) {
+                lastError = err as Error;
+                if (attempt < maxRetries) {
+                    const delay = 2000 * Math.pow(2, attempt);
+                    logger.warn({ err, attempt }, `Searlo network error, retrying in ${delay}ms`);
+                    await new Promise(r => setTimeout(r, delay));
+                    continue;
                 }
-            };
-        } catch (err) {
-            logger.error({ err }, "JustSerp fetch failed");
-            return { results: [], discoveryPlan: this.emptyPlan() };
+            }
         }
+
+        logger.error({ err: lastError }, "Searlo fetch failed after retries");
+        return { results: [], discoveryPlan: this.emptyPlan() };
     }
+
 
     private emptyPlan(): DiscoveryPlan {
         return {
