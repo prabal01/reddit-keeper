@@ -281,6 +281,17 @@ export class DiscoveryOrchestrator {
         return { author, upvotes, numComments };
     }
 
+    private parseSnippetDate(snippet: string): number | null {
+        if (!snippet) return null;
+        const match = snippet.match(/^(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\s+(\d{4})\b/i);
+        if (!match) return null;
+        const [, day, rawMonth, year] = match;
+        const month = rawMonth.length === 4 ? rawMonth.slice(0, 3) : rawMonth;
+        const date = new Date(`${day} ${month} ${year}`);
+        if (isNaN(date.getTime())) return null;
+        return Math.floor(date.getTime() / 1000);
+    }
+
     private async searloBaseline(query: string): Promise<DiscoveryResponse> {
         const SEARLO_API_KEY = process.env.SEARLO_API_KEY;
         const globalConfig = await getGlobalConfig();
@@ -324,7 +335,8 @@ export class DiscoveryOrchestrator {
         }
 
         const searloUrl = "https://api.searlo.tech/api/v1/search";
-        const searchQuery = `${query} site:reddit.com`;
+        const currentYear = new Date().getFullYear();
+        const searchQuery = `${query} site:reddit.com after:${currentYear}-01-01`;
         logger.info({ platform: 'searlo', action: 'API_FETCH', searchTerm: searchQuery });
 
         // Retry loop for transient failures
@@ -401,7 +413,7 @@ export class DiscoveryOrchestrator {
                         author,
                         source,
                         num_comments: numComments,
-                        created_utc: Math.floor(Date.now() / 1000),
+                        created_utc: this.parseSnippetDate(r.snippet) ?? Math.floor(Date.now() / 1000),
                         score: baseScore + engagementScore,
                         intentMarkers: markers
                     } as DiscoveryResult;
@@ -533,10 +545,22 @@ export class DiscoveryOrchestrator {
                 if (id) idToResult.set(id, r);
             }
 
+            // Data freshness cutoffs (unix seconds) — skip services that won't have newer posts
+            const PULLPUSH_CUTOFF = 1748736000;    // June 1, 2025
+            const ARCTIC_SHIFT_CUTOFF = 1767225600; // Jan 1, 2026
+
             // --- Step 1: PullPush (works from datacenter IPs, no proxy needed) ---
             const resolvedIds = new Set<string>();
-            if (redditIds.length > 0) {
-                const pullPushData = await this.pullPushService.getSubmissionsByIds(redditIds);
+            const pullpushEligible = redditIds.filter(id => {
+                const r = idToResult.get(id);
+                return r && r.created_utc < PULLPUSH_CUTOFF;
+            });
+            const pullpushSkipped = redditIds.length - pullpushEligible.length;
+            if (pullpushSkipped > 0) {
+                logger.info({ action: 'ENRICHMENT_PULLPUSH_SKIP', skipped: pullpushSkipped }, `Skipped ${pullpushSkipped} posts newer than PullPush data dump cutoff`);
+            }
+            if (pullpushEligible.length > 0) {
+                const pullPushData = await this.pullPushService.getSubmissionsByIds(pullpushEligible);
                 for (const item of pullPushData) {
                     const r = idToResult.get(item.id);
                     if (r && item.author && item.author !== 'unknown') {
@@ -546,13 +570,21 @@ export class DiscoveryOrchestrator {
                         resolvedIds.add(item.id);
                     }
                 }
-                logger.info({ action: 'ENRICHMENT_PULLPUSH', resolved: resolvedIds.size, total: redditIds.length }, `PullPush resolved ${resolvedIds.size}/${redditIds.length} authors`);
+                logger.info({ action: 'ENRICHMENT_PULLPUSH', resolved: resolvedIds.size, total: pullpushEligible.length }, `PullPush resolved ${resolvedIds.size}/${pullpushEligible.length} authors`);
             }
 
             // --- Step 2: Arctic Shift for IDs PullPush missed ---
             const unresolved = redditIds.filter(id => !resolvedIds.has(id));
-            if (unresolved.length > 0) {
-                const arcticData = await this.arcticShiftService.getPostsByIds(unresolved);
+            const arcticEligible = unresolved.filter(id => {
+                const r = idToResult.get(id);
+                return r && r.created_utc < ARCTIC_SHIFT_CUTOFF;
+            });
+            const arcticSkipped = unresolved.length - arcticEligible.length;
+            if (arcticSkipped > 0) {
+                logger.info({ action: 'ENRICHMENT_ARCTIC_SKIP', skipped: arcticSkipped }, `Skipped ${arcticSkipped} posts newer than Arctic Shift data dump cutoff`);
+            }
+            if (arcticEligible.length > 0) {
+                const arcticData = await this.arcticShiftService.getPostsByIds(arcticEligible);
                 for (const item of arcticData) {
                     const r = idToResult.get(item.id);
                     if (r && item.author && item.author !== 'unknown') {
@@ -562,7 +594,7 @@ export class DiscoveryOrchestrator {
                         resolvedIds.add(item.id);
                     }
                 }
-                logger.info({ action: 'ENRICHMENT_ARCTIC_SHIFT', resolved: resolvedIds.size, total: redditIds.length }, `Arctic Shift resolved ${resolvedIds.size - (redditIds.length - unresolved.length)}/${unresolved.length} additional authors`);
+                logger.info({ action: 'ENRICHMENT_ARCTIC_SHIFT', resolved: resolvedIds.size, total: arcticEligible.length }, `Arctic Shift resolved ${resolvedIds.size - (redditIds.length - unresolved.length)}/${arcticEligible.length} additional authors`);
             }
 
             // --- Step 3: Fall back to full thread fetch (proxy/fetcher/direct) for anything still unresolved ---

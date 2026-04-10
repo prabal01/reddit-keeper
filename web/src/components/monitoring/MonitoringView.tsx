@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { formatDistanceToNow } from 'date-fns';
 import {
     Settings as SettingsIcon,
     ExternalLink,
@@ -246,6 +247,7 @@ export const MonitoringView: React.FC = () => {
                                             {/* Meta */}
                                             <p className="text-xs text-slate-500 mb-2">
                                                 u/{opp.postAuthor}
+                                                {opp.createdAt ? <span className="ml-1.5">· {formatDistanceToNow(new Date(opp.createdAt * 1000), { addSuffix: true })}</span> : null}
                                             </p>
 
                                             {/* Metrics */}

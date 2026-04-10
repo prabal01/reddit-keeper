@@ -11,6 +11,8 @@ interface MonitorCardProps {
     leadCount?: number;
     patternCount?: number;
     lastScanTime?: string | null;
+    monitorType?: 'seo' | 'subreddit';
+    onCardClick?: () => void;
 }
 
 export const MonitorCard: React.FC<MonitorCardProps> = ({
@@ -18,6 +20,8 @@ export const MonitorCard: React.FC<MonitorCardProps> = ({
     leadCount = 0,
     patternCount = 0,
     lastScanTime,
+    monitorType,
+    onCardClick,
 }) => {
     const navigate = useNavigate();
     const keyword = folder.seed_keywords?.[0] || folder.name;
@@ -25,7 +29,7 @@ export const MonitorCard: React.FC<MonitorCardProps> = ({
 
     return (
         <button
-            onClick={() => navigate(`/folders/${folder.id}`)}
+            onClick={() => onCardClick ? onCardClick() : navigate(`/folders/${folder.id}`)}
             className="group w-full text-left p-6 rounded-2xl bg-(--bg-secondary) border border-(--border-light) hover:border-(--bg-accent)/40 hover:bg-(--bg-secondary)/60 transition-all duration-300"
         >
             <div className="flex items-start justify-between mb-6">
@@ -35,7 +39,11 @@ export const MonitorCard: React.FC<MonitorCardProps> = ({
                         {isUrl ? 'Website monitor' : 'Niche monitor'}
                     </Metadata>
                 </div>
-                <Badge variant="success">Live</Badge>
+                <div className="flex items-center gap-1.5">
+                    {monitorType === 'seo' && <Badge variant="info">SEO</Badge>}
+                    {monitorType === 'subreddit' && <Badge variant="warning">Subreddits</Badge>}
+                    <Badge variant="success">Live</Badge>
+                </div>
             </div>
 
             <H2 className="text-[1.1rem]! mb-6 group-hover:text-(--bg-accent) transition-colors line-clamp-1">

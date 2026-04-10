@@ -3,12 +3,29 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFolders } from '../../contexts/FolderContext';
 import { MonitorCard } from './MonitorCard';
-import { Radar, Sparkles, Plus, Link as LinkIcon, Search, Globe, Zap, X, CheckCircle2 } from 'lucide-react';
-import { H1, H2, Subtitle, Metadata } from '../common/Typography';
+import { Radar, Sparkles, Plus, Link as LinkIcon, Search, Globe, Zap, X, CheckCircle2, MessageSquare } from 'lucide-react';
+import { H2, Subtitle, Metadata } from '../common/Typography';
 import { UIButton } from '../common/UIButton';
 import { PageHeader } from '../common/PageHeader';
 import { Badge } from '../common/Badge';
 import './MonitoringDashboard.css';
+
+interface SubredditSuggestion {
+    name: string;
+    members: string;
+    signal: string;
+    reason: string;
+}
+
+interface SubredditMonitor {
+    uid: string;
+    monitorId: string;
+    name: string;
+    websiteContext: string;
+    subreddits: string[];
+    createdAt: string;
+    lastMatchAt: string | null;
+}
 
 export const MonitoringDashboard: React.FC = () => {
     const { user, config, openUpgradeModal } = useAuth();
@@ -30,17 +47,34 @@ export const MonitoringDashboard: React.FC = () => {
         target_audience: string;
     } | null>(null);
 
+    // Subreddit state
+    const [subredditSuggestions, setSubredditSuggestions] = useState<SubredditSuggestion[]>([]);
+    const [selectedSubreddits, setSelectedSubreddits] = useState<string[]>([]);
+    const [newSubInput, setNewSubInput] = useState('');
+    const [subredditError, setSubredditError] = useState(false);
+
+    // Subreddit monitors (separate from folders)
+    const [subredditMonitors, setSubredditMonitors] = useState<SubredditMonitor[]>([]);
+
     // URL Detection
     const isUrl = useMemo(() => {
         const trimmed = query.trim();
         return trimmed.startsWith('http') || trimmed.includes('.com') || trimmed.includes('.io') || trimmed.includes('.ai');
     }, [query]);
 
-    // Filter to only active monitors
+    // Filter to only active SEO monitors (folder-based)
     const activeMonitors = useMemo(
         () => folders.filter(f => f.is_monitoring_active),
         [folders]
     );
+
+    // Dynamic deploy button label
+    const deployButtonLabel = useMemo(() => {
+        if (selectedSubreddits.length > 0) {
+            return `Deploy SEO + ${selectedSubreddits.length} Subreddit${selectedSubreddits.length > 1 ? 's' : ''}`;
+        }
+        return 'Deploy SEO Monitor';
+    }, [selectedSubreddits.length]);
 
     // Cycle through searching steps during loading
     useEffect(() => {
@@ -56,7 +90,7 @@ export const MonitoringDashboard: React.FC = () => {
         return () => clearInterval(interval);
     }, [confirmStep]);
 
-    // Load stats for each active monitor
+    // Load stats for each active SEO monitor
     useEffect(() => {
         if (activeMonitors.length === 0) return;
 
@@ -87,6 +121,31 @@ export const MonitoringDashboard: React.FC = () => {
         loadStats();
     }, [activeMonitors.length]);
 
+    // Fetch subreddit monitors
+    useEffect(() => {
+        if (!user) return;
+        const fetchSubredditMonitors = async () => {
+            try {
+                const { getAuth } = await import('firebase/auth');
+                const token = await getAuth().currentUser?.getIdToken();
+                const API_BASE = window.location.origin.includes('localhost') ? 'http://localhost:3001/api' : '/api';
+                const res = await fetch(`${API_BASE}/monitoring/monitors`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setSubredditMonitors(Array.isArray(data) ? data : []);
+                }
+            } catch {
+                // Non-critical — silently fail
+            }
+        };
+        fetchSubredditMonitors();
+    }, [user]);
+
+    const getApiBase = () =>
+        window.location.origin.includes('localhost') ? 'http://localhost:3001/api' : '/api';
+
     const handleGetProposals = async () => {
         const trimmed = query.trim();
         if (!trimmed) return;
@@ -99,24 +158,40 @@ export const MonitoringDashboard: React.FC = () => {
         }
 
         setConfirmStep('proposing');
-        
+        setSubredditSuggestions([]);
+        setSelectedSubreddits([]);
+        setSubredditError(false);
+
         try {
             const { getAuth } = await import('firebase/auth');
             const token = await getAuth().currentUser?.getIdToken();
-            const API_BASE = window.location.origin.includes('localhost') ? 'http://localhost:3001/api' : '/api';
+            const API_BASE = getApiBase();
+            const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
 
-            const response = await fetch(`${API_BASE}/discovery/propose`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ query: trimmed })
-            });
+            // Run both API calls in parallel — subreddits are non-critical
+            const [proposeRes, suggestRes] = await Promise.all([
+                fetch(`${API_BASE}/discovery/propose`, {
+                    method: 'POST', headers, body: JSON.stringify({ query: trimmed })
+                }),
+                fetch(`${API_BASE}/monitoring/suggestions`, {
+                    method: 'POST', headers, body: JSON.stringify({ context: trimmed })
+                }).catch(() => null)
+            ]);
 
-            if (!response.ok) throw new Error('Failed to fetch proposals');
-            const data = await response.json();
-            setProposedContext(data);
+            if (!proposeRes.ok) throw new Error('Failed to fetch proposals');
+            const proposeData = await proposeRes.json();
+            setProposedContext(proposeData);
+
+            if (suggestRes?.ok) {
+                const suggestData = await suggestRes.json();
+                const suggestions: SubredditSuggestion[] = suggestData.suggestions || [];
+                setSubredditSuggestions(suggestions);
+                // Auto-select first 3
+                setSelectedSubreddits(suggestions.slice(0, 3).map(s => s.name));
+            } else {
+                setSubredditError(true);
+            }
+
             setConfirmStep('review');
         } catch (err) {
             console.error(err);
@@ -130,15 +205,12 @@ export const MonitoringDashboard: React.FC = () => {
         try {
             const { getAuth } = await import('firebase/auth');
             const token = await getAuth().currentUser?.getIdToken();
-            const API_BASE = window.location.origin.includes('localhost') ? 'http://localhost:3001/api' : '/api';
+            const API_BASE = getApiBase();
+            const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
 
             const response = await fetch(`${API_BASE}/discovery/start`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ 
+                method: 'POST', headers,
+                body: JSON.stringify({
                     query,
                     niche: proposedContext.niche,
                     suggested_keywords: proposedContext.suggested_keywords
@@ -155,12 +227,22 @@ export const MonitoringDashboard: React.FC = () => {
                 throw new Error('Failed to start monitor');
             }
             const data = await response.json();
-            
+
+            // Also create subreddit monitor if subreddits selected (non-critical)
+            if (selectedSubreddits.length > 0) {
+                await fetch(`${API_BASE}/monitoring/monitors`, {
+                    method: 'POST', headers,
+                    body: JSON.stringify({
+                        name: proposedContext.niche || query.slice(0, 50),
+                        websiteContext: proposedContext.description || query,
+                        subreddits: selectedSubreddits
+                    })
+                }).catch(err => console.warn('Subreddit monitor creation failed:', err));
+            }
+
             if (data.folderId) {
                 setConfirmStep('success');
-                // Refresh folders so FolderDetail can find the new folder immediately
                 await fetchFolders();
-                // Give the user a moment of 'Zen' before redirecting
                 setTimeout(() => {
                     navigate(`/folders/${data.folderId}`);
                 }, 2500);
@@ -171,17 +253,33 @@ export const MonitoringDashboard: React.FC = () => {
         }
     };
 
+    const toggleSubreddit = (name: string) => {
+        setSelectedSubreddits(prev =>
+            prev.includes(name) ? prev.filter(s => s !== name) : [...prev, name]
+        );
+    };
+
+    const handleAddSubreddit = (e?: React.FormEvent) => {
+        e?.preventDefault();
+        const clean = newSubInput.replace(/^r\//, '').trim().toLowerCase();
+        if (clean && !selectedSubreddits.includes(clean)) {
+            setSelectedSubreddits(prev => [...prev, clean]);
+        }
+        setNewSubInput('');
+    };
+
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') handleGetProposals();
     };
 
     const isLoading = confirmStep === 'proposing' || confirmStep === 'starting';
+    const hasAnyMonitors = activeMonitors.length > 0 || subredditMonitors.length > 0;
 
     return (
         <div className="monitoring-dashboard">
-            {/* Standardized Header Navigation Area */}
+            {/* Header */}
             <div className="md-hero-header">
-                <PageHeader 
+                <PageHeader
                     title={user?.displayName ? `${user.displayName}'s Intelligence Hub` : 'Global Opportunity Scanner'}
                     subtitle="OpinionDeck Monitoring Agent v2.0"
                     icon={<Radar size={18} className="text-white" />}
@@ -237,15 +335,15 @@ export const MonitoringDashboard: React.FC = () => {
             </section>
 
             {isLoading ? (
-                /* Searching State (RedShip Style) */
+                /* Loading State */
                 <div className="md-searching-state fadeInUp">
                     <div className="md-searching-icon-wrapper">
                         <Radar size={24} />
                     </div>
                     <h3 className="md-searching-title">
-                        {confirmStep === 'proposing' ? 'Extracting Market Context...' : 'Deploying Your Agent...'}
+                        {confirmStep === 'proposing' ? 'Extracting Market Context...' : 'Deploying Your Agents...'}
                     </h3>
-                    
+
                     <div className="md-searching-steps">
                         <div className={`md-step ${searchingStep === 0 ? 'active' : ''}`}>
                             <div className="md-step-icon"><Globe size={16} /></div>
@@ -259,7 +357,7 @@ export const MonitoringDashboard: React.FC = () => {
                             <div className="md-step-icon"><Search size={16} /></div>
                             <div className="md-step-info">
                                 <div className="md-step-name">Mapping Communities</div>
-                                <div className="md-step-desc">Identifying high-signal subreddits...</div>
+                                <div className="md-step-desc">Identifying keywords & high-signal subreddits...</div>
                             </div>
                         </div>
 
@@ -273,13 +371,13 @@ export const MonitoringDashboard: React.FC = () => {
                     </div>
                 </div>
             ) : confirmStep === 'review' && proposedContext ? (
-                /* Review Mission Step (NEW) */
+                /* Review Step */
                 <div className="md-review-mission fadeInUp">
                     <div className="md-review-card premium-card">
                         <div className="md-review-header">
                             <div className="md-review-badge">Review Mission</div>
-                            <h2>Initialize Monitoring Agent</h2>
-                            <p>AI has generated a target profile based on your query. Refine it below to focus your search.</p>
+                            <h2>Initialize Monitoring Agents</h2>
+                            <p>AI has generated a target profile. Refine keywords and select communities to watch.</p>
                         </div>
 
                         <div className="md-review-field">
@@ -291,8 +389,15 @@ export const MonitoringDashboard: React.FC = () => {
                             />
                         </div>
 
+                        {/* SEO Keywords Section */}
                         <div className="md-review-field">
-                            <label>Seed Keywords & Indicators</label>
+                            <div className="flex items-start justify-between mb-2">
+                                <div>
+                                    <label className="block">SEO Keywords</label>
+                                    <p className="text-[11px] text-zinc-500 mt-0.5">We search Google for Reddit posts ranking for these terms</p>
+                                </div>
+                                <Badge variant="info">SEO Monitor</Badge>
+                            </div>
                             <div className="md-keyword-grid">
                                 {proposedContext.suggested_keywords.map((kw, i) => (
                                     <div key={i} className="md-keyword-pill">
@@ -310,32 +415,121 @@ export const MonitoringDashboard: React.FC = () => {
                             </div>
                         </div>
 
+                        {/* Communities to Watch Section */}
+                        <div className="md-review-field">
+                            <div className="flex items-start justify-between mb-2">
+                                <div>
+                                    <label className="block">Communities to Watch</label>
+                                    <p className="text-[11px] text-zinc-500 mt-0.5">We scan these subreddits 24/7 and surface relevant threads</p>
+                                </div>
+                                <Badge variant="warning">Subreddit Monitor</Badge>
+                            </div>
+
+                            {subredditError ? (
+                                <p className="text-xs text-zinc-500 italic mb-3">Couldn't load suggestions — add subreddits manually below</p>
+                            ) : subredditSuggestions.length > 0 ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+                                    {subredditSuggestions.map(s => (
+                                        <div
+                                            key={s.name}
+                                            onClick={() => toggleSubreddit(s.name)}
+                                            title={s.reason}
+                                            className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.99] ${
+                                                selectedSubreddits.includes(s.name)
+                                                ? 'bg-amber-500/10 border-amber-500/40 text-amber-400'
+                                                : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-2.5">
+                                                <div className="w-7 h-7 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0">
+                                                    <MessageSquare size={13} className={selectedSubreddits.includes(s.name) ? 'text-amber-400' : 'text-zinc-500'} />
+                                                </div>
+                                                <div>
+                                                    <div className="text-xs font-bold">r/{s.name}</div>
+                                                    <div className="text-[10px] opacity-60">{s.members} members · {s.signal} signal</div>
+                                                </div>
+                                            </div>
+                                            <div className={`w-4 h-4 rounded-full border transition-colors ${
+                                                selectedSubreddits.includes(s.name)
+                                                ? 'bg-amber-500 border-amber-500'
+                                                : 'border-zinc-700'
+                                            }`} />
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : null}
+
+                            {/* Manual add */}
+                            <div className="flex items-center gap-2">
+                                <div className="relative flex-1">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs font-bold">r/</span>
+                                    <input
+                                        type="text"
+                                        value={newSubInput}
+                                        onChange={(e) => setNewSubInput(e.target.value.toLowerCase().replace(/^r\//, ''))}
+                                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSubreddit())}
+                                        placeholder="add-subreddit"
+                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl py-2 pl-7 pr-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-500/50 placeholder:text-zinc-600"
+                                    />
+                                </div>
+                                <button
+                                    onClick={() => handleAddSubreddit()}
+                                    className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-zinc-400 hover:text-white transition-colors"
+                                >
+                                    <Plus size={14} />
+                                </button>
+                            </div>
+
+                            {/* Selected subreddits not in suggestions */}
+                            {selectedSubreddits.filter(s => !subredditSuggestions.find(sg => sg.name === s)).length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 mt-2">
+                                    {selectedSubreddits
+                                        .filter(s => !subredditSuggestions.find(sg => sg.name === s))
+                                        .map(s => (
+                                            <div key={s} className="flex items-center gap-1 px-2 py-1 bg-amber-500/10 border border-amber-500/30 rounded-full text-[10px] text-amber-400 font-bold">
+                                                r/{s}
+                                                <button onClick={() => toggleSubreddit(s)}>
+                                                    <X size={9} />
+                                                </button>
+                                            </div>
+                                        ))
+                                    }
+                                </div>
+                            )}
+
+                            {selectedSubreddits.length === 0 && (
+                                <p className="text-[10px] text-zinc-600 mt-2">No subreddits selected — only SEO monitor will be deployed</p>
+                            )}
+                        </div>
+
                         <div className="md-review-actions">
                             <button className="btn-secondary" onClick={() => setConfirmStep('input')}>Go Back</button>
                             <button className="md-deploy-btn" onClick={handleDeployAgent}>
                                 <Zap size={16} />
-                                <span>Deploy Agent</span>
+                                <span>{deployButtonLabel}</span>
                             </button>
                         </div>
                     </div>
                 </div>
             ) : confirmStep === 'success' ? (
-                /* Zen Success Step (NEW) */
+                /* Success Step */
                 <div className="md-success-state fadeInUp">
                     <div className="md-success-icon-wrapper zen-pulse">
                         <CheckCircle2 size={32} />
                     </div>
                     <div className="md-success-content">
                         <h3 className="md-success-title">Mission Launched Successfully</h3>
-                        <p className="md-success-text">
-                            Your monitoring agent is now active in the background. 
-                            We are currently seeding your research folder with the first batch of results.
-                        </p>
-                        <div className="md-redirect-timer">Redirecting to project folder...</div>
+                        <div className="flex flex-col gap-1 mt-3 text-sm">
+                            <p className="text-blue-400">✓ SEO Monitor scanning for "{proposedContext?.niche}"</p>
+                            {selectedSubreddits.length > 0 && (
+                                <p className="text-amber-400">✓ Watching {selectedSubreddits.map(s => `r/${s}`).join(' · ')}</p>
+                            )}
+                        </div>
+                        <div className="md-redirect-timer mt-3">Redirecting to project folder...</div>
                     </div>
                 </div>
             ) : foldersLoading ? (
-                /* Loading state — prevents empty flash on first load */
+                /* Skeleton loading */
                 <section className="md-monitors-section">
                     <div className="md-monitors-grid">
                         {[1, 2, 3].map(i => (
@@ -353,12 +547,12 @@ export const MonitoringDashboard: React.FC = () => {
                         ))}
                     </div>
                 </section>
-            ) : activeMonitors.length > 0 ? (
-                /* Active Monitors Grid */
+            ) : hasAnyMonitors ? (
+                /* Active Monitors Grid — SEO + Subreddit */
                 <section className="md-monitors-section">
                     <div className="md-section-header flex items-center justify-between mb-8">
                         <H2 className="md-section-title mb-0">Active Intelligence Monitors</H2>
-                        <Badge variant="premium">{activeMonitors.length} RUNNING</Badge>
+                        <Badge variant="premium">{activeMonitors.length + subredditMonitors.length} RUNNING</Badge>
                     </div>
                     <div className="md-monitors-grid">
                         {activeMonitors.map(folder => (
@@ -368,6 +562,23 @@ export const MonitoringDashboard: React.FC = () => {
                                 leadCount={monitorStats[folder.id]?.leads}
                                 patternCount={monitorStats[folder.id]?.patterns}
                                 lastScanTime={monitorStats[folder.id]?.lastScan}
+                                monitorType="seo"
+                            />
+                        ))}
+                        {subredditMonitors.map(monitor => (
+                            <MonitorCard
+                                key={monitor.monitorId}
+                                folder={{
+                                    id: monitor.monitorId,
+                                    uid: monitor.uid,
+                                    name: monitor.name,
+                                    createdAt: monitor.createdAt,
+                                    threadCount: 0,
+                                    seed_keywords: monitor.subreddits.map(s => `r/${s}`)
+                                }}
+                                lastScanTime={monitor.lastMatchAt}
+                                monitorType="subreddit"
+                                onCardClick={() => navigate('/leads')}
                             />
                         ))}
                     </div>

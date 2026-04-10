@@ -458,7 +458,11 @@ export const LeadsManagement: React.FC = () => {
                                             </span>
                                         </td>
                                         <td className="px-4 py-3 text-zinc-500 text-xs">
-                                            {formatDistanceToNow(new Date(lead.createdAt * 1000), { addSuffix: true })}
+                                            {lead.createdAt
+                                                ? formatDistanceToNow(new Date(lead.createdAt * 1000), { addSuffix: true })
+                                                : lead.matchedAt
+                                                    ? formatDistanceToNow(new Date(lead.matchedAt), { addSuffix: true })
+                                                    : '—'}
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <a
