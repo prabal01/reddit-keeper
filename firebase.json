@@ -9,7 +9,14 @@
                 "**/node_modules/**"
             ],
             "cleanUrls": true,
-            "trailingSlash": false
+            "trailingSlash": false,
+            "redirects": [
+                {
+                    "source": "/docs",
+                    "destination": "/docs/getting-started/introduction",
+                    "type": 301
+                }
+            ]
         },
         {
             "target": "app",
