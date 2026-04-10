@@ -241,35 +241,49 @@ export class MonitoringService {
     static async scrapeAndSummarize(url: string): Promise<string> {
         try {
             logger.info({ action: 'SCRAPE_URL', url }, `Scraping URL for context...`);
-            const response = await fetch(url, {
-                headers: {
-                    'User-Agent': USER_AGENT
-                }
-            });
-
+            const response = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
             if (!response.ok) throw new Error(`Failed to fetch URL: ${response.statusText}`);
             const html = await response.text();
 
-            // Strip HTML tags for cleaner context (simple version)
-            const textContent = html.replace(/<[^>]*>?/gm, ' ')
-                .replace(/\s+/g, ' ')
-                .trim()
-                .slice(0, 10000); // 10k chars is enough for a summary
+            // Tier 1: Extract meta tags — cheapest, most accurate, no LLM needed
+            const metaDesc =
+                html.match(/<meta\s+name=["']description["']\s+content=["']([^"']{50,})["']/i)?.[1] ||
+                html.match(/<meta\s+content=["']([^"']{50,})["']\s+name=["']description["']/i)?.[1] ||
+                html.match(/<meta\s+property=["']og:description["']\s+content=["']([^"']{50,})["']/i)?.[1] ||
+                html.match(/<meta\s+content=["']([^"']{50,})["']\s+property=["']og:description["']/i)?.[1];
 
-            const prompt = `
-                You are a product marketing expert. Analyze the following website content and provide a concise, single-paragraph summary (max 50 words) of what the product does, who it's for, and what pain points it solves.
-                
-                WEBSITE CONTENT:
-                ${textContent}
-                
-                FORMAT:
-                Return ONLY the summary text. No headers, no markdown, just the description.
-                Be extremely punchy and direct.
-            `;
+            if (metaDesc) {
+                logger.info({ action: 'SCRAPE_META_HIT', url }, 'Using meta description — no LLM needed');
+                return metaDesc.trim();
+            }
+
+            // Tier 2: Extract structured content (h1/h2/p/li) after removing script/style noise
+            const stripped = html
+                .replace(/<script[\s\S]*?<\/script>/gi, '')
+                .replace(/<style[\s\S]*?<\/style>/gi, '');
+
+            const structuredParts: string[] = [];
+            const tagPattern = /<(h1|h2|h3|p|li)[^>]*>([\s\S]*?)<\/\1>/gi;
+            let match: RegExpExecArray | null;
+            while ((match = tagPattern.exec(stripped)) !== null && structuredParts.join(' ').length < 2000) {
+                const text = match[2].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+                if (text.length > 20) structuredParts.push(text);
+            }
+
+            const structuredText = structuredParts.join(' ').slice(0, 2000);
+
+            // Tier 3: Plain text fallback (JS-heavy sites with no visible semantic tags)
+            const fallbackText = structuredText.length > 100
+                ? structuredText
+                : stripped.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 2000);
+
+            const prompt = `You are a product marketing expert. In one sentence (max 40 words), describe what this product does, who it's for, and what problem it solves. Return ONLY the sentence.
+
+WEBSITE CONTENT:
+${fallbackText}`;
 
             const result = await summaryModel.generateContent(prompt);
             const summary = result.response.candidates?.[0]?.content?.parts?.[0]?.text;
-
             if (!summary) throw new Error("AI failed to generate summary");
             return summary.trim();
 
@@ -287,17 +301,20 @@ export class MonitoringService {
             logger.info({ action: 'BRAINSTORM_SUBREDDITS' }, `AI Brainstorming relevant subreddits...`);
             
             // 1. Ask Gemini for 8-10 high-value subreddit names with reasons
-            const brainstormPrompt = `
-                Analyze this product: "${context}"
-                
-                List 10 specific subreddits where users discuss these problems OR where the target audience hangs out.
-                
-                RULES:
-                - Return ONLY a JSON array of objects: { "name": "string", "reason": "string" }
-                - NO r/ prefix.
-                - NO noisy subreddits (e.g. japan, sonos, bumble) UNLESS they are a perfect match.
-                - Focus on: startups, saas, indiehackers, and niche interest groups.
-            `;
+            const brainstormPrompt = `You are a Reddit community expert. Analyze this product description and identify the most relevant subreddits.
+
+PRODUCT: "${context}"
+
+STEP 1 — Identify the product category (e.g. fitness app, parenting tool, game, B2B SaaS, e-commerce, travel, finance, etc.)
+STEP 2 — List 10 subreddits where the TARGET USERS (not founders) naturally hang out and discuss the problem this product solves.
+
+RULES:
+- Return ONLY a JSON array of objects: [{ "name": "string", "reason": "string" }]
+- NO r/ prefix. Exact subreddit name only.
+- Match subreddits to the product's actual audience (e.g. fitness app → r/fitness, r/loseit, NOT r/startups)
+- Include a mix: large general communities + small niche ones
+- DO NOT default to startup/SaaS communities unless the product is explicitly for founders or developers
+- NO generic noise (e.g. AskReddit, funny, pics)`;
 
             const brainstormResult = await summaryModel.generateContent(brainstormPrompt);
             const rawText = brainstormResult.response.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
@@ -308,26 +325,34 @@ export class MonitoringService {
                 const cleanJson = rawText.replace(/```json|```/g, '').trim();
                 brainstormed = JSON.parse(cleanJson);
             } catch {
-                brainstormed = [{ name: 'saas', reason: 'SaaS discussion' }, { name: 'startups', reason: 'Founder community' }];
+                brainstormed = [];
             }
 
-            // 2. Fetch metadata and perform Metadata-based Relevance Check
+            const contextKeywords = context.toLowerCase().split(/\s+/).filter(k => k.length > 3);
+
+            // 2. Fetch metadata, validate existence, and apply relevance check
             const suggestions = await Promise.all(brainstormed.slice(0, 10).map(async (item) => {
                 try {
                     const url = `https://www.reddit.com/r/${item.name}/about.json`;
-                    const res = await fetch(url);
+                    const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
+                    // Sub doesn't exist or is private/banned
                     if (!res.ok) return null;
-                    const json = await res.json();
-                    const sub = json.data;
-                    
-                    // Basic heuristic relevance check on description
+                    const json = await res.json() as any;
+                    const sub = json?.data;
+                    if (!sub?.display_name) return null;
+
+                    // Skip tiny or quarantined subs
+                    if (sub.subscribers < 500) return null;
+
+                    // Relevance gate: at least 1 context keyword must appear in title/description
+                    // OR the AI reason is strong enough (item.reason exists and sub is large)
                     const desc = (sub.public_description || '').toLowerCase();
                     const title = (sub.title || '').toLowerCase();
-                    const keywords = context.toLowerCase().split(' ');
-                    const matches = keywords.filter(k => k.length > 3 && (desc.includes(k) || title.includes(k)));
+                    const matches = contextKeywords.filter(k => desc.includes(k) || title.includes(k));
+                    const isLargeSub = sub.subscribers >= 50000;
 
-                    // If it's a tiny sub or completely unrelated title, skip
-                    if (sub.subscribers < 100) return null;
+                    // Reject if no keyword match AND not a large well-known community
+                    if (matches.length === 0 && !isLargeSub) return null;
 
                     return {
                         name: sub.display_name,
