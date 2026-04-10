@@ -18,7 +18,7 @@ interface MonitorSettingsProps {
 }
 
 export const MonitorSettings: React.FC<MonitorSettingsProps> = ({ onSave, initialConfig }) => {
-    const { getIdToken } = useAuth();
+    const { getIdToken, plan } = useAuth();
     const [websiteContext, setWebsiteContext] = useState(initialConfig?.websiteContext || '');
     const [subreddits, setSubreddits] = useState<string[]>(initialConfig?.subreddits || []);
     const [newSub, setNewSub] = useState('');
