@@ -1,4 +1,295 @@
 ---
-// Redirect handled by Firebase Hosting (firebase.json) as a proper 301
-// to avoid the "Redirecting..." flash from Astro's static meta-refresh.
+import Layout from '../../layouts/Layout.astro';
+
+const sections = [
+    {
+        label: 'Getting Started',
+        color: '#ff4500',
+        icon: '🚀',
+        desc: 'Set up your account and run your first discovery in minutes.',
+        pages: [
+            { label: 'Introduction', href: '/docs/getting-started/introduction', desc: 'What OpinionDeck is, who it\'s for, and how it works.' },
+            { label: 'Quick Start', href: '/docs/getting-started/quick-start', desc: 'Create an account and get your first insight in under 5 minutes.' },
+        ],
+    },
+    {
+        label: 'Features',
+        color: '#3b82f6',
+        icon: '⚡',
+        desc: 'Deep dives into every part of the platform.',
+        pages: [
+            { label: 'Discovery Lab', href: '/docs/features/discovery-lab', desc: 'Search Reddit & HN for competitor mentions and market signals.' },
+            { label: 'Monitoring', href: '/docs/features/monitoring', desc: 'Continuous background scanning of subreddits for new leads.' },
+            { label: 'Folders & Decks', href: '/docs/features/folders', desc: 'Organise threads, insights, and leads into research workspaces.' },
+            { label: 'Analysis Engine', href: '/docs/features/analysis', desc: 'How AI extracts pain points, triggers, and outcomes from threads.' },
+            { label: 'Chrome Extension', href: '/docs/features/chrome-extension', desc: 'Capture threads and run discovery without leaving Reddit.' },
+        ],
+    },
+    {
+        label: 'Plans',
+        color: '#22c55e',
+        icon: '💳',
+        desc: 'Understand limits and choose the right plan.',
+        pages: [
+            { label: 'Pricing & Limits', href: '/docs/plans/pricing', desc: 'All plan tiers, feature limits, and how to upgrade.' },
+        ],
+    },
+    {
+        label: 'Reference',
+        color: '#8b5cf6',
+        icon: '📖',
+        desc: 'Answers to common questions and troubleshooting.',
+        pages: [
+            { label: 'FAQ', href: '/docs/reference/faq', desc: 'Common questions about discovery, monitoring, billing, and privacy.' },
+        ],
+    },
+];
 ---
+
+<Layout title="Documentation — OpinionDeck" description="Everything you need to use OpinionDeck — from your first search to advanced monitoring and analysis.">
+    <div class="docs-index">
+        <!-- Hero -->
+        <div class="docs-hero">
+            <p class="docs-eyebrow">Documentation</p>
+            <h1 class="docs-title">Everything you need to know</h1>
+            <p class="docs-subtitle">Guides, feature references, and answers — all in one place.</p>
+        </div>
+
+        <!-- Quick links row -->
+        <div class="quick-links">
+            <a href="/docs/getting-started/introduction" class="quick-link quick-link--primary">
+                <span>Get started →</span>
+            </a>
+            <a href="/docs/features/discovery-lab" class="quick-link">Discovery Lab</a>
+            <a href="/docs/features/monitoring" class="quick-link">Monitoring</a>
+            <a href="/docs/plans/pricing" class="quick-link">Pricing</a>
+            <a href="/docs/reference/faq" class="quick-link">FAQ</a>
+        </div>
+
+        <!-- Sections -->
+        <div class="sections">
+            {sections.map(section => (
+                <div class="section">
+                    <div class="section-header">
+                        <div class="section-icon" style={`background: ${section.color}18; border-color: ${section.color}30;`}>
+                            <span>{section.icon}</span>
+                        </div>
+                        <div>
+                            <h2 class="section-label" style={`color: ${section.color};`}>{section.label}</h2>
+                            <p class="section-desc">{section.desc}</p>
+                        </div>
+                    </div>
+                    <div class="pages-grid">
+                        {section.pages.map(page => (
+                            <a href={page.href} class="page-card">
+                                <div class="page-card-title">{page.label}</div>
+                                <div class="page-card-desc">{page.desc}</div>
+                                <div class="page-card-arrow">→</div>
+                            </a>
+                        ))}
+                    </div>
+                </div>
+            ))}
+        </div>
+
+        <!-- Footer help -->
+        <div class="docs-help">
+            <p>Can't find what you're looking for? Email us at <a href="mailto:hello@opiniondeck.com">hello@opiniondeck.com</a></p>
+        </div>
+    </div>
+</Layout>
+
+<style>
+    .docs-index {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 48px 28px 80px;
+    }
+
+    /* Hero */
+    .docs-hero {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+
+    .docs-eyebrow {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--bg-accent);
+        margin-bottom: 12px;
+    }
+
+    .docs-title {
+        font-size: 2.5rem;
+        font-weight: 900;
+        color: var(--text-primary);
+        letter-spacing: -0.02em;
+        margin-bottom: 12px;
+        line-height: 1.15;
+    }
+
+    .docs-subtitle {
+        font-size: 1.05rem;
+        color: var(--text-secondary);
+        max-width: 480px;
+        margin: 0 auto;
+        line-height: 1.6;
+    }
+
+    /* Quick links */
+    .quick-links {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-bottom: 56px;
+    }
+
+    .quick-link {
+        padding: 8px 18px;
+        border-radius: var(--radius-full);
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        text-decoration: none;
+        transition: all 0.15s;
+    }
+
+    .quick-link:hover {
+        color: var(--text-primary);
+        border-color: var(--bg-accent);
+        opacity: 1;
+    }
+
+    .quick-link--primary {
+        background: var(--bg-accent);
+        color: #fff;
+        border-color: var(--bg-accent);
+    }
+
+    .quick-link--primary:hover {
+        background: var(--bg-accent-hover);
+        color: #fff;
+    }
+
+    /* Sections */
+    .sections {
+        display: flex;
+        flex-direction: column;
+        gap: 48px;
+    }
+
+    .section-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+
+    .section-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: var(--radius-md);
+        border: 1px solid;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+
+    .section-label {
+        font-size: 0.75rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 4px;
+    }
+
+    .section-desc {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+
+    /* Pages grid */
+    .pages-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 12px;
+    }
+
+    .page-card {
+        position: relative;
+        padding: 18px 20px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        text-decoration: none;
+        transition: all 0.15s;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .page-card:hover {
+        border-color: var(--bg-accent);
+        background: var(--bg-hover);
+        opacity: 1;
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .page-card-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .page-card-desc {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        line-height: 1.5;
+    }
+
+    .page-card-arrow {
+        font-size: 0.85rem;
+        color: var(--bg-accent);
+        margin-top: 4px;
+        opacity: 0;
+        transition: opacity 0.15s;
+    }
+
+    .page-card:hover .page-card-arrow {
+        opacity: 1;
+    }
+
+    /* Help footer */
+    .docs-help {
+        margin-top: 64px;
+        padding-top: 24px;
+        border-top: 1px solid var(--border);
+        text-align: center;
+        font-size: 0.875rem;
+        color: var(--text-tertiary);
+    }
+
+    .docs-help a {
+        color: var(--bg-accent);
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .docs-help a:hover {
+        opacity: 0.8;
+    }
+
+    @media (max-width: 600px) {
+        .docs-title { font-size: 1.8rem; }
+        .pages-grid { grid-template-columns: 1fr; }
+    }
+</style>
