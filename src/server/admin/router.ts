@@ -14,7 +14,7 @@ import {
     getWaitlist,
     getStats
 } from '../admin.js';
-import { syncQueue, granularAnalysisQueue, analysisQueue } from '../queues.js';
+import { syncQueue, granularAnalysisQueue } from '../queues.js';
 import { monitoringScraperQueue, opportunityMatcherQueue } from '../monitoring/worker.js';
 
 const router = Router();
@@ -171,6 +171,53 @@ router.get('/test-alert', adminMiddleware, async (req: Request, res: Response) =
     } catch (err: unknown) {
         logger.error({ err }, 'GET /api/admin/test-alert failed');
         res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Proxy health check — fetches ipinfo.io through the proxy and returns the visible IP
+router.get('/test-proxy', adminMiddleware, async (req: Request, res: Response) => {
+    const proxyHost = process.env.PROXY_HOST;
+    const proxyPort = process.env.PROXY_PORT;
+    const proxyUser = process.env.PROXY_USER;
+    const proxyPass = process.env.PROXY_PASS;
+
+    const configured = !!(proxyHost && proxyPort && proxyUser && proxyPass);
+
+    // Always fetch the server's direct IP first (no proxy)
+    let directIp = 'unknown';
+    try {
+        const directRes = await fetch('https://ipinfo.io/json');
+        const directData: any = await directRes.json();
+        directIp = directData.ip;
+    } catch { /* ignore */ }
+
+    if (!configured) {
+        return res.json({
+            proxyConfigured: false,
+            directIp,
+            message: 'PROXY_HOST/PORT/USER/PASS not set — proxy is not active'
+        });
+    }
+
+    try {
+        const { HttpsProxyAgent } = await import('https-proxy-agent');
+        const agent = new HttpsProxyAgent(`http://${proxyUser}:${proxyPass}@${proxyHost}:${proxyPort}`);
+        const proxyRes = await fetch('https://ipinfo.io/json', { agent } as any);
+        const proxyData: any = await proxyRes.json();
+
+        res.json({
+            proxyConfigured: true,
+            proxyHost,
+            proxyPort,
+            directIp,
+            proxyIp: proxyData.ip,
+            proxyLocation: `${proxyData.city}, ${proxyData.region}, ${proxyData.country}`,
+            isResidential: proxyData.ip !== directIp,
+            raw: proxyData
+        });
+    } catch (err: unknown) {
+        logger.error({ err }, 'GET /api/admin/test-proxy failed');
+        res.status(500).json({ proxyConfigured: true, directIp, error: 'Proxy request failed', detail: String(err) });
     }
 });
 

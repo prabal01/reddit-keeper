@@ -18,7 +18,7 @@ import {
 } from "./tree-builder.js";
 
 import { sendAlert } from "../server/alerts.js";
-import { USER_AGENT, RATE_LIMIT_DELAY, TOOL_VERSION } from "../server/config.js";
+import { getRandomUserAgent, RATE_LIMIT_DELAY, TOOL_VERSION } from "../server/config.js";
 
 type ProgressCallback = (message: string) => void;
 
@@ -80,29 +80,32 @@ async function fetchWithRetry(
     // LEGACY FALLBACK (Direct Fetch)
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
+            const ua = getRandomUserAgent();
             const response = await fetch(url, {
                 headers: {
-                    "User-Agent": USER_AGENT,
-                    "Accept": "application/json",
+                    "User-Agent": ua,
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                     "Accept-Language": "en-US,en;q=0.9",
+                    "Accept-Encoding": "gzip, deflate, br",
                     "Referer": "https://www.reddit.com/",
+                    "Cache-Control": "no-cache",
+                    "Pragma": "no-cache",
                     "Sec-Fetch-Dest": "empty",
                     "Sec-Fetch-Mode": "cors",
                     "Sec-Fetch-Site": "same-origin",
                     "DNT": "1",
-                    "Upgrade-Insecure-Requests": "1"
                 },
             });
 
             if (response.status === 429) {
-                await sendAlert("REDDIT", `Rate Limit (429) detected!`, { 
-                    url, 
-                    status: 429, 
+                await sendAlert("REDDIT", `Rate Limit (429) detected!`, {
+                    url,
+                    status: 429,
                     attempt,
-                    userAgent: USER_AGENT,
+                    userAgent: ua,
                     referer: "https://www.reddit.com/"
                 });
-                
+
                 const retryAfter = parseInt(response.headers.get("retry-after") || "5");
                 await sleep(retryAfter * 1000);
                 continue;
@@ -110,11 +113,11 @@ async function fetchWithRetry(
 
             if (response.status === 403) {
                 const bodySnippet = await response.text().then(t => t.substring(0, 300)).catch(() => "N/A");
-                await sendAlert("REDDIT", `Access Forbidden (403)! Likely a block.`, { 
-                    url, 
-                    status: 403, 
+                await sendAlert("REDDIT", `Access Forbidden (403)! Likely a block.`, {
+                    url,
+                    status: 403,
                     attempt,
-                    userAgent: USER_AGENT,
+                    userAgent: ua,
                     responseSnippet: bodySnippet
                 });
                 const err: any = new Error(`HTTP 403: Access blocked by Reddit.`);

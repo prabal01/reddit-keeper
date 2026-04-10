@@ -26,7 +26,7 @@ export interface CachedRedditPost {
     num_comments: number;
     created_utc: number;
     fetchedAt: string;
-    source?: 'arctic_shift' | 'pullpush' | 'reddit_local' | 'justserp';
+    source?: 'arctic_shift' | 'pullpush' | 'reddit_local' | 'justserp' | 'archive_first';
 }
 
 export interface MarketingOpportunity {

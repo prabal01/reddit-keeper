@@ -122,6 +122,7 @@ export interface PlanConfig {
     monitorLimit: number;           // -1 = unlimited, max active monitors
     subredditsPerMonitor: number;   // -1 = unlimited, max subreddits per monitor
     teamSeats: number;              // -1 = unlimited
+    serpQueriesPerDiscovery: number; // SERP queries per discovery (free=1, pro=3)
 }
 
 export interface UserDoc {
@@ -303,6 +304,7 @@ const DEFAULT_FREE_CONFIG: PlanConfig = {
     monitorLimit: 0,
     subredditsPerMonitor: 0,
     teamSeats: 1,
+    serpQueriesPerDiscovery: 1,
 };
 
 const DEFAULT_TRIAL_CONFIG: PlanConfig = {
@@ -322,6 +324,7 @@ const DEFAULT_TRIAL_CONFIG: PlanConfig = {
     monitorLimit: 3,
     subredditsPerMonitor: 10,
     teamSeats: 1,
+    serpQueriesPerDiscovery: 1,
 };
 
 const DEFAULT_STARTER_CONFIG: PlanConfig = {
@@ -341,6 +344,7 @@ const DEFAULT_STARTER_CONFIG: PlanConfig = {
     monitorLimit: 3,
     subredditsPerMonitor: 10,
     teamSeats: 1,
+    serpQueriesPerDiscovery: 1,
 };
 
 const DEFAULT_PROFESSIONAL_CONFIG: PlanConfig = {
@@ -360,6 +364,7 @@ const DEFAULT_PROFESSIONAL_CONFIG: PlanConfig = {
     monitorLimit: 10,
     subredditsPerMonitor: 20,
     teamSeats: 3,
+    serpQueriesPerDiscovery: 3,
 };
 
 const DEFAULT_PRO_CONFIG: PlanConfig = {
@@ -379,6 +384,7 @@ const DEFAULT_PRO_CONFIG: PlanConfig = {
     monitorLimit: 10,
     subredditsPerMonitor: 20,
     teamSeats: 3,
+    serpQueriesPerDiscovery: 3,
 };
 
 const DEFAULT_ENTERPRISE_CONFIG: PlanConfig = {
@@ -398,6 +404,7 @@ const DEFAULT_ENTERPRISE_CONFIG: PlanConfig = {
     monitorLimit: -1,
     subredditsPerMonitor: -1,
     teamSeats: -1,
+    serpQueriesPerDiscovery: 5,
 };
 
 const DEFAULT_BETA_CONFIG: PlanConfig = {
@@ -417,6 +424,7 @@ const DEFAULT_BETA_CONFIG: PlanConfig = {
     monitorLimit: 5,
     subredditsPerMonitor: 15,
     teamSeats: 2,
+    serpQueriesPerDiscovery: 2,
 };
 
 // ── Plan config cache (5-min TTL) ──────────────────────────────────
@@ -465,13 +473,50 @@ export async function getPlanConfig(plan: string): Promise<PlanConfig> {
 // ── Global Config (discovery config, etc) ──────────────────────────
 
 export interface GlobalConfig {
-    discovery_cache_ttl: number; // in seconds
-    discovery_enrichment_limit: number;
+    // Discovery
+    discovery_cache_ttl: number;                  // seconds (default: 7 days)
+    discovery_enrichment_limit: number;           // default: 10
+
+    // SERP API (Searlo)
+    searlo_daily_cap: number;                     // max SERP calls/day globally (default: 50)
+    searlo_response_cache_ttl: number;            // seconds (default: 86400 = 24h)
+    searlo_max_retries: number;                   // retry on 5xx (default: 2)
+
+    // Monitoring
+    monitoring_scrape_interval_hours: number;     // cron interval (default: 8)
+    monitoring_subreddit_cooldown_hours: number;  // Redis cooldown (default: 8)
+    monitoring_freshness_threshold_hours: number; // archive freshness window before proxy fallback (default: 24)
+    monitoring_min_archive_posts: number;         // min recent posts from archives before proxy fallback (default: 5)
+    monitoring_scoring_batch_size: number;        // posts per AI scoring call (default: 5)
+    monitoring_max_posts_to_score: number;        // per monitor per cycle (default: 20)
+
+    // Proxy
+    proxy_fallback_enabled: boolean;              // enable/disable proxy fallback (default: true)
+
+    // AI
+    embedding_cache_ttl: number;                  // seconds (default: 60 days)
+    arbitration_delay_ms: number;                 // delay between dedup AI calls (default: 200)
+
+    // Thread caching
+    thread_cache_ttl: number;                     // seconds (default: 7 days)
 }
 
 const DEFAULT_GLOBAL_CONFIG: GlobalConfig = {
-    discovery_cache_ttl: 7 * 24 * 3600, // 7 days in seconds
-    discovery_enrichment_limit: 10
+    discovery_cache_ttl: 7 * 24 * 3600,
+    discovery_enrichment_limit: 10,
+    searlo_daily_cap: 50,
+    searlo_response_cache_ttl: 86400,
+    searlo_max_retries: 2,
+    monitoring_scrape_interval_hours: 8,
+    monitoring_subreddit_cooldown_hours: 8,
+    monitoring_freshness_threshold_hours: 24,
+    monitoring_min_archive_posts: 5,
+    monitoring_scoring_batch_size: 5,
+    monitoring_max_posts_to_score: 20,
+    proxy_fallback_enabled: true,
+    embedding_cache_ttl: 60 * 86400,
+    arbitration_delay_ms: 200,
+    thread_cache_ttl: 7 * 24 * 3600,
 };
 
 const GLOBAL_CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache

@@ -1,6 +1,6 @@
 
 import { getEmbeddings, arbitrateSimilarity } from "./ai.js";
-import { saveAggregatedInsights, updateUserAicost } from "./firestore.js";
+import { saveAggregatedInsights, updateUserAicost, getGlobalConfig } from "./firestore.js";
 import { ClusterLogger } from "./utils/logger.js";
 
 // GEMINI FLASH PRICING (Estimated)
@@ -46,6 +46,9 @@ export class ClusterEngine {
             logger.close();
             return [];
         }
+
+        const globalConfig = await getGlobalConfig();
+        const arbitrationDelay = globalConfig.arbitration_delay_ms;
 
         // 1. Generate Embeddings
         const titles = insights.map(i => i.title);
@@ -116,8 +119,8 @@ export class ClusterEngine {
                     } else {
                         logger.log(`-> Arbitration FAILED: Keeping as distinct.`);
                     }
-                    // MANDATORY PACING: Avoid hitting RPM limits
-                    await new Promise(resolve => setTimeout(resolve, 1200));
+                    // Pacing: configurable delay to avoid hitting RPM limits
+                    await new Promise(resolve => setTimeout(resolve, arbitrationDelay));
                 } catch (err) {
                     logger.log(`-> Arbitration CRASHED: ${err instanceof Error ? err.message : 'Unknown error'}. Defaulting to distinct.`);
                 }

@@ -78,7 +78,7 @@ router.post('/propose', authMiddleware, async (req: Request, res: Response) => {
     }
 });
 
-router.post('/start', authMiddleware, async (req: Request, res: Response) => {
+router.post('/start', authMiddleware, usageGuard('DISCOVERY'), async (req: Request, res: Response) => {
     if (!req.user) {
         return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -239,6 +239,7 @@ router.post('/start', authMiddleware, async (req: Request, res: Response) => {
             await batch.commit();
         }
 
+        await incrementDiscoveryCount(req.user.uid);
         res.json({ success: true, folderId: folder.id, patterns: insights.patterns, opportunities: insights.opportunities });
     } catch (err: unknown) {
         logger.error({ err, query }, 'Failed to run discovery start');
