@@ -430,7 +430,7 @@ const DEFAULT_BETA_CONFIG: PlanConfig = {
 // ── Plan config cache (5-min TTL) ──────────────────────────────────
 
 const CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-let planConfigCache: Map<string, { config: PlanConfig; cachedAt: number }> = new Map();
+const planConfigCache: Map<string, { config: PlanConfig; cachedAt: number }> = new Map();
 
 export async function getPlanConfig(plan: string): Promise<PlanConfig> {
     const cached = planConfigCache.get(plan);
