@@ -1,0 +1,352 @@
+---
+import '../styles/theme.css';
+import { Sun, Moon } from 'lucide-react';
+
+interface Props {
+    title: string;
+    description: string;
+    tool: string;
+}
+
+const { title, description, tool } = Astro.props;
+const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
+const siteUrl = 'https://opiniondeck.com';
+const pageUrl = `${siteUrl}/free-tools/${tool}`;
+---
+
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <meta name="generator" content={Astro.generator} />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+        <!-- SEO -->
+        <title>{title}</title>
+        <meta name="description" content={description} />
+        <link rel="canonical" href={pageUrl} />
+
+        <!-- Open Graph -->
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={pageUrl} />
+
+        <!-- Twitter -->
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={description} />
+
+        <!-- JSON-LD -->
+        <script type="application/ld+json" set:html={JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebApplication",
+            "name": title.split(' — ')[0],
+            "description": description,
+            "url": pageUrl,
+            "applicationCategory": "BusinessApplication",
+            "operatingSystem": "Web",
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+            "creator": { "@type": "Organization", "name": "OpinionDeck" }
+        })} />
+        <script type="application/ld+json" set:html={JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+                { "@type": "ListItem", "position": 1, "name": "Home", "item": siteUrl },
+                { "@type": "ListItem", "position": 2, "name": "Free Tools", "item": `${siteUrl}/free-tools` },
+                { "@type": "ListItem", "position": 3, "name": title.split(' — ')[0], "item": pageUrl }
+            ]
+        })} />
+
+        <script is:inline>
+            const savedTheme = localStorage.getItem('reddit-dl-theme');
+            const theme = savedTheme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+            if (theme === 'dark') document.documentElement.classList.add('dark');
+        </script>
+        <script>
+            import posthog from 'posthog-js';
+            const key = import.meta.env.PUBLIC_POSTHOG_KEY;
+            const host = import.meta.env.PUBLIC_POSTHOG_HOST || 'https://us.i.i.posthog.com';
+            if (key) posthog.init(key, { api_host: host, person_profiles: 'identified_only' });
+        </script>
+    </head>
+    <body>
+        <header class="app-header">
+            <div class="header-content">
+                <a href="/" class="logo">
+                    <img src="/logo.svg" class="logo-icon" alt="OpinionDeck Logo" style="width: 42px; height: 42px;" />
+                    <h1 class="logo-text">OpinionDeck</h1>
+                    <span class="logo-tagline">Strategic Market Intelligence</span>
+                </a>
+                <div class="header-actions">
+                    <a href="/free-tools" class="nav-docs-link">Free Tools</a>
+                    <a href="/docs" class="nav-docs-link hide-mobile">Docs</a>
+                    <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle theme">
+                        <div class="sun-icon"><Sun size={20} /></div>
+                        <div class="moon-icon"><Moon size={20} /></div>
+                    </button>
+                    <a href={dashboardUrl} class="btn btn-secondary">Go to App</a>
+                    <a href={dashboardUrl} class="btn btn-primary">Sign In</a>
+                </div>
+            </div>
+        </header>
+
+        <main class="tool-main">
+            <!-- Breadcrumb -->
+            <nav class="breadcrumb">
+                <div class="container">
+                    <a href="/">Home</a>
+                    <span class="sep">/</span>
+                    <a href="/free-tools">Free Tools</a>
+                    <span class="sep">/</span>
+                    <span class="current">{title.split(' — ')[0]}</span>
+                </div>
+            </nav>
+
+            <slot />
+        </main>
+
+        <footer class="app-footer">
+            <div class="container footer-grid">
+                <div class="footer-col">
+                    <p class="copyright">&copy; {new Date().getFullYear()} OpinionDeck. All rights reserved.</p>
+                    <nav class="footer-links">
+                        <a href={dashboardUrl}>Dashboard</a>
+                        <a href="/contact">Contact</a>
+                        <a href="/terms">Terms</a>
+                        <a href="/privacy">Privacy</a>
+                        <a href="/refund">Refund Policy</a>
+                    </nav>
+                </div>
+                <div class="footer-col">
+                    <p class="footer-col-title">Free Tools</p>
+                    <nav class="footer-links footer-tools">
+                        <a href="/free-tools/best-time-to-post">Best Time to Post</a>
+                        <a href="/free-tools/subreddit-analyzer">Subreddit Analyzer</a>
+                        <a href="/free-tools/brand-mentions">Brand Mentions</a>
+                        <a href="/free-tools/subreddit-comparison">Subreddit Comparison</a>
+                        <a href="/free-tools/user-activity">User Activity</a>
+                        <a href="/free-tools/thread-explorer">Thread Explorer</a>
+                        <a href="/free-tools/pain-point-finder">Pain Point Finder</a>
+                        <a href="/free-tools/opportunity-finder">Opportunity Finder</a>
+                        <a href="/free-tools/subreddit-finder">Subreddit Finder</a>
+                    </nav>
+                </div>
+            </div>
+        </footer>
+    </body>
+    <script>
+        const themeToggle = document.getElementById('theme-toggle');
+        const toggleTheme = () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            document.documentElement.classList.toggle('dark', newTheme === 'dark');
+            localStorage.setItem('reddit-dl-theme', newTheme);
+        };
+        themeToggle?.addEventListener('click', toggleTheme);
+    </script>
+</html>
+
+<style>
+    html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        min-height: 100%;
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .app-header {
+        background: var(--bg-glass);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--border);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+    }
+
+    .header-content {
+        max-width: 1200px;
+        margin: 0 auto;
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+    }
+
+    .logo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        text-decoration: none;
+    }
+
+    .logo-text {
+        font-size: 1.25rem;
+        font-weight: 800;
+        margin: 0;
+        background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .logo-tagline {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        font-weight: 600;
+        padding: 4px 10px;
+        background: var(--bg-tertiary);
+        border-radius: var(--radius-full);
+    }
+
+    .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .nav-docs-link {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        text-decoration: none;
+        padding: 6px 4px;
+        transition: color 0.15s;
+    }
+
+    .nav-docs-link:hover { color: var(--text-primary); }
+
+    .theme-toggle-btn {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+        width: 40px;
+        height: 40px;
+        border-radius: var(--radius-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        padding: 0;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .theme-toggle-btn:hover {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+    }
+
+    .sun-icon, .moon-icon {
+        position: absolute;
+        transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
+    }
+
+    :global([data-theme="light"]) .sun-icon { opacity: 0; transform: translateY(20px) rotate(90deg); }
+    :global([data-theme="light"]) .moon-icon { opacity: 1; transform: translateY(0); }
+    :global([data-theme="dark"]) .sun-icon { opacity: 1; transform: translateY(0); color: #ffb800; }
+    :global([data-theme="dark"]) .moon-icon { opacity: 0; transform: translateY(-20px) rotate(-90deg); }
+
+    .tool-main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 0 24px 80px;
+    }
+
+    .breadcrumb {
+        padding: 16px 0;
+        font-size: 0.8rem;
+        color: var(--text-tertiary);
+    }
+
+    .breadcrumb a {
+        color: var(--text-secondary);
+        text-decoration: none;
+    }
+
+    .breadcrumb a:hover { color: var(--text-primary); }
+
+    .breadcrumb .sep {
+        margin: 0 8px;
+        color: var(--text-tertiary);
+    }
+
+    .breadcrumb .current {
+        color: var(--text-primary);
+    }
+
+    .app-footer {
+        padding: 40px 0;
+        border-top: 1px solid var(--border);
+        margin-top: 0;
+        background: var(--bg-secondary);
+    }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+    .footer-grid {
+        display: flex;
+        justify-content: space-between;
+        gap: 48px;
+    }
+
+    .footer-col {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .footer-col-title {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+    }
+
+    .footer-links { display: flex; gap: 24px; }
+    .footer-links a { color: var(--text-secondary); font-size: 0.9rem; text-decoration: none; }
+    .footer-links a:hover { color: var(--text-primary); }
+
+    .footer-tools {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 20px;
+        max-width: 480px;
+    }
+
+    .footer-tools a { font-size: 0.8rem; }
+
+    .copyright { margin: 0; font-size: 0.85rem; color: var(--text-tertiary); }
+
+    @media (max-width: 768px) {
+        .header-content { height: 56px; padding: 0 16px; }
+        .logo-tagline { display: none; }
+        .header-actions { gap: 8px; }
+        .hide-mobile { display: none; }
+        .btn-secondary { display: none; }
+        .tool-main { padding: 0 16px 60px; }
+
+        .footer-grid { flex-direction: column; gap: 24px; }
+        .footer-links { flex-direction: column; gap: 12px; }
+        .footer-tools { max-width: 100%; }
+    }
+
+    @media (max-width: 480px) {
+        .header-content { height: 52px; padding: 0 12px; }
+        .header-actions { gap: 4px; }
+        .logo-text { font-size: 1rem; }
+        .logo-icon { width: 32px !important; height: 32px !important; }
+        .logo { gap: 6px; }
+        .nav-docs-link { font-size: 0.75rem; }
+        .btn { padding: 6px 12px; font-size: 0.8rem; }
+    }
+</style>

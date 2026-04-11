@@ -15,7 +15,10 @@ import {
     BookMarked,
     AlertCircle,
     ChevronRight,
-    Radio
+    Radio,
+    Clock,
+    BarChart3,
+    Search
 } from 'lucide-react';
 
 const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
@@ -251,6 +254,38 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
                     </div>
                 </div>
                 <p class="audience-note">Works best if your market discusses your space on Reddit/HackerNews. If your niche has zero community, market signals will be weak.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Free Tools -->
+    <section class="tools-section" id="free-tools">
+        <div class="container">
+            <h2 class="section-title">Free Reddit Tools</h2>
+            <p class="section-subtitle">Research communities, track brands, and find opportunities — no signup needed.</p>
+
+            <div class="tools-home-grid">
+                <a href="/free-tools/best-time-to-post" class="tool-home-card">
+                    <div class="tool-home-icon"><Clock size={20} /></div>
+                    <strong>Best Time to Post</strong>
+                    <p>Find when posts get the most engagement.</p>
+                </a>
+                <a href="/free-tools/subreddit-analyzer" class="tool-home-card">
+                    <div class="tool-home-icon"><BarChart3 size={20} /></div>
+                    <strong>Subreddit Analyzer</strong>
+                    <p>Engagement stats, top contributors, and patterns.</p>
+                </a>
+                <a href="/free-tools/brand-mentions" class="tool-home-card">
+                    <div class="tool-home-icon"><Search size={20} /></div>
+                    <strong>Brand Mention Tracker</strong>
+                    <p>See where people talk about any brand.</p>
+                </a>
+            </div>
+
+            <div style="text-align: center; margin-top: 24px;">
+                <a href="/free-tools" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 8px;">
+                    View All 9 Tools <ArrowRight size={16} />
+                </a>
             </div>
         </div>
     </section>
@@ -841,6 +876,71 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
         font-style: italic;
         color: var(--text-secondary);
         font-size: 1rem;
+    }
+
+    /* ─── Free Tools ─────────────────────────────── */
+    .tools-section {
+        padding: 100px 0;
+        background: var(--bg-secondary);
+        text-align: center;
+    }
+
+    .tools-home-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-top: 40px;
+        text-align: left;
+    }
+
+    .tool-home-card {
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        padding: 28px 24px;
+        text-decoration: none;
+        color: inherit;
+        transition: all 0.2s ease;
+    }
+
+    .tool-home-card:hover {
+        transform: translateY(-3px);
+        border-color: var(--bg-accent);
+        box-shadow: var(--shadow-md);
+    }
+
+    .tool-home-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: var(--radius-sm);
+        background: rgba(255, 69, 0, 0.08);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--bg-accent);
+        margin-bottom: 14px;
+    }
+
+    .tool-home-card strong {
+        display: block;
+        font-size: 0.95rem;
+        color: var(--text-primary);
+        margin-bottom: 6px;
+    }
+
+    .tool-home-card p {
+        font-size: 0.82rem;
+        color: var(--text-secondary);
+        margin: 0;
+        line-height: 1.4;
+    }
+
+    @media (max-width: 768px) {
+        .tools-home-grid {
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+        .tools-section { padding: 60px 20px; }
     }
 
     /* ─── Pricing ─────────────────────────────────── */

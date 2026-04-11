@@ -44,24 +44,30 @@ export class ArcticShiftService {
     }
 
     /**
-     * Search posts by keyword within a subreddit
+     * Search posts within a subreddit, optionally filtering by title keyword.
+     * Arctic Shift requires subreddit or author scope — keyword-only search is not supported.
+     * When keyword is provided it filters by title match; when empty it returns recent posts.
      */
     async searchPosts(
         keyword: string,
-        subreddit?: string,
+        subreddit: string,
         limit: number = 100,
         after?: number,
         before?: number
     ): Promise<DiscoveryResult[]> {
+        if (!subreddit) {
+            logger.warn({ service: 'arctic_shift', action: 'SEARCH_POSTS_SKIP' }, `Arctic Shift requires a subreddit for post search`);
+            return [];
+        }
         try {
             await this.enforceRateLimit();
 
-            let url = `${this.baseUrl}/api/posts/search?q=${encodeURIComponent(keyword)}&limit=${limit}`;
-            if (subreddit) url += `&subreddit=${encodeURIComponent(subreddit)}`;
+            let url = `${this.baseUrl}/api/posts/search?subreddit=${encodeURIComponent(subreddit)}&limit=${limit}&sort=desc&meta-app=opiniondeck`;
+            if (keyword) url += `&title=${encodeURIComponent(keyword)}`;
             if (after) url += `&after=${after}`;
             if (before) url += `&before=${before}`;
 
-            logger.info({ service: 'arctic_shift', action: 'SEARCH_POSTS', keyword, subreddit }, `Searching posts...`);
+            logger.info({ service: 'arctic_shift', action: 'SEARCH_POSTS', keyword: keyword || '(browse)', subreddit }, `Searching posts...`);
 
             const response = await fetch(url, {
                 headers: {
@@ -99,20 +105,25 @@ export class ArcticShiftService {
     }
 
     /**
-     * Search comments by keyword
+     * Search comments within a subreddit, optionally filtering by body keyword.
+     * Arctic Shift requires subreddit or author scope — keyword-only search is not supported.
      */
     async searchComments(
         keyword: string,
-        subreddit?: string,
+        subreddit: string,
         limit: number = 100
     ): Promise<DiscoveryResult[]> {
+        if (!subreddit) {
+            logger.warn({ service: 'arctic_shift', action: 'SEARCH_COMMENTS_SKIP' }, `Arctic Shift requires a subreddit for comment search`);
+            return [];
+        }
         try {
             await this.enforceRateLimit();
 
-            let url = `${this.baseUrl}/api/comments/search?q=${encodeURIComponent(keyword)}&limit=${limit}`;
-            if (subreddit) url += `&subreddit=${encodeURIComponent(subreddit)}`;
+            let url = `${this.baseUrl}/api/comments/search?subreddit=${encodeURIComponent(subreddit)}&limit=${limit}&sort=desc&meta-app=opiniondeck`;
+            if (keyword) url += `&body=${encodeURIComponent(keyword)}`;
 
-            logger.info({ service: 'arctic_shift', action: 'SEARCH_COMMENTS', keyword }, `Searching comments...`);
+            logger.info({ service: 'arctic_shift', action: 'SEARCH_COMMENTS', keyword: keyword || '(browse)', subreddit }, `Searching comments...`);
 
             const response = await fetch(url, {
                 headers: {
@@ -145,40 +156,6 @@ export class ArcticShiftService {
             return results;
         } catch (err: unknown) {
             logger.error({ service: 'arctic_shift', action: 'SEARCH_COMMENTS_ERROR', err: errMsg(err) }, `Arctic Shift comment search error`);
-            return [];
-        }
-    }
-
-    /**
-     * Search subreddits by keyword
-     */
-    async searchSubreddits(keyword: string): Promise<any[]> {
-        try {
-            await this.enforceRateLimit();
-
-            const url = `${this.baseUrl}/api/subreddits/search?q=${encodeURIComponent(keyword)}`;
-
-            logger.info({ service: 'arctic_shift', action: 'SEARCH_SUBREDDITS', keyword }, `Searching subreddits...`);
-
-            const response = await fetch(url, {
-                headers: {
-                    'User-Agent': USER_AGENT,
-                    'Accept': 'application/json'
-                }
-            });
-
-            if (!response.ok) {
-                logger.warn({ service: 'arctic_shift', status: response.status }, `Arctic Shift subreddit search failed`);
-                return [];
-            }
-
-            const data: any = await response.json();
-            const subreddits = data.data || [];
-
-            logger.info({ service: 'arctic_shift', action: 'SEARCH_SUBREDDITS_RESULT', count: subreddits.length }, `Found ${subreddits.length} subreddits`);
-            return subreddits;
-        } catch (err: unknown) {
-            logger.error({ service: 'arctic_shift', action: 'SEARCH_SUBREDDITS_ERROR', err: errMsg(err) }, `Arctic Shift subreddit search error`);
             return [];
         }
     }

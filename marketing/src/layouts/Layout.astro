@@ -44,7 +44,8 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
 					<span class="logo-tagline">Strategic Market Intelligence</span>
 				</a>
 				<div class="header-actions">
-                    <a href="/docs" class="nav-docs-link">Docs</a>
+                    <a href="/free-tools" class="nav-docs-link">Free Tools</a>
+                    <a href="/docs" class="nav-docs-link hide-mobile">Docs</a>
                     <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle theme">
                         <div class="sun-icon"><Sun size={20} /></div>
                         <div class="moon-icon"><Moon size={20} /></div>
@@ -60,17 +61,33 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
 		</main>
 
 		<footer class="app-footer">
-			<div class="container footer-content">
-				<p class="copyright">
-					&copy; {new Date().getFullYear()} OpinionDeck. All rights reserved.
-				</p>
-				<nav class="footer-links">
-					<a href={dashboardUrl}>Dashboard</a>
-					<a href="/contact">Contact</a>
-					<a href="/terms">Terms</a>
-				    <a href="/privacy">Privacy</a>
-                    <a href="/refund">Refund Policy</a>
-				</nav>
+			<div class="container footer-grid">
+				<div class="footer-col">
+					<p class="copyright">
+						&copy; {new Date().getFullYear()} OpinionDeck. All rights reserved.
+					</p>
+					<nav class="footer-links">
+						<a href={dashboardUrl}>Dashboard</a>
+						<a href="/contact">Contact</a>
+						<a href="/terms">Terms</a>
+						<a href="/privacy">Privacy</a>
+						<a href="/refund">Refund Policy</a>
+					</nav>
+				</div>
+				<div class="footer-col">
+					<p class="footer-col-title">Free Tools</p>
+					<nav class="footer-links footer-tools">
+						<a href="/free-tools/best-time-to-post">Best Time to Post</a>
+						<a href="/free-tools/subreddit-analyzer">Subreddit Analyzer</a>
+						<a href="/free-tools/brand-mentions">Brand Mention Tracker</a>
+						<a href="/free-tools/subreddit-comparison">Subreddit Comparison</a>
+						<a href="/free-tools/user-activity">User Activity Lookup</a>
+						<a href="/free-tools/thread-explorer">Thread Explorer</a>
+						<a href="/free-tools/pain-point-finder">Pain Point Finder</a>
+						<a href="/free-tools/opportunity-finder">Opportunity Finder</a>
+						<a href="/free-tools/subreddit-finder">Subreddit Finder</a>
+					</nav>
+				</div>
 			</div>
 		</footer>
 	</body>
@@ -233,10 +250,23 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
         background: var(--bg-secondary);
     }
 
-    .footer-content {
+    .footer-grid {
         display: flex;
         justify-content: space-between;
-        align-items: center;
+        gap: 48px;
+    }
+
+    .footer-col {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .footer-col-title {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
     }
 
     .footer-links {
@@ -251,6 +281,17 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
 
     .footer-links a:hover {
         color: var(--text-primary);
+    }
+
+    .footer-tools {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 20px;
+        max-width: 480px;
+    }
+
+    .footer-tools a {
+        font-size: 0.8rem;
     }
 
     @media (max-width: 768px) {
@@ -275,6 +316,14 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
             gap: 8px;
         }
 
+        .hide-mobile {
+            display: none;
+        }
+
+        .btn-secondary {
+            display: none;
+        }
+
         .theme-toggle-btn {
             width: 36px;
             height: 36px;
@@ -290,9 +339,9 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
             margin-top: 48px;
         }
 
-        .footer-content {
+        .footer-grid {
             flex-direction: column;
-            gap: 16px;
+            gap: 24px;
             padding: 0 16px;
         }
 
@@ -300,6 +349,10 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
             flex-direction: column;
             gap: 12px;
             width: 100%;
+        }
+
+        .footer-tools {
+            max-width: 100%;
         }
 
         .copyright {
@@ -318,9 +371,21 @@ const dashboardUrl = import.meta.env.PUBLIC_DASHBOARD_URL || '/app';
             gap: 4px;
         }
 
+        .logo-text {
+            font-size: 1rem;
+        }
+
+        .logo {
+            gap: 6px;
+        }
+
+        .nav-docs-link {
+            font-size: 0.75rem;
+        }
+
         .btn {
             padding: 6px 12px;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
         }
     }
 </style>

@@ -26,6 +26,7 @@ import paymentsRouter from "./server/payments/router.js";
 import foldersRouter from "./server/folders/router.js";
 import extractionsRouter from "./server/extractions/router.js";
 import authRouter from "./server/auth/router.js";
+import toolsRouter from "./server/tools/router.js";
 import { addWaitlistEntry } from "./server/admin.js";
 
 import { initMonitoring, monitoringScraperWorker, opportunityMatcherWorker } from "./server/monitoring/worker.js";
@@ -98,6 +99,7 @@ app.use("/api/payments", paymentsRouter);
 app.use("/api/folders", foldersRouter);
 app.use("/api/extractions", extractionsRouter);
 app.use("/api/auth", authRouter);
+app.use("/api/tools", toolsRouter);
 
 // Public waitlist signup — frontend calls POST /api/waitlist directly
 app.post("/api/waitlist", async (req, res) => {

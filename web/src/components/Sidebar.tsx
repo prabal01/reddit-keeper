@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { BRANDING } from '../constants/branding';
-import { Globe, Star, Shield, Settings, Users } from 'lucide-react';
+import { Globe, Search, Star, History as HistoryIcon, ChevronDown, ChevronRight, X, Shield, Settings, Users, Wrench } from 'lucide-react';
 import { UsageProgress } from './UsageProgress';
 import { H1 } from './common/Typography';
 import { useAuth } from '../contexts/AuthContext';
@@ -10,6 +10,20 @@ import "./Sidebar.css";
 export const Sidebar: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
+    const [isToolsExpanded, setIsToolsExpanded] = useState(false);
+
+    const toolsBaseUrl = BRANDING.LANDING_PAGE_URL + '/free-tools';
+    const tools = [
+        { slug: 'best-time-to-post', label: 'Best Time to Post' },
+        { slug: 'subreddit-analyzer', label: 'Subreddit Analyzer' },
+        { slug: 'brand-mentions', label: 'Brand Mentions' },
+        { slug: 'subreddit-comparison', label: 'Subreddit Comparison' },
+        { slug: 'user-activity', label: 'User Activity' },
+        { slug: 'thread-explorer', label: 'Thread Explorer' },
+        { slug: 'pain-point-finder', label: 'Pain Point Finder' },
+        { slug: 'opportunity-finder', label: 'Opportunity Finder' },
+        { slug: 'subreddit-finder', label: 'Subreddit Finder' },
+    ];
 
     const handleLogoClick = () => {
         navigate('/');
@@ -106,6 +120,37 @@ export const Sidebar: React.FC = () => {
                 <NavLink to="/reports" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                     <Globe size={18} /> <span className="link-text">Reports</span>
                 </NavLink>
+
+                <div className="sidebar-section">
+                    <button
+                        onClick={() => setIsToolsExpanded(!isToolsExpanded)}
+                        className="nav-link"
+                        style={{ width: '100%', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <Wrench size={18} />
+                            <span className="link-text">Free Tools</span>
+                        </div>
+                        {isToolsExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                    </button>
+
+                    {isToolsExpanded && (
+                        <div style={{ paddingLeft: '12px' }}>
+                            {tools.map(tool => (
+                                <a
+                                    key={tool.slug}
+                                    href={`${toolsBaseUrl}/${tool.slug}?ref=dashboard`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="nav-link"
+                                    style={{ fontSize: '0.8rem', padding: '6px 16px 6px 20px', opacity: 0.85 }}
+                                >
+                                    <span className="link-text">{tool.label}</span>
+                                </a>
+                            ))}
+                        </div>
+                    )}
+                </div>
 
                 <NavLink
                     to="/pricing"
