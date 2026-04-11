@@ -12,7 +12,13 @@ import {
     createInviteCode,
     updateWaitlistStatus,
     getWaitlist,
-    getStats
+    getStats,
+    getPlanDistribution,
+    getEngagementStats,
+    getActivationFunnel,
+    getDailyActiveUsers,
+    getCohortPlanStats,
+    getSystemHealth,
 } from '../admin.js';
 import { syncQueue, granularAnalysisQueue } from '../queues.js';
 import { monitoringScraperQueue, opportunityMatcherQueue } from '../monitoring/worker.js';
@@ -129,6 +135,78 @@ router.post('/test-match', adminMiddleware, async (req: Request, res: Response) 
         });
 
         res.json(result);
+    } catch (err: unknown) {
+        logger.error(err); res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+// ── Admin identity check (used by admin frontend to gate access) ───
+router.get('/me', adminMiddleware, (req: Request, res: Response) => {
+    res.json({ ok: true, email: req.user?.email });
+});
+
+// ── KPI Endpoints ──────────────────────────────────────────────────
+
+router.get('/kpis/growth', adminMiddleware, async (req: Request, res: Response) => {
+    try {
+        const [planDist, daily, metrics] = await Promise.all([
+            getPlanDistribution(),
+            getDailyStats(),
+            getGlobalStats(),
+        ]);
+        res.json({ planDist, daily, metrics });
+    } catch (err: unknown) {
+        logger.error(err); res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+router.get('/kpis/engagement', adminMiddleware, async (req: Request, res: Response) => {
+    try {
+        const engagement = await getEngagementStats();
+        res.json(engagement);
+    } catch (err: unknown) {
+        logger.error(err); res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+router.get('/kpis/dau', adminMiddleware, async (req: Request, res: Response) => {
+    try {
+        const days = parseInt(req.query.days as string) || 30;
+        const dau = await getDailyActiveUsers(days);
+        res.json(dau);
+    } catch (err: unknown) {
+        logger.error(err); res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+router.get('/kpis/funnel', adminMiddleware, async (req: Request, res: Response) => {
+    try {
+        const funnel = await getActivationFunnel();
+        res.json(funnel);
+    } catch (err: unknown) {
+        logger.error(err); res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+router.get('/kpis/health', adminMiddleware, async (req: Request, res: Response) => {
+    try {
+        const [health, bullmqStats] = await Promise.all([
+            getSystemHealth(),
+            Promise.all([
+                getStats(syncQueue),
+                getStats(granularAnalysisQueue),
+            ]).then(([sync, granular]) => ({ sync, granular })),
+        ]);
+        res.json({ ...health, queues: bullmqStats });
+    } catch (err: unknown) {
+        logger.error(err); res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+router.get('/kpis/cohorts', adminMiddleware, async (req: Request, res: Response) => {
+    try {
+        const cohorts = await getCohortPlanStats();
+        res.json(cohorts);
     } catch (err: unknown) {
         logger.error(err); res.status(500).json({ error: "Internal server error" });
     }
