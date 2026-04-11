@@ -9,13 +9,13 @@ export const SettingsView: React.FC = () => {
     const { user, plan } = useAuth();
 
     return (
-        <div className="dashboard-home px-8 py-6">
+        <div className="dashboard-home px-4 py-4 md:px-8 md:py-6">
             <PageHeader 
                 title="Settings" 
                 subtitle="Manage your account, preferences, and workspace limits." 
             />
 
-            <div className="settings-section bg-(--bg-secondary) p-8 rounded-2xl border border-(--border-light) mb-8 shadow-sm">
+            <div className="settings-section bg-(--bg-secondary) p-5 md:p-8 rounded-2xl border border-(--border-light) mb-8 shadow-sm">
                 <H2 className="mb-6">Account Profile</H2>
                 <div className="grid gap-8">
                     <div className="flex flex-col gap-2">

@@ -77,14 +77,14 @@ export function VerificationGate() {
                 zIndex: 0
             }} />
 
-            <div style={{
+            <div className="verification-card" style={{
                 maxWidth: '480px',
                 width: '100%',
                 background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)',
                 backdropFilter: 'blur(20px)',
                 border: '1px solid rgba(255,255,255,0.06)',
                 borderRadius: '32px',
-                padding: '48px',
+                padding: 'clamp(24px, 5vw, 48px)',
                 textAlign: 'center',
                 position: 'relative',
                 zIndex: 1,

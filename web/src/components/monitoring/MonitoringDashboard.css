@@ -513,3 +513,58 @@
     from { opacity: 0; transform: translateY(12px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+/* ==============================
+   MONITORING DASHBOARD RESPONSIVE
+   ============================== */
+
+@media (max-width: 768px) {
+    .md-monitors-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .md-tab-bar {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .md-tab-bar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .md-tab {
+        white-space: nowrap;
+        padding: 12px 16px;
+    }
+
+    .md-review-card {
+        padding: 24px 20px;
+    }
+
+    .md-review-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .md-deploy-wrapper {
+        align-items: stretch;
+    }
+
+    .md-deploy-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .md-empty-state {
+        padding: 48px 20px;
+    }
+
+    .md-success-state {
+        padding: 48px 20px;
+    }
+
+    .md-keyword-grid {
+        padding: 12px;
+    }
+}

@@ -2505,3 +2505,136 @@ select:focus-visible {
     opacity: 0.7;
     margin-top: 4px;
 }
+
+/* ==============================
+   MOBILE SIDEBAR DRAWER
+   ============================== */
+
+.sidebar-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: var(--radius-sm);
+    transition: background 0.2s;
+    flex-shrink: 0;
+}
+
+.sidebar-toggle:hover {
+    background: var(--bg-hover);
+}
+
+.sidebar-overlay {
+    display: none;
+}
+
+.sidebar {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ==============================
+   DASHBOARD RESPONSIVE (768px)
+   ============================== */
+
+@media (max-width: 768px) {
+    /* Hamburger toggle */
+    .sidebar-toggle {
+        display: flex;
+    }
+
+    /* Sidebar becomes off-canvas drawer */
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        height: 100dvh;
+        transform: translateX(-100%);
+        z-index: 1100;
+        box-shadow: none;
+    }
+
+    .sidebar--open {
+        transform: translateX(0);
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Overlay backdrop */
+    .sidebar-overlay {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1099;
+        animation: fadeIn 0.2s ease;
+    }
+
+    /* Hide skeleton sidebar on mobile */
+    .app-skeleton-sidebar {
+        display: none !important;
+    }
+
+    /* Header adjustments */
+    .app-header {
+        padding: 0 12px;
+    }
+
+    .header-content {
+        padding: 0;
+        gap: 12px;
+    }
+
+    .header-breadcrumbs {
+        display: none;
+    }
+
+    .header-actions {
+        gap: 8px;
+    }
+
+    /* Main content padding */
+    .app-main {
+        padding: 20px 16px 48px;
+    }
+
+    /* Sidebar footer safe area for iOS */
+    .sidebar-footer {
+        padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* Login page responsive */
+    .login-container {
+        flex-direction: column !important;
+    }
+
+    .login-brand-panel {
+        display: none !important;
+    }
+
+    .auth-panel {
+        min-width: 100% !important;
+        flex: 1 !important;
+        padding: 32px 24px !important;
+    }
+
+    /* Admin portal responsive */
+    .admin-tabs-nav {
+        scrollbar-width: none;
+    }
+
+    .admin-tabs-nav::-webkit-scrollbar {
+        display: none;
+    }
+
+    .admin-content-area {
+        padding: 20px 16px !important;
+    }
+
+    .admin-portal {
+        padding: 0;
+    }
+}

@@ -812,6 +812,15 @@ a.lead-author:hover {
     .folder-action-group { width: 100%; overflow-x: auto; padding-bottom: 8px; }
     .folder-name-heading { font-size: 1.5rem; }
     .folder-metrics-bar { grid-template-columns: 1fr; }
+
+    .folder-tab-navbar {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+    .folder-tab-navbar::-webkit-scrollbar { display: none; }
+    .folder-tab { padding: 10px 16px; white-space: nowrap; }
 }
 /* Strategic Tab Navigation (NEW) */
 .folder-tab-navbar {

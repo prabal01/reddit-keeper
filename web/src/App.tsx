@@ -1,6 +1,7 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Menu } from "lucide-react";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { FolderProvider } from "./contexts/FolderContext";
 import { setTokenGetter } from "./lib/api";
@@ -30,7 +31,7 @@ import { DiscoveryProvider } from "./components/discovery/contexts/DiscoveryCont
 
 const AppSkeleton = () => (
   <div className="app" style={{ background: '#0a0a0c', minHeight: '100vh', display: 'flex' }}>
-    <aside className="sidebar skeleton-sidebar" style={{ 
+    <aside className="sidebar skeleton-sidebar app-skeleton-sidebar" style={{
       width: '260px', 
       minWidth: '260px',
       background: 'rgba(10, 10, 12, 0.4)', 
@@ -177,6 +178,22 @@ function AppContent() {
   const { getIdToken, loading, user, isUpgradeModalOpen, closeUpgradeModal, refreshPlan, refreshStats } = useAuth();
   const location = useLocation();
   const isLoginPage = location.pathname === "/login";
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Close sidebar on route change
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
+
+  // Lock body scroll when mobile sidebar is open
+  useEffect(() => {
+    if (sidebarOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [sidebarOpen]);
 
   // PostHog: capture pageview on route change
   useEffect(() => {
@@ -246,12 +263,15 @@ function AppContent() {
 
   return (
     <div className="app">
-      {user && !isLoginPage && <Sidebar />}
+      {user && !isLoginPage && <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />}
 
       <div className="app-main-wrapper">
         {!isLoginPage && (
           <header className="app-header">
             <div className="header-content">
+              <button className="sidebar-toggle" onClick={() => setSidebarOpen(prev => !prev)} aria-label="Toggle navigation">
+                <Menu size={20} />
+              </button>
               <div className="header-breadcrumbs">
                 <Breadcrumbs />
               </div>

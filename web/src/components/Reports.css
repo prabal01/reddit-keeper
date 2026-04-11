@@ -29,3 +29,22 @@
     justify-content: center;
     text-align: center;
 }
+
+/* ==============================
+   REPORTS RESPONSIVE
+   ============================== */
+
+@media (max-width: 768px) {
+    .analytics-grid {
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    }
+
+    .analytics-visuals {
+        grid-template-columns: 1fr;
+    }
+
+    .visual-card {
+        padding: 20px;
+        min-height: 240px;
+    }
+}
