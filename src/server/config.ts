@@ -85,12 +85,15 @@ export function validateConfig(): void {
     }
 
     if (config.isProd) {
-        const required = ["GOOGLE_APPLICATION_CREDENTIALS", "ADMIN_SECRET"];
+        const required = ["ADMIN_SECRET"];
         const missing = required.filter((k) => !process.env[k]);
         if (missing.length > 0) {
             throw new Error(
                 `Missing required env vars in production: ${missing.join(", ")}`
             );
+        }
+        if (!process.env.FIREBASE_SERVICE_ACCOUNT && !process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+            warnings.push("Neither FIREBASE_SERVICE_ACCOUNT nor GOOGLE_APPLICATION_CREDENTIALS set — Firebase will attempt default credentials");
         }
     }
 
