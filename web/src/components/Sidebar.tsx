@@ -1,25 +1,15 @@
-import React, { useState } from 'react';
-import { useLocation, NavLink, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { BRANDING } from '../constants/branding';
-import { Globe, Search, Star, History as HistoryIcon, ChevronDown, ChevronRight, X, Shield, Settings, Users } from 'lucide-react';
+import { Globe, Star, Shield, Settings, Users } from 'lucide-react';
 import { UsageProgress } from './UsageProgress';
-import { useDiscoveryContext } from './discovery/contexts/DiscoveryContext';
-import { H1, Metadata } from './common/Typography';
+import { H1 } from './common/Typography';
 import { useAuth } from '../contexts/AuthContext';
 import "./Sidebar.css";
 
 export const Sidebar: React.FC = () => {
     const navigate = useNavigate();
-    const location = useLocation();
     const { user } = useAuth();
-    const { 
-        history = [], 
-        deleteHistoryItem, 
-        historyLoading = false
-    } = useDiscoveryContext();
-    const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
-
-    const isDiscoveryPage = location.pathname === '/discovery';
 
     const handleLogoClick = () => {
         navigate('/');

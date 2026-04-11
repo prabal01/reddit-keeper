@@ -68,7 +68,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({ person, onUpdateStatus }) =>
                                 </a>
                             )}
                             {score > 0 && (
-                                <Badge variant="neutral" className="text-[10px]! px-1.5! py-0!" title="Relevance score">
+                                <Badge variant="neutral" className="text-[10px]! px-1.5! py-0!">
                                     {score}% match
                                 </Badge>
                             )}
