@@ -13,6 +13,7 @@ import {
     signInWithEmailAndPassword,
     signInWithCustomToken,
     sendEmailVerification,
+    sendPasswordResetEmail,
     signOut as firebaseSignOut,
     type User,
 } from "firebase/auth";
@@ -39,6 +40,7 @@ interface AuthContextType {
     registerWithEmail: (email: string, password: string) => Promise<void>;
     loginWithEmail: (email: string, password: string) => Promise<void>;
     sendVerificationEmail: () => Promise<void>;
+    resetPassword: (email: string) => Promise<void>;
     refreshUser: () => Promise<AuthUser | undefined>;
     signOut: () => Promise<void>;
     refreshPlan: () => Promise<void>;
@@ -229,6 +231,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await sendEmailVerification(auth.currentUser);
     }, []);
 
+    const resetPassword = useCallback(async (email: string) => {
+        if (!auth) throw new Error("Firebase not initialized");
+        await sendPasswordResetEmail(auth, email);
+    }, []);
+
     const refreshUser = useCallback(async () => {
         if (!auth || !auth.currentUser) return;
         console.log("[AUTH] Refreshing user... Current verified:", auth.currentUser.emailVerified);
@@ -284,6 +291,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         registerWithEmail,
         loginWithEmail,
         sendVerificationEmail,
+        resetPassword,
         refreshUser,
         signOut: signOutUser,
         refreshPlan,
@@ -295,7 +303,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         closeUpgradeModal
     }), [
         user, plan, config, usage, loading, firebaseConfigured,
-        signInWithGoogle, registerWithEmail, loginWithEmail, sendVerificationEmail, refreshUser, signOutUser, refreshPlan, getIdToken,
+        signInWithGoogle, registerWithEmail, loginWithEmail, sendVerificationEmail, resetPassword, refreshUser, signOutUser, refreshPlan, getIdToken,
         userStats, refreshStats, isUpgradeModalOpen, openUpgradeModal, closeUpgradeModal
     ]);
 
