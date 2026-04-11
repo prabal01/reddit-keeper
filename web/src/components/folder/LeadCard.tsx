@@ -1,9 +1,8 @@
 import React from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { ExternalLink, User, CheckCircle, EyeOff, ChevronRight } from 'lucide-react';
+import { ExternalLink, CheckCircle, EyeOff, MessageSquare, ArrowUpCircle, ChevronUp } from 'lucide-react';
 import { Badge } from '../common/Badge';
 import { UIButton } from '../common/UIButton';
-import { Caption } from '../common/Typography';
 import type { PersonLead } from '../../contexts/FolderContext';
 
 interface LeadCardProps {
@@ -13,11 +12,11 @@ interface LeadCardProps {
 
 const normalizeScore = (s: number) => (s <= 1 ? Math.round(s * 100) : Math.round(s));
 
-const INTENT_CONFIG: Record<string, { label: string; className: string }> = {
-    frustration:      { label: 'Frustration',      className: 'frustration' },
-    question:         { label: 'Question',          className: 'question' },
-    high_engagement:  { label: 'High Engagement',   className: 'high_engagement' },
-    alternative:      { label: 'Alternative',       className: 'alternative' },
+const INTENT_CONFIG: Record<string, { label: string; color: string }> = {
+    frustration:      { label: 'Frustration',      color: '#ef4444' },
+    question:         { label: 'Question',          color: '#3b82f6' },
+    high_engagement:  { label: 'High Engagement',   color: '#f59e0b' },
+    alternative:      { label: 'Seeking Alternative', color: '#8b5cf6' },
 };
 
 export const LeadCard: React.FC<LeadCardProps> = ({ person, onUpdateStatus }) => {
@@ -27,154 +26,198 @@ export const LeadCard: React.FC<LeadCardProps> = ({ person, onUpdateStatus }) =>
     const displayName = isAnonymous
         ? (person.threads[0]?.title?.substring(0, 60) || 'Reddit Thread')
         : `u/${person.author}`;
-    const visibleThreads = person.threads.slice(0, 3);
-    const hiddenCount = person.threads.length - visibleThreads.length;
+    const primaryThread = person.threads[0];
+    const additionalThreads = person.threads.slice(1, 4);
+    const hiddenCount = Math.max(0, person.threads.length - 4);
 
     const renderStatusBadge = () => {
         switch (person.status) {
             case 'new':
-                return <Badge variant="info">New</Badge>;
+                return <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/20">New</span>;
             case 'contacted':
-                return <Badge variant="success">Contacted</Badge>;
+                return <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">Contacted</span>;
             case 'ignored':
-                return <Badge variant="neutral">Ignored</Badge>;
+                return <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-neutral-500/15 text-neutral-400 border border-neutral-500/20">Ignored</span>;
             default:
                 return null;
         }
     };
 
     return (
-        <div className="lead-card group p-5 bg-(--bg-secondary)/40 border border-(--border-light) hover:border-(--bg-accent)/30 rounded-2xl transition-all shadow-sm">
-            <div className="lead-card-header flex justify-between items-start mb-4">
-                <div className="lead-author-group flex items-center gap-3">
-                    <div className="lead-avatar w-10 h-10 rounded-full bg-(--bg-accent)/10 flex items-center justify-center text-(--bg-accent) border border-(--bg-accent)/20">
-                        <User size={20} />
-                    </div>
-                    <div className="lead-author-info">
-                        <div className="flex items-center gap-2">
-                            {isAnonymous ? (
-                                <span className="font-bold text-(--text-primary) line-clamp-1 max-w-xs" title={displayName}>
-                                    {displayName}
-                                </span>
-                            ) : (
+        <div className="lead-card group bg-(--bg-secondary)/50 border border-(--border-light)/60 hover:border-[#FF4500]/25 rounded-sm transition-all overflow-hidden">
+            {/* Reddit-style top bar */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-(--bg-primary)/40 border-b border-(--border-light)/30 text-[11px]">
+                {person.subreddits.length > 0 && (
+                    <div className="flex items-center gap-1.5">
+                        {person.subreddits.map((s, i) => (
+                            <React.Fragment key={i}>
+                                {i > 0 && <span className="text-(--text-tertiary)/40">·</span>}
                                 <a
-                                    href={profileUrl!}
+                                    href={`https://reddit.com/r/${s}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="font-bold text-(--text-primary) hover:text-(--bg-accent) transition-colors"
-                                    title="Visit this person's Reddit profile"
+                                    className="font-bold text-(--text-secondary) hover:text-[#FF4500] hover:underline transition-colors"
                                 >
-                                    u/{person.author}
+                                    r/{s}
                                 </a>
-                            )}
-                            {score > 0 && (
-                                <Badge variant="neutral" className="text-[10px]! px-1.5! py-0!">
-                                    {score}% match
-                                </Badge>
-                            )}
-                        </div>
-                        {person.subreddits.length > 0 && (
-                            <div className="lead-subreddits flex flex-wrap gap-1 mt-1">
-                                {person.subreddits.map((s, i) => (
-                                    <Caption key={i} className="text-(--bg-accent) font-semibold opacity-80 hover:opacity-100 cursor-default">r/{s}</Caption>
-                                ))}
-                            </div>
-                        )}
+                            </React.Fragment>
+                        ))}
                     </div>
-                </div>
-                <div className="lead-meta-group">
+                )}
+                <span className="text-(--text-tertiary)/50">•</span>
+                <span className="text-(--text-tertiary)/70">Posted by{' '}</span>
+                {isAnonymous ? (
+                    <span className="text-(--text-tertiary)/70">[anonymous]</span>
+                ) : (
+                    <a
+                        href={profileUrl!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-(--text-tertiary)/70 hover:text-(--text-primary) hover:underline transition-colors"
+                    >
+                        u/{person.author}
+                    </a>
+                )}
+                {primaryThread?.time && (
+                    <>
+                        <span className="text-(--text-tertiary)/50">•</span>
+                        <span className="text-(--text-tertiary)/60">
+                            {formatDistanceToNow(new Date(primaryThread.time), { addSuffix: true })}
+                        </span>
+                    </>
+                )}
+                <div className="ml-auto flex items-center gap-2">
                     {renderStatusBadge()}
                 </div>
             </div>
 
-            <div className="lead-thread-list space-y-2 mb-4 bg-(--bg-primary)/30 rounded-xl p-3 border border-(--border-light)/50">
-                {visibleThreads.map((thread, i) => (
-                    <div key={i} className="lead-thread-item flex items-start gap-2 group/item">
-                        <ChevronRight size={14} className="mt-0.5 text-(--text-tertiary) group-hover/item:text-(--bg-accent) transition-colors" />
-                        <div className="lead-thread-content flex-1">
-                            <a
-                                href={thread.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-sm font-medium text-(--text-secondary) hover:text-(--text-primary) flex items-center gap-1.5 transition-colors line-clamp-1"
-                            >
-                                {thread.title || 'View thread'}
-                                <ExternalLink size={12} className="opacity-0 group-hover/item:opacity-100 transition-opacity" />
-                            </a>
-                            {thread.time && (
-                                <Caption className="text-xs opacity-60">
-                                    {formatDistanceToNow(new Date(thread.time), { addSuffix: true })}
-                                </Caption>
+            <div className="flex">
+                {/* Vote column */}
+                <div className="flex flex-col items-center gap-0.5 px-2 py-3 bg-(--bg-primary)/20 min-w-[40px]">
+                    <ChevronUp size={20} className="text-(--text-tertiary)/40" />
+                    <span className="text-xs font-bold text-[#FF4500]">{score}%</span>
+                    <span className="text-[9px] text-(--text-tertiary)/50 uppercase tracking-wider">match</span>
+                </div>
+
+                {/* Main content */}
+                <div className="flex-1 py-3 px-3">
+                    {/* Primary thread title */}
+                    {primaryThread && (
+                        <a
+                            href={primaryThread.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block text-base font-semibold text-(--text-primary) hover:text-[#FF4500] transition-colors mb-1 leading-snug"
+                        >
+                            {primaryThread.title || 'View thread'}
+                        </a>
+                    )}
+
+                    {/* Intent markers as flair */}
+                    {person.intentMarkers.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mb-2.5">
+                            {person.intentMarkers.map((marker, i) => {
+                                const config = INTENT_CONFIG[marker];
+                                const color = config?.color || '#FF4500';
+                                return (
+                                    <span
+                                        key={i}
+                                        className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                                        style={{
+                                            backgroundColor: `${color}15`,
+                                            color: color,
+                                            border: `1px solid ${color}25`,
+                                        }}
+                                    >
+                                        {config?.label || marker}
+                                    </span>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* Additional threads as "related posts" */}
+                    {additionalThreads.length > 0 && (
+                        <div className="mt-2 mb-2 pl-3 border-l-2 border-(--border-light)/40 space-y-1.5">
+                            {additionalThreads.map((thread, i) => (
+                                <div key={i} className="group/thread flex items-baseline gap-1.5">
+                                    <MessageSquare size={11} className="text-(--text-tertiary)/40 mt-0.5 shrink-0" />
+                                    <a
+                                        href={thread.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-[13px] text-(--text-secondary)/80 hover:text-[#FF4500] transition-colors line-clamp-1"
+                                    >
+                                        {thread.title || 'View thread'}
+                                    </a>
+                                    {thread.time && (
+                                        <span className="text-[10px] text-(--text-tertiary)/40 whitespace-nowrap shrink-0">
+                                            {formatDistanceToNow(new Date(thread.time), { addSuffix: true })}
+                                        </span>
+                                    )}
+                                </div>
+                            ))}
+                            {hiddenCount > 0 && (
+                                <span className="text-[11px] text-(--text-tertiary)/50 font-medium">
+                                    +{hiddenCount} more thread{hiddenCount > 1 ? 's' : ''}
+                                </span>
                             )}
                         </div>
+                    )}
+
+                    {/* Reddit-style action bar */}
+                    <div className="flex items-center gap-1 mt-3 -ml-1.5">
+                        <span className="flex items-center gap-1 text-[11px] font-bold text-(--text-tertiary)/50 px-1.5 py-1 rounded hover:bg-(--bg-primary)/50 cursor-default uppercase tracking-wide">
+                            <MessageSquare size={13} />
+                            {person.threads.length} thread{person.threads.length !== 1 ? 's' : ''}
+                        </span>
+
+                        {profileUrl && (
+                            <a
+                                href={profileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-[11px] font-bold text-(--text-tertiary)/50 px-1.5 py-1 rounded hover:bg-(--bg-primary)/50 hover:text-(--text-secondary) transition-colors uppercase tracking-wide"
+                            >
+                                <ExternalLink size={13} />
+                                Profile
+                            </a>
+                        )}
+
+                        <div className="flex-1" />
+
+                        {person.status === 'new' && (
+                            <>
+                                <button
+                                    onClick={() => onUpdateStatus(person.leadIds, 'contacted')}
+                                    className="flex items-center gap-1 text-[11px] font-bold text-emerald-500/70 px-2 py-1 rounded hover:bg-emerald-500/10 transition-colors uppercase tracking-wide cursor-pointer"
+                                    title="Mark that you've contacted this person"
+                                >
+                                    <CheckCircle size={13} />
+                                    Contacted
+                                </button>
+                                <button
+                                    onClick={() => onUpdateStatus(person.leadIds, 'ignored')}
+                                    className="flex items-center gap-1 text-[11px] font-bold text-(--text-tertiary)/40 px-2 py-1 rounded hover:bg-red-500/10 hover:text-red-400 transition-colors uppercase tracking-wide cursor-pointer"
+                                    title="Hide this person from your list"
+                                >
+                                    <EyeOff size={13} />
+                                    Skip
+                                </button>
+                            </>
+                        )}
+                        {(person.status === 'contacted' || person.status === 'ignored') && (
+                            <button
+                                onClick={() => onUpdateStatus(person.leadIds, 'new')}
+                                className="flex items-center gap-1 text-[11px] font-bold text-(--text-tertiary)/50 px-2 py-1 rounded hover:bg-(--bg-primary)/50 hover:text-(--text-secondary) transition-colors uppercase tracking-wide cursor-pointer"
+                                title="Bring this person back to your prospects list"
+                            >
+                                <ArrowUpCircle size={13} />
+                                Put Back
+                            </button>
+                        )}
                     </div>
-                ))}
-                {hiddenCount > 0 && (
-                    <Caption className="px-5 text-(--text-tertiary) font-bold">+{hiddenCount} more thread{hiddenCount > 1 ? 's' : ''}</Caption>
-                )}
-            </div>
-
-            {person.intentMarkers.length > 0 && (
-                <div className="lead-intent-pills flex flex-wrap gap-1.5 mb-5">
-                    {person.intentMarkers.map((marker, i) => {
-                        const config = INTENT_CONFIG[marker];
-                        return (
-                            <Badge key={i} variant="neutral" className="bg-(--bg-accent)/5 border-(--bg-accent)/10 text-(--bg-accent)/80 text-[10px]! py-0.5! px-2!">
-                                {config?.label || marker}
-                            </Badge>
-                        );
-                    })}
                 </div>
-            )}
-
-            <div className="lead-actions flex justify-between items-center pt-4 border-t border-(--border-light)/30">
-                <div className="lead-action-btns flex gap-2 flex-wrap">
-                    {person.status === 'new' && (
-                        <>
-                            <UIButton
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => onUpdateStatus(person.leadIds, 'contacted')}
-                                icon={<CheckCircle size={14} />}
-                                className="bg-emerald-500/5 hover:bg-emerald-500/10 border-emerald-500/20 hover:border-emerald-500/40 text-emerald-500!"
-                                title="Mark that you've contacted this person"
-                            >
-                                Mark Contacted
-                            </UIButton>
-                            <UIButton
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => onUpdateStatus(person.leadIds, 'ignored')}
-                                icon={<EyeOff size={14} />}
-                                className="hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-500!"
-                                title="Hide this person from your list"
-                            >
-                                Skip for Now
-                            </UIButton>
-                        </>
-                    )}
-                    {(person.status === 'contacted' || person.status === 'ignored') && (
-                        <UIButton
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => onUpdateStatus(person.leadIds, 'new')}
-                            title="Bring this person back to your prospects list"
-                        >
-                            Put Back
-                        </UIButton>
-                    )}
-                </div>
-                {profileUrl && (
-                    <UIButton
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => window.open(profileUrl, '_blank')}
-                        icon={<ExternalLink size={14} />}
-                        title="Visit their Reddit profile"
-                    >
-                        Visit Profile
-                    </UIButton>
-                )}
             </div>
         </div>
     );
