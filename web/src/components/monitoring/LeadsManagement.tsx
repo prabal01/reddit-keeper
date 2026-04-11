@@ -190,7 +190,7 @@ export const LeadsManagement: React.FC<LeadsManagementProps> = ({ folderId }) =>
 
     const handleSelectLead = (leadId: string) => {
         const next = new Set(selectedLeads);
-        next.has(leadId) ? next.delete(leadId) : next.add(leadId);
+        if (next.has(leadId)) { next.delete(leadId); } else { next.add(leadId); }
         setSelectedLeads(next);
     };
 

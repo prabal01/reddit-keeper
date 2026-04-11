@@ -4,19 +4,14 @@ import {
     Settings as SettingsIcon,
     ExternalLink,
     CheckCircle2,
-    Clock,
     Sparkles,
     Loader2,
     RefreshCw,
-    Pause,
-    Play,
-    Eye,
     Zap,
     TrendingUp
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { MonitorSettings } from './MonitorSettings';
-import { MetricCard } from '../common/MetricCard';
 
 interface Opportunity {
     id: string;
@@ -228,7 +223,7 @@ export const MonitoringView: React.FC = () => {
                                             className="p-3 cursor-pointer"
                                             onClick={() => setExpandedCards(prev => {
                                                 const next = new Set(prev);
-                                                next.has(opp.id) ? next.delete(opp.id) : next.add(opp.id);
+                                                if (next.has(opp.id)) { next.delete(opp.id); } else { next.add(opp.id); }
                                                 return next;
                                             })}
                                         >

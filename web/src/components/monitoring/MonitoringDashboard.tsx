@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useFolders } from '../../contexts/FolderContext';
 import { MonitorCard } from './MonitorCard';
 import { Radar, Sparkles, Plus, Link as LinkIcon, Search, Globe, Zap, X, CheckCircle2, MessageSquare, Loader2, AlertCircle } from 'lucide-react';
-import { H2, Subtitle, Metadata } from '../common/Typography';
+import { Subtitle } from '../common/Typography';
 import { UIButton } from '../common/UIButton';
 import { PageHeader } from '../common/PageHeader';
 import { Badge } from '../common/Badge';

@@ -20,7 +20,6 @@ export function PricingPage() {
     const isTrial = plan === "free" || plan === "trial";
     const isStarter = plan === "starter";
     const isPro = plan === "pro" || plan === "professional";
-    const isEnterprise = plan === "enterprise";
     const isPastDue = plan === "past_due";
     const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
 
