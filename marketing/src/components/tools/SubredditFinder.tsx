@@ -99,6 +99,10 @@ export function SubredditFinder() {
                 },
             ]}
             apiEndpoint="/api/tools/find-subreddits"
+            submitLabel="Find Subreddits"
+            loadingLabel="Searching..."
+            ctaHeading="Want to monitor these subreddits?"
+            ctaDescription="OpinionDeck tracks multiple subreddits and surfaces high-value threads automatically."
             renderResult={(data) => <ResultView data={data} />}
         >
             <ToolSEO

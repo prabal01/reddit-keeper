@@ -97,19 +97,20 @@ Return short, concrete search terms (1-3 words each) that would appear in Reddit
     );
 
     // Step 3: Group by subreddit and rank
-    const subMap: Record<string, { count: number; samplePost: string; totalScore: number }> = {};
+    const subMap: Record<string, { count: number; samplePost: string; totalScore: number; bestScore: number }> = {};
 
     for (const results of allResults) {
         for (const post of results) {
             const sub = post.subreddit;
             if (!sub) continue;
             if (!subMap[sub]) {
-                subMap[sub] = { count: 0, samplePost: post.title, totalScore: 0 };
+                subMap[sub] = { count: 0, samplePost: post.title, totalScore: 0, bestScore: 0 };
             }
             subMap[sub].count++;
             subMap[sub].totalScore += (post.score || 0);
             // Keep the highest-scoring post as sample
-            if ((post.score || 0) > subMap[sub].totalScore / subMap[sub].count) {
+            if ((post.score || 0) > subMap[sub].bestScore) {
+                subMap[sub].bestScore = post.score || 0;
                 subMap[sub].samplePost = post.title;
             }
         }

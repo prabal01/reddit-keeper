@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 interface Step {
     title: string;
@@ -41,6 +41,11 @@ const paragraph = {
 };
 
 export function ToolSEO({ heading, introParagraphs, steps, useCases, faqs, relatedTools, closingParagraphs }: ToolSEOProps) {
+    const [fromDashboard, setFromDashboard] = useState(false);
+    useEffect(() => {
+        if (new URLSearchParams(window.location.search).get('ref') === 'dashboard') setFromDashboard(true);
+    }, []);
+
     // Inject FAQ JSON-LD structured data
     useEffect(() => {
         if (faqs.length === 0) return;
@@ -140,8 +145,8 @@ export function ToolSEO({ heading, introParagraphs, steps, useCases, faqs, relat
                 ))}
             </div>
 
-            {/* Closing SEO paragraphs */}
-            {closingParagraphs && closingParagraphs.length > 0 && (
+            {/* Closing SEO paragraphs (hidden for dashboard users) */}
+            {!fromDashboard && closingParagraphs && closingParagraphs.length > 0 && (
                 <div style={{ marginTop: 28 }}>
                     {closingParagraphs.map((p, i) => (
                         <p key={i} style={paragraph}>{p}</p>

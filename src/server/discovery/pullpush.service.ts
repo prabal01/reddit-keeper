@@ -68,7 +68,8 @@ export class PullPushService {
                 source: 'pullpush' as const,
                 num_comments: sub.num_comments || 0,
                 created_utc: sub.created_utc || Math.floor(Date.now() / 1000),
-                score: (sub.score || 0) * 10
+                score: (sub.score || 0) * 10,
+                selftext: sub.selftext || '',
             }));
 
             logger.info({ service: 'pullpush', action: 'SEARCH_SUBMISSIONS_RESULT', count: results.length }, `Found ${results.length} submissions`);

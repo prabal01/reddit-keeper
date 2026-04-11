@@ -1,5 +1,5 @@
 import { useState, useEffect, type ReactNode, type FormEvent } from 'react';
-import { Loader2, AlertCircle, ArrowRight } from 'lucide-react';
+import { Loader2, AlertCircle, ArrowRight, SearchX } from 'lucide-react';
 
 interface Field {
     name: string;
@@ -9,6 +9,12 @@ interface Field {
     required?: boolean;
 }
 
+interface NextTool {
+    slug: string;
+    label: string;
+    paramMap?: Record<string, string>; // maps current field names → target tool's param names
+}
+
 interface ToolShellProps {
     title: string;
     description: string;
@@ -16,14 +22,21 @@ interface ToolShellProps {
     apiEndpoint: string;
     renderResult: (data: any) => ReactNode;
     children?: ReactNode;
+    extraBody?: Record<string, any>;
+    submitLabel?: string;
+    loadingLabel?: string;
+    ctaHeading?: string;
+    ctaDescription?: string;
+    nextTools?: NextTool[];
 }
 
 const dashboardUrl = (typeof window !== 'undefined' && (window as any).__PUBLIC_DASHBOARD_URL) || '/app';
 
-export function ToolShell({ title, description, fields, apiEndpoint, renderResult, children }: ToolShellProps) {
+export function ToolShell({ title, description, fields, apiEndpoint, renderResult, children, extraBody, submitLabel = 'Analyze', loadingLabel = 'Analyzing...', ctaHeading, ctaDescription, nextTools }: ToolShellProps) {
     const [values, setValues] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [errorType, setErrorType] = useState<'error' | 'empty'>('error');
     const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
     const [result, setResult] = useState<any>(null);
     const [fromDashboard, setFromDashboard] = useState(false);
@@ -55,6 +68,7 @@ export function ToolShell({ title, description, fields, apiEndpoint, renderResul
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         setError(null);
+        setErrorType('error');
         setResult(null);
         setLoading(true);
 
@@ -70,7 +84,7 @@ export function ToolShell({ title, description, fields, apiEndpoint, renderResul
             const resp = await fetch(apiEndpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(values),
+                body: JSON.stringify({ ...values, ...extraBody }),
             });
 
             if (resp.status === 429) {
@@ -82,6 +96,7 @@ export function ToolShell({ title, description, fields, apiEndpoint, renderResul
 
             if (!resp.ok) {
                 const data = await resp.json().catch(() => ({}));
+                if (resp.status === 404) setErrorType('empty');
                 setError(data.error || 'Something went wrong. Please try again.');
                 return;
             }
@@ -149,15 +164,30 @@ export function ToolShell({ title, description, fields, apiEndpoint, renderResul
                         display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap',
                         transition: 'all 0.2s', opacity: (loading || rateLimitCountdown > 0) ? 0.6 : 1,
                     }}>
-                        {loading ? <><Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> Analyzing...</>
+                        {loading ? <><Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> {loadingLabel}</>
                             : rateLimitCountdown > 0 ? `Wait ${rateLimitCountdown}s`
-                            : 'Analyze'}
+                            : submitLabel}
                     </button>
                 </div>
             </form>
 
-            {/* Error */}
-            {error && (
+            {/* Error / Empty State */}
+            {error && errorType === 'empty' && (
+                <div style={{
+                    textAlign: 'center', padding: '32px 24px',
+                    background: 'var(--bg-secondary)', border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius-xl)', marginBottom: 24
+                }}>
+                    <SearchX size={32} color="var(--text-tertiary)" style={{ marginBottom: 12 }} />
+                    <p style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 6px' }}>
+                        No results found
+                    </p>
+                    <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
+                        {error}
+                    </p>
+                </div>
+            )}
+            {error && errorType === 'error' && (
                 <div style={{
                     display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px',
                     background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)',
@@ -172,6 +202,39 @@ export function ToolShell({ title, description, fields, apiEndpoint, renderResul
             {result && (
                 <div style={{ marginBottom: 32 }}>
                     {renderResult(result)}
+                </div>
+            )}
+
+            {/* Cross-tool action bar */}
+            {result && nextTools && nextTools.length > 0 && (
+                <div style={{
+                    display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 24,
+                    padding: '16px 20px', background: 'var(--bg-secondary)',
+                    border: '1px solid var(--border)', borderRadius: 'var(--radius-xl)'
+                }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', alignSelf: 'center', marginRight: 4 }}>
+                        Next:
+                    </span>
+                    {nextTools.map((tool) => {
+                        const params = new URLSearchParams();
+                        if (tool.paramMap) {
+                            for (const [from, to] of Object.entries(tool.paramMap)) {
+                                if (values[from]) params.set(to, values[from]);
+                            }
+                        }
+                        const href = `/free-tools/${tool.slug}/${params.toString() ? `?${params}` : ''}`;
+                        return (
+                            <a key={tool.slug} href={href} style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 6,
+                                padding: '8px 16px', fontSize: '0.85rem', fontWeight: 500,
+                                background: 'var(--bg-tertiary)', color: 'var(--text-primary)',
+                                border: '1px solid var(--border)', borderRadius: 'var(--radius-full)',
+                                textDecoration: 'none', transition: 'background 0.15s'
+                            }}>
+                                {tool.label} <ArrowRight size={13} />
+                            </a>
+                        );
+                    })}
                 </div>
             )}
 
@@ -225,10 +288,10 @@ export function ToolShell({ title, description, fields, apiEndpoint, renderResul
                     borderRadius: 'var(--radius-xl)', marginTop: 24
                 }}>
                     <p style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px' }}>
-                        Want deeper insights?
+                        {ctaHeading || 'Want deeper insights?'}
                     </p>
                     <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: '0 0 20px' }}>
-                        OpinionDeck monitors Reddit 24/7 and finds opportunities automatically.
+                        {ctaDescription || 'OpinionDeck monitors Reddit 24/7 and finds opportunities automatically.'}
                     </p>
                     <a href={dashboardUrl} style={{
                         display: 'inline-flex', alignItems: 'center', gap: 8,

@@ -7,7 +7,9 @@ import { logger } from '../../utils/logger.js';
 const pullPush = new PullPushService();
 
 const CACHE_TTL = 86400; // 24h
-const FREE_LIMIT = 3;
+const FREE_LIMIT = 5;
+const POSTS_TO_ANALYZE = 25;
+const BODY_EXCERPT_LENGTH = 200;
 
 const painPointSchema: any = {
     type: SchemaType.OBJECT,
@@ -79,19 +81,49 @@ export async function getPainPoints(
     }
 
     // Fetch relevant posts
-    const submissions = await pullPush.searchSubmissions(keyword, subreddit, 50);
+    const submissions = await pullPush.searchSubmissions(keyword, subreddit, 100);
     if (submissions.length === 0) {
         throw new Error('NO_DATA');
     }
 
-    // Pick top posts by score for LLM analysis
-    const topPosts = submissions
-        .sort((a, b) => (b.score || 0) - (a.score || 0))
-        .slice(0, 15);
+    // Filter out low-engagement noise (score <= 10 in PullPush = real score <= 1)
+    const filtered = submissions.filter(p => (p.score || 0) > 10);
 
-    const postsText = topPosts
-        .map((p, i) => `[${i}] "${p.title}" (score: ${Math.round((p.score || 0) / 10)})`)
-        .join('\n');
+    // Mix selection: top by score + most recent for diversity
+    const byScore = [...filtered].sort((a, b) => (b.score || 0) - (a.score || 0));
+    const byRecent = [...filtered].sort((a, b) => (b.created_utc || 0) - (a.created_utc || 0));
+
+    const selectedIds = new Set<string>();
+    const selected: typeof submissions = [];
+
+    // Top 15 by score
+    for (const post of byScore) {
+        if (selected.length >= 15) break;
+        if (!selectedIds.has(post.id)) {
+            selectedIds.add(post.id);
+            selected.push(post);
+        }
+    }
+    // Top 10 most recent (deduplicated)
+    for (const post of byRecent) {
+        if (selected.length >= POSTS_TO_ANALYZE) break;
+        if (!selectedIds.has(post.id)) {
+            selectedIds.add(post.id);
+            selected.push(post);
+        }
+    }
+
+    const postsText = selected
+        .map((p, i) => {
+            const score = Math.round((p.score || 0) / 10);
+            let text = `[${i}] "${p.title}" (score: ${score})`;
+            if (p.selftext) {
+                const excerpt = p.selftext.slice(0, BODY_EXCERPT_LENGTH).replace(/\n/g, ' ').trim();
+                if (excerpt) text += `\nBody: ${excerpt}`;
+            }
+            return text;
+        })
+        .join('\n\n');
 
     const prompt = `Analyze these Reddit posts from r/${subreddit} about "${keyword}" and extract specific pain points that users are experiencing.
 
@@ -100,7 +132,7 @@ ${postsText}
 
 For each pain point found:
 - title: A short, clear description of the pain point (1 sentence)
-- quote: The most relevant phrase or sentence from the post title that illustrates this pain point
+- quote: The most relevant phrase or sentence from the post that illustrates this pain point
 - severity: "high" if many people share this frustration or it's a serious problem, "medium" if it's a common annoyance, "low" if it's minor
 - postIndex: The index number of the post this came from
 
@@ -119,7 +151,7 @@ Find as many distinct pain points as you can (up to 15). Focus on real user frus
     const painPoints: PainPoint[] = (parsed.painPoints || []).map(pp => ({
         title: pp.title,
         quote: pp.quote,
-        postUrl: topPosts[pp.postIndex]?.url || '',
+        postUrl: selected[pp.postIndex]?.url || '',
         severity: (['high', 'medium', 'low'].includes(pp.severity) ? pp.severity : 'medium') as 'high' | 'medium' | 'low',
     }));
 

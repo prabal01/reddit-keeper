@@ -11,6 +11,7 @@ export interface DiscoveryResult {
     isCached?: boolean;
     ups?: number;
     intentMarkers?: string[];
+    selftext?: string;
 }
 
 export interface DiscoveryPlan {

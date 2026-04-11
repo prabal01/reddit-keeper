@@ -5,7 +5,7 @@ import { logger } from '../../utils/logger.js';
 import type { Comment } from '../../../reddit/types.js';
 
 const CACHE_TTL = 86400; // 24h
-const FREE_COMMENT_LIMIT = 3;
+const FREE_COMMENT_LIMIT = 5;
 
 interface ThreadExplorerResult {
     post: {
@@ -20,7 +20,7 @@ interface ThreadExplorerResult {
     };
     stats: {
         totalComments: number;
-        avgCommentScore: number;
+        medianScore: number;
         topCommenter: string;
         uniqueCommenters: number;
     };
@@ -81,16 +81,24 @@ export async function getThreadExplorer(
 
     // Stats
     const authorCounts: Record<string, number> = {};
-    let totalScore = 0;
+    const scores: number[] = [];
     const depthCounts: Record<number, number> = {};
 
     for (const c of allComments) {
         if (c.author !== '[deleted]' && c.author !== 'AutoModerator') {
             authorCounts[c.author] = (authorCounts[c.author] || 0) + 1;
         }
-        totalScore += c.score;
+        scores.push(c.score);
         depthCounts[c.depth] = (depthCounts[c.depth] || 0) + 1;
     }
+
+    // Use median score of positive-score comments only (excludes buried replies and downvoted spam)
+    const positiveScores = scores.filter(s => s > 0).sort((a, b) => a - b);
+    const medianScore = positiveScores.length > 0
+        ? positiveScores.length % 2 === 0
+            ? Math.round((positiveScores[positiveScores.length / 2 - 1] + positiveScores[positiveScores.length / 2]) / 2)
+            : positiveScores[Math.floor(positiveScores.length / 2)]
+        : 0;
 
     const topCommenter = Object.entries(authorCounts)
         .sort(([, a], [, b]) => b - a)[0]?.[0] || 'unknown';
@@ -127,7 +135,7 @@ export async function getThreadExplorer(
         },
         stats: {
             totalComments: allComments.length,
-            avgCommentScore: allComments.length > 0 ? Math.round(totalScore / allComments.length) : 0,
+            medianScore,
             topCommenter,
             uniqueCommenters: Object.keys(authorCounts).length,
         },

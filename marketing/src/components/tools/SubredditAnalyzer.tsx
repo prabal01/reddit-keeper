@@ -1,57 +1,113 @@
 import { ToolShell } from './ToolShell';
 import { ToolSEO } from './ToolSEO';
-import { BarChart3, Users, MessageSquare, TrendingUp } from 'lucide-react';
+import { MessageSquare, TrendingUp, Activity, Zap } from 'lucide-react';
 
-function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | number }) {
-    return (
-        <div style={{
-            background: 'var(--bg-secondary)', border: '1px solid var(--border)',
-            borderRadius: 'var(--radius-md)', padding: '20px 18px',
-            display: 'flex', alignItems: 'center', gap: 14
-        }}>
-            <div style={{
-                width: 40, height: 40, borderRadius: 'var(--radius-sm)',
-                background: 'rgba(255, 69, 0, 0.08)', display: 'flex',
-                alignItems: 'center', justifyContent: 'center', flexShrink: 0
-            }}>{icon}</div>
-            <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 500 }}>{label}</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)' }}>{value}</div>
-            </div>
-        </div>
-    );
+const TIER_LABELS: Record<string, { label: string; color: string }> = {
+    '0-5': { label: 'Low', color: 'var(--text-tertiary)' },
+    '6-25': { label: 'Moderate', color: '#fbbf24' },
+    '26-100': { label: 'Strong', color: '#86efac' },
+    '101-500': { label: 'Hot', color: '#22c55e' },
+    '500+': { label: 'Viral', color: '#16a34a' },
+};
+
+function getEngagementLevel(avg: number): { label: string; color: string } {
+    if (avg >= 100) return { label: 'Very High', color: '#16a34a' };
+    if (avg >= 50) return { label: 'High', color: '#22c55e' };
+    if (avg >= 15) return { label: 'Moderate', color: '#fbbf24' };
+    if (avg >= 5) return { label: 'Low', color: '#fb923c' };
+    return { label: 'Very Low', color: '#ef4444' };
+}
+
+function getActivityLevel(ppd: number): { label: string; description: string } {
+    if (ppd >= 20) return { label: 'Very Active', description: 'Lots of competition — quality matters' };
+    if (ppd >= 5) return { label: 'Active', description: 'Healthy posting pace' };
+    if (ppd >= 1) return { label: 'Moderate', description: 'Room to stand out' };
+    return { label: 'Quiet', description: 'Less competition, smaller audience' };
+}
+
+function getDiscussionLevel(avg: number): { label: string; description: string } {
+    if (avg >= 50) return { label: 'Very Lively', description: 'Deep discussions happen here' };
+    if (avg >= 20) return { label: 'Lively', description: 'Posts spark good conversations' };
+    if (avg >= 8) return { label: 'Moderate', description: 'Some discussion on most posts' };
+    return { label: 'Quiet', description: 'People read more than they reply' };
 }
 
 function ResultView({ data }: { data: any }) {
     const maxAuthorCount = data.topAuthors?.[0]?.count || 1;
+    const totalDist = data.scoreDistribution?.reduce((s: number, d: any) => s + d.count, 0) || 1;
     const maxDistCount = Math.max(...(data.scoreDistribution?.map((d: any) => d.count) || [1]));
+
+    const engagement = getEngagementLevel(data.avgScore);
+    const activity = getActivityLevel(data.postsPerDay);
+    const discussion = getDiscussionLevel(data.avgComments);
+
+    // Find the dominant tier for the insight
+    const strongPlus = data.scoreDistribution
+        ?.filter((d: any) => !['0-5', '6-25'].includes(d.range))
+        .reduce((s: number, d: any) => s + d.count, 0) || 0;
+    const strongPct = Math.round((strongPlus / totalDist) * 100);
 
     return (
         <div>
-            {/* Stats Grid */}
+            {/* Community Snapshot — the key takeaway */}
             <div style={{
-                display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                gap: 12, marginBottom: 24
+                background: 'var(--bg-secondary)', border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-xl)', padding: '24px 24px 20px', marginBottom: 20,
             }}>
-                <StatCard
-                    icon={<TrendingUp size={18} color="var(--bg-accent)" />}
-                    label="Average Score" value={data.avgScore}
-                />
-                <StatCard
-                    icon={<MessageSquare size={18} color="var(--bg-accent)" />}
-                    label="Average Comments" value={data.avgComments}
-                />
-                <StatCard
-                    icon={<BarChart3 size={18} color="var(--bg-accent)" />}
-                    label="Posts per Day" value={data.postsPerDay}
-                />
-                <StatCard
-                    icon={<Users size={18} color="var(--bg-accent)" />}
-                    label="Sample Size" value={`${data.sampleSize} posts`}
-                />
+                <div style={{
+                    fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)',
+                    textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 16,
+                }}>Community Snapshot</div>
+
+                <div style={{
+                    display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                    gap: 20,
+                }}>
+                    {/* Engagement */}
+                    <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                            <TrendingUp size={15} color={engagement.color} />
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Engagement</span>
+                        </div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: engagement.color }}>
+                            {engagement.label}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: 2 }}>
+                            ~{data.avgScore} upvotes per post
+                        </div>
+                    </div>
+
+                    {/* Activity */}
+                    <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                            <Activity size={15} color="var(--text-secondary)" />
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Activity</span>
+                        </div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                            {activity.label}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: 2 }}>
+                            {data.postsPerDay} posts/day — {activity.description.toLowerCase()}
+                        </div>
+                    </div>
+
+                    {/* Discussion */}
+                    <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                            <MessageSquare size={15} color="var(--text-secondary)" />
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Discussion</span>
+                        </div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                            {discussion.label}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: 2 }}>
+                            ~{data.avgComments} comments per post
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
                 {/* Top Authors */}
                 <div style={{
                     background: 'var(--bg-secondary)', border: '1px solid var(--border)',
@@ -84,36 +140,58 @@ function ResultView({ data }: { data: any }) {
                     ))}
                 </div>
 
-                {/* Score Distribution */}
+                {/* Post Performance */}
                 <div style={{
                     background: 'var(--bg-secondary)', border: '1px solid var(--border)',
                     borderRadius: 'var(--radius-xl)', padding: 20
                 }}>
-                    <h3 style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 16px' }}>
-                        Score Distribution
+                    <h3 style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 4px' }}>
+                        Post Performance
                     </h3>
-                    {data.scoreDistribution?.map((d: any, i: number) => (
-                        <div key={i} style={{ marginBottom: 10 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                                <span style={{ fontSize: '0.8rem', color: 'var(--text-primary)', fontWeight: 500 }}>
-                                    {d.range} points
-                                </span>
-                                <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
-                                    {d.count} posts
-                                </span>
-                            </div>
-                            <div style={{
-                                height: 6, borderRadius: 3, background: 'var(--bg-tertiary)', overflow: 'hidden'
-                            }}>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', margin: '0 0 16px', lineHeight: 1.4 }}>
+                        {strongPct > 0
+                            ? `${strongPct}% of posts break out with strong engagement`
+                            : 'Most posts stay in the low-to-moderate range'}
+                    </p>
+                    {data.scoreDistribution?.map((d: any, i: number) => {
+                        const tier = TIER_LABELS[d.range] || { label: d.range, color: 'var(--text-tertiary)' };
+                        const pct = Math.round((d.count / totalDist) * 100);
+                        return (
+                            <div key={i} style={{ marginBottom: 10 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        {tier.label === 'Hot' || tier.label === 'Viral' ? (
+                                            <Zap size={12} color={tier.color} />
+                                        ) : null}
+                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                                            {tier.label}
+                                        </span>
+                                        <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>
+                                            {d.range} upvotes
+                                        </span>
+                                    </div>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
+                                        {pct}%
+                                    </span>
+                                </div>
                                 <div style={{
-                                    height: '100%', borderRadius: 3, background: '#22c55e',
-                                    width: `${(d.count / maxDistCount) * 100}%`,
-                                    transition: 'width 0.5s ease'
-                                }} />
+                                    height: 6, borderRadius: 3, background: 'var(--bg-tertiary)', overflow: 'hidden'
+                                }}>
+                                    <div style={{
+                                        height: '100%', borderRadius: 3, background: tier.color,
+                                        width: `${(d.count / maxDistCount) * 100}%`,
+                                        transition: 'width 0.5s ease'
+                                    }} />
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
+            </div>
+
+            {/* Footnote */}
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', marginTop: 12, textAlign: 'right' }}>
+                Based on {data.sampleSize} posts analyzed
             </div>
         </div>
     );
@@ -128,6 +206,13 @@ export function SubredditAnalyzer() {
                 { name: 'subreddit', label: 'Subreddit', placeholder: 'e.g. saas', required: true }
             ]}
             apiEndpoint="/api/tools/subreddit-stats"
+            ctaHeading="Track this subreddit automatically?"
+            ctaDescription="OpinionDeck monitors subreddits 24/7 and alerts you to new opportunities."
+            nextTools={[
+                { slug: 'best-time-to-post', label: 'Find best time to post here', paramMap: { subreddit: 'subreddit' } },
+                { slug: 'subreddit-comparison', label: 'Compare with another', paramMap: { subreddit: 'sub1' } },
+                { slug: 'pain-point-finder', label: 'Find pain points', paramMap: { subreddit: 'subreddit' } },
+            ]}
             renderResult={(data) => <ResultView data={data} />}
         >
             <ToolSEO
