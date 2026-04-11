@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { MonitoringService } from './service.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { expensiveOpLimiter } from '../middleware/rateLimiter.js';
 import { monitoringScraperQueue, opportunityMatcherQueue } from './worker.js';
 import { logger } from '../utils/logger.js';
 
@@ -261,7 +262,7 @@ router.get('/opportunities/export/csv', authMiddleware, async (req: Request, res
 
 // ── Manual Trigger ────────────────────────────────────────────────
 
-router.post('/sync', authMiddleware, async (req: Request, res: Response) => {
+router.post('/sync', authMiddleware, expensiveOpLimiter, async (req: Request, res: Response) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
 
     try {
@@ -275,7 +276,7 @@ router.post('/sync', authMiddleware, async (req: Request, res: Response) => {
     }
 });
 
-router.post('/match', authMiddleware, async (req: Request, res: Response) => {
+router.post('/match', authMiddleware, expensiveOpLimiter, async (req: Request, res: Response) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
     const { monitorId = 'default' } = req.body;
 
@@ -302,7 +303,7 @@ router.post('/match', authMiddleware, async (req: Request, res: Response) => {
 
 // ── Subreddit Suggestions ──────────────────────────────────────────
 
-router.post('/suggestions', authMiddleware, async (req: Request, res: Response) => {
+router.post('/suggestions', authMiddleware, expensiveOpLimiter, async (req: Request, res: Response) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
     let { context } = req.body;
 

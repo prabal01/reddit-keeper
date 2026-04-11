@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth.js';
 import { usageGuard } from '../middleware/usageGuard.js';
+import { expensiveOpLimiter } from '../middleware/rateLimiter.js';
 import { DiscoveryOrchestrator } from './orchestrator.js';
 import { PullPushService } from './pullpush.service.js';
 import { ArcticShiftService } from './arctic-shift.service.js';
@@ -64,7 +65,7 @@ async function getProposeIntelligence(query: string) {
     };
 }
 
-router.post('/propose', authMiddleware, async (req: Request, res: Response) => {
+router.post('/propose', authMiddleware, expensiveOpLimiter, async (req: Request, res: Response) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
     const { query } = req.body;
     if (!query) return res.status(400).json({ error: 'Query is required' });
@@ -78,7 +79,7 @@ router.post('/propose', authMiddleware, async (req: Request, res: Response) => {
     }
 });
 
-router.post('/start', authMiddleware, usageGuard('DISCOVERY'), async (req: Request, res: Response) => {
+router.post('/start', authMiddleware, expensiveOpLimiter, usageGuard('DISCOVERY'), async (req: Request, res: Response) => {
     if (!req.user) {
         return res.status(401).json({ error: 'Unauthorized' });
     }
