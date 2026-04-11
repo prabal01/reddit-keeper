@@ -1,23 +1,51 @@
 import { ToolShell } from './ToolShell';
 import { ToolSEO } from './ToolSEO';
-import { User, BarChart3, MessageSquare, FileText } from 'lucide-react';
+import { Activity, FileText, MessageSquare, BarChart3, TrendingUp } from 'lucide-react';
 
-function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | number }) {
-    return (
-        <div style={{
-            background: 'var(--bg-secondary)', border: '1px solid var(--border)',
-            borderRadius: 'var(--radius-xl)', padding: 20, textAlign: 'center'
-        }}>
-            <div style={{
-                width: 40, height: 40, borderRadius: 'var(--radius-md)',
-                background: 'rgba(255, 69, 0, 0.08)', display: 'flex',
-                alignItems: 'center', justifyContent: 'center',
-                color: 'var(--bg-accent)', margin: '0 auto 12px'
-            }}>{icon}</div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>{value}</div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 4 }}>{label}</div>
-        </div>
-    );
+function getActivityVolume(posts: number, comments: number): { label: string; color: string; description: string } {
+    const total = posts + comments;
+    if (total >= 150) return { label: 'Power User', color: '#16a34a', description: `${posts} posts, ${comments} comments` };
+    if (total >= 80) return { label: 'Very Active', color: '#22c55e', description: `Consistent contributor — ${posts} posts, ${comments} comments` };
+    if (total >= 30) return { label: 'Active', color: '#fbbf24', description: `Regular participant — ${posts} posts, ${comments} comments` };
+    if (total >= 10) return { label: 'Occasional', color: '#fb923c', description: 'Drops in from time to time' };
+    return { label: 'Lurker', color: '#ef4444', description: 'Rarely posts or comments' };
+}
+
+function getUserStyle(posts: number, comments: number): { label: string; color: string; description: string } {
+    const total = posts + comments;
+    if (total === 0) return { label: 'Unknown', color: 'var(--text-tertiary)', description: 'No activity to analyze' };
+    const ratio = posts / total;
+    const pct = Math.round(ratio * 100);
+    if (ratio >= 0.7) return { label: 'Creator', color: '#22c55e', description: `Mostly posts original content (${pct}% posts)` };
+    if (ratio >= 0.4) return { label: 'Balanced', color: '#fbbf24', description: `Mix of posting and commenting (${pct}% posts)` };
+    if (ratio >= 0.15) return { label: 'Commenter', color: '#fb923c', description: `Engages more in others\' threads (${pct}% posts)` };
+    return { label: 'Reactor', color: '#ef4444', description: 'Almost exclusively comments' };
+}
+
+function getCommunityFocus(subs: { subreddit: string; count: number }[]): { label: string; color: string; description: string } {
+    if (!subs || subs.length === 0) return { label: 'Unknown', color: 'var(--text-tertiary)', description: 'No community data' };
+    const total = subs.reduce((s, sub) => s + sub.count, 0);
+    const topConc = total > 0 ? subs[0].count / total : 0;
+    const count = subs.length;
+    if (count <= 2 || topConc >= 0.6) return { label: 'Specialist', color: '#22c55e', description: `Focused on r/${subs[0].subreddit}` };
+    if (count <= 5 || topConc >= 0.35) return { label: 'Focused', color: '#fbbf24', description: `Active in a few communities — mostly r/${subs[0].subreddit}` };
+    if (count <= 10) return { label: 'Diverse', color: '#86efac', description: 'Spread across several communities' };
+    return { label: 'Explorer', color: '#16a34a', description: `Active across ${count} communities` };
+}
+
+function getActivityTrend(months: { month: string; posts: number; comments: number }[]): { label: string; color: string; description: string } {
+    if (!months || months.length < 4) return { label: 'New', color: 'var(--text-tertiary)', description: 'Not enough history to determine trend' };
+    const half = Math.floor(months.length / 2);
+    const recent = months.slice(half).reduce((s, m) => s + m.posts + m.comments, 0);
+    const earlier = months.slice(0, half).reduce((s, m) => s + m.posts + m.comments, 0);
+    if (earlier === 0 && recent > 0) return { label: 'Surging', color: '#16a34a', description: 'Activity is climbing fast' };
+    if (earlier === 0) return { label: 'New', color: 'var(--text-tertiary)', description: 'Not enough history to determine trend' };
+    const growth = (recent - earlier) / earlier;
+    if (growth >= 0.5) return { label: 'Surging', color: '#16a34a', description: 'Activity is climbing fast' };
+    if (growth >= 0.1) return { label: 'Growing', color: '#22c55e', description: 'Gradually becoming more active' };
+    if (growth >= -0.1) return { label: 'Steady', color: '#fbbf24', description: 'Consistent participation' };
+    if (growth >= -0.5) return { label: 'Declining', color: '#fb923c', description: 'Becoming less active' };
+    return { label: 'Fading', color: '#ef4444', description: 'Significant drop in activity' };
 }
 
 function ResultView({ data }: { data: any }) {
@@ -26,16 +54,79 @@ function ResultView({ data }: { data: any }) {
         ...(data.activityByMonth?.map((m: any) => m.posts + m.comments) || [1])
     );
 
+    const volume = getActivityVolume(data.postCount || 0, data.commentCount || 0);
+    const style = getUserStyle(data.postCount || 0, data.commentCount || 0);
+    const focus = getCommunityFocus(data.topSubreddits || []);
+    const trend = getActivityTrend(data.activityByMonth || []);
+
     return (
         <div>
-            {/* Stats Cards */}
+            {/* User Snapshot */}
             <div style={{
-                display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-                gap: 12, marginBottom: 24
+                background: 'var(--bg-secondary)', border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-xl)', padding: '24px 24px 20px', marginBottom: 20,
             }}>
-                <StatCard icon={<FileText size={18} />} label="Posts" value={data.postCount} />
-                <StatCard icon={<MessageSquare size={18} />} label="Comments" value={data.commentCount} />
-                <StatCard icon={<BarChart3 size={18} />} label="Active Communities" value={data.topSubreddits?.length || 0} />
+                <div style={{
+                    fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)',
+                    textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 16,
+                }}>User Snapshot</div>
+
+                <div style={{
+                    display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                    gap: 20,
+                }}>
+                    <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                            <Activity size={15} color={volume.color} />
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Activity Level</span>
+                        </div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: volume.color }}>
+                            {volume.label}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: 2 }}>
+                            {volume.description}
+                        </div>
+                    </div>
+
+                    <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                            <FileText size={15} color="var(--text-secondary)" />
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Style</span>
+                        </div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: style.color }}>
+                            {style.label}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: 2 }}>
+                            {style.description}
+                        </div>
+                    </div>
+
+                    <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                            <BarChart3 size={15} color="var(--text-secondary)" />
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Community Focus</span>
+                        </div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: focus.color }}>
+                            {focus.label}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: 2 }}>
+                            {focus.description}
+                        </div>
+                    </div>
+
+                    <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                            <TrendingUp size={15} color={trend.color} />
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Trend</span>
+                        </div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: trend.color }}>
+                            {trend.label}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: 2 }}>
+                            {trend.description}
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Top Subreddits */}
@@ -88,6 +179,7 @@ function ResultView({ data }: { data: any }) {
                             const total = m.posts + m.comments;
                             const height = maxMonthActivity > 0 ? (total / maxMonthActivity) * 100 : 0;
                             const postPct = total > 0 ? (m.posts / total) * 100 : 0;
+                            const showLabel = data.activityByMonth.length <= 8 || i % 2 === 0;
                             return (
                                 <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                                     <div
@@ -102,8 +194,8 @@ function ResultView({ data }: { data: any }) {
                                     <span style={{
                                         fontSize: '0.55rem', color: 'var(--text-tertiary)',
                                         marginTop: 4, whiteSpace: 'nowrap',
-                                        transform: 'rotate(-45deg)', transformOrigin: 'center'
-                                    }}>{m.month.slice(5)}</span>
+                                        visibility: showLabel ? 'visible' : 'hidden',
+                                    }}>{new Date(m.month + '-01').toLocaleDateString('en-US', { month: 'short' })}</span>
                                 </div>
                             );
                         })}
@@ -127,7 +219,10 @@ function ResultView({ data }: { data: any }) {
                         fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)',
                         margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '0.05em'
                     }}>Recent Posts</h3>
-                    {data.recentPosts.map((p: any, i: number) => (
+                    {(() => { const maxPostScore = Math.max(...(data.recentPosts?.map((p: any) => p.score || 0) || [1])); return data.recentPosts.map((p: any, i: number) => {
+                        const ratio = maxPostScore > 0 ? (p.score || 0) / maxPostScore : 0;
+                        const barColor = ratio > 0.7 ? '#22c55e' : ratio > 0.4 ? '#86efac' : '#fde68a';
+                        return (
                         <a key={i} href={p.url} target="_blank" rel="noopener noreferrer" style={{
                             display: 'block', padding: '12px 0',
                             borderBottom: i < data.recentPosts.length - 1 ? '1px solid var(--border)' : 'none',
@@ -137,16 +232,24 @@ function ResultView({ data }: { data: any }) {
                                 fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-primary)',
                                 marginBottom: 4, lineHeight: 1.4
                             }}>{p.title}</div>
-                            <div style={{ display: 'flex', gap: 12, fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
                                 <span style={{
                                     padding: '1px 8px', background: 'rgba(255, 69, 0, 0.08)',
                                     borderRadius: 'var(--radius-full)', color: 'var(--bg-accent)', fontWeight: 600
                                 }}>r/{p.subreddit}</span>
-                                <span>{p.score} points</span>
+                                <div style={{
+                                    width: 40, height: 6, borderRadius: 3,
+                                    background: 'var(--bg-tertiary)', overflow: 'hidden'
+                                }}>
+                                    <div style={{
+                                        width: `${Math.round(ratio * 100)}%`, height: '100%',
+                                        borderRadius: 3, background: barColor
+                                    }} />
+                                </div>
                                 {p.created_utc && <span>{new Date(p.created_utc * 1000).toLocaleDateString()}</span>}
                             </div>
                         </a>
-                    ))}
+                    ); }); })()}
                 </div>
             )}
         </div>
@@ -162,6 +265,10 @@ export function UserActivity() {
                 { name: 'username', label: 'Username', placeholder: 'e.g. spez', required: true }
             ]}
             apiEndpoint="/api/tools/user-activity"
+            submitLabel="Look Up"
+            loadingLabel="Looking up..."
+            ctaHeading="Track key users automatically?"
+            ctaDescription="OpinionDeck monitors Reddit users and communities to surface opportunities for your brand."
             renderResult={(data) => <ResultView data={data} />}
         >
             <ToolSEO

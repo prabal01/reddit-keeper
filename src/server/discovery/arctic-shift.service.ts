@@ -53,7 +53,8 @@ export class ArcticShiftService {
         subreddit: string,
         limit: number = 100,
         after?: number,
-        before?: number
+        before?: number,
+        sort: 'asc' | 'desc' = 'desc'
     ): Promise<DiscoveryResult[]> {
         if (!subreddit) {
             logger.warn({ service: 'arctic_shift', action: 'SEARCH_POSTS_SKIP' }, `Arctic Shift requires a subreddit for post search`);
@@ -62,7 +63,7 @@ export class ArcticShiftService {
         try {
             await this.enforceRateLimit();
 
-            let url = `${this.baseUrl}/api/posts/search?subreddit=${encodeURIComponent(subreddit)}&limit=${limit}&sort=desc&meta-app=opiniondeck`;
+            let url = `${this.baseUrl}/api/posts/search?subreddit=${encodeURIComponent(subreddit)}&limit=${limit}&sort=${sort}&meta-app=opiniondeck`;
             if (keyword) url += `&title=${encodeURIComponent(keyword)}`;
             if (after) url += `&after=${after}`;
             if (before) url += `&before=${before}`;
@@ -93,7 +94,8 @@ export class ArcticShiftService {
                 source: 'arctic_shift' as const,
                 num_comments: post.num_comments || 0,
                 created_utc: post.created_utc || Math.floor(Date.now() / 1000),
-                score: (post.score || 0) * 10 // Scale score for consistency
+                score: (post.score || 0) * 10, // Scale score for consistency with other sources
+                selftext: post.selftext || '',
             }));
 
             logger.info({ service: 'arctic_shift', action: 'SEARCH_POSTS_RESULT', count: results.length }, `Found ${results.length} posts`);

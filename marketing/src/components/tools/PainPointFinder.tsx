@@ -81,6 +81,14 @@ export function PainPointFinder() {
                 { name: 'subreddit', label: 'Subreddit', placeholder: 'e.g. startups', required: true },
             ]}
             apiEndpoint="/api/tools/pain-points"
+            submitLabel="Find Pain Points"
+            loadingLabel="Analyzing..."
+            ctaHeading="Turn pain points into product opportunities?"
+            ctaDescription="OpinionDeck continuously monitors Reddit for fresh pain points and scores them by market potential."
+            nextTools={[
+                { slug: 'opportunity-finder', label: 'Find opportunities in this subreddit', paramMap: { subreddit: 'subreddit' } },
+                { slug: 'subreddit-analyzer', label: 'Analyze this subreddit', paramMap: { subreddit: 'subreddit' } },
+            ]}
             renderResult={(data) => <ResultView data={data} />}
         >
             <ToolSEO

@@ -109,6 +109,14 @@ export function OpportunityFinder() {
                 { name: 'subreddit', label: 'Subreddit', placeholder: 'e.g. entrepreneur', required: true },
             ]}
             apiEndpoint="/api/tools/opportunities"
+            submitLabel="Find Opportunities"
+            loadingLabel="Searching..."
+            ctaHeading="Never miss a Reddit opportunity?"
+            ctaDescription="OpinionDeck scans Reddit 24/7 and alerts you to threads where your product can help."
+            nextTools={[
+                { slug: 'pain-point-finder', label: 'Find pain points here', paramMap: { subreddit: 'subreddit' } },
+                { slug: 'best-time-to-post', label: 'Best time to post here', paramMap: { subreddit: 'subreddit' } },
+            ]}
             renderResult={(data) => <ResultView data={data} />}
         >
             <ToolSEO

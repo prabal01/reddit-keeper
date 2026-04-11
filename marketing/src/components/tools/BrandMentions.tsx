@@ -1,38 +1,116 @@
 import { ToolShell } from './ToolShell';
 import { ToolSEO } from './ToolSEO';
-import { ExternalLink, MessageSquare } from 'lucide-react';
+import { ExternalLink, MessageSquare, Zap, Globe, TrendingUp } from 'lucide-react';
 
 function formatDate(utc: number): string {
     return new Date(utc * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function getBuzzLevel(total: number): { label: string; color: string; description: string } {
+    if (total >= 80) return { label: 'Major Buzz', color: '#16a34a', description: 'widely discussed across Reddit' };
+    if (total >= 40) return { label: 'High', color: '#22c55e', description: 'getting significant attention' };
+    if (total >= 15) return { label: 'Moderate', color: '#fbbf24', description: 'getting noticed in some communities' };
+    if (total >= 5) return { label: 'Low', color: '#fb923c', description: 'occasional mentions' };
+    return { label: 'Minimal', color: '#ef4444', description: 'barely on Reddit\'s radar' };
+}
+
+function getSpread(breakdown: any[], total: number): { label: string; color: string; description: string } {
+    const n = breakdown?.length || 0;
+    const topShare = n > 0 ? (breakdown[0]?.count || 0) / Math.max(total, 1) : 0;
+    if (n >= 10 && topShare < 0.3) return { label: 'Widespread', color: '#16a34a', description: 'talked about in many communities' };
+    if (n >= 5) return { label: 'Broad', color: '#22c55e', description: 'present in several communities' };
+    if (n >= 3) return { label: 'Focused', color: '#fbbf24', description: 'concentrated in a few places' };
+    return { label: 'Niche', color: '#fb923c', description: 'limited to one or two communities' };
+}
+
+function getMomentum(timeline: any[]): { label: string; color: string; description: string } {
+    if (!timeline || timeline.length < 4) return { label: 'New', color: 'var(--text-tertiary)', description: 'not enough data to show a trend' };
+    const half = Math.floor(timeline.length / 2);
+    const earlier = timeline.slice(0, half).reduce((s: number, t: any) => s + t.count, 0);
+    const later = timeline.slice(half).reduce((s: number, t: any) => s + t.count, 0);
+    if (earlier === 0) return later > 0
+        ? { label: 'Emerging', color: '#22c55e', description: 'new and gaining attention' }
+        : { label: 'Quiet', color: 'var(--text-tertiary)', description: 'no clear trend' };
+    const change = (later - earlier) / earlier;
+    if (change >= 0.5) return { label: 'Surging', color: '#16a34a', description: 'rapidly gaining attention' };
+    if (change >= 0.1) return { label: 'Growing', color: '#22c55e', description: 'steadily gaining attention' };
+    if (change >= -0.1) return { label: 'Stable', color: '#fbbf24', description: 'consistent mention volume' };
+    if (change >= -0.5) return { label: 'Declining', color: '#fb923c', description: 'losing some buzz' };
+    return { label: 'Fading', color: '#ef4444', description: 'significantly less discussion' };
 }
 
 function ResultView({ data }: { data: any }) {
     const maxSubCount = data.subredditBreakdown?.[0]?.count || 1;
     const maxTimeCount = Math.max(...(data.timeline?.map((t: any) => t.count) || [1]));
 
+    const buzz = getBuzzLevel(data.totalMentions);
+    const spread = getSpread(data.subredditBreakdown, data.totalMentions);
+    const momentum = getMomentum(data.timeline);
+
+    const topSub = data.subredditBreakdown?.[0]?.subreddit;
+    const buzzDesc = buzz.label === 'Major Buzz' ? 'major buzz' : `${buzz.label.toLowerCase()} buzz`;
+    const insight = topSub
+        ? `"${data.brand}" has ${buzzDesc}, mainly in r/${topSub}${data.subredditBreakdown?.length > 1 ? ` and ${data.subredditBreakdown.length - 1} other ${data.subredditBreakdown.length === 2 ? 'community' : 'communities'}` : ''}.`
+        : `"${data.brand}" has ${buzzDesc} on Reddit.`;
+
     return (
         <div>
-            {/* Summary */}
+            {/* Brand Presence */}
             <div style={{
-                display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 24
+                background: 'var(--bg-secondary)', border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-xl)', padding: '24px 24px 20px', marginBottom: 20,
             }}>
                 <div style={{
-                    padding: '14px 20px', background: 'var(--bg-secondary)',
-                    border: '1px solid var(--border)', borderRadius: 'var(--radius-md)'
-                }}>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Total Mentions</div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>{data.totalMentions}</div>
-                </div>
+                    fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)',
+                    textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 16,
+                }}>Brand Presence</div>
+
                 <div style={{
-                    padding: '14px 20px', background: 'var(--bg-secondary)',
-                    border: '1px solid var(--border)', borderRadius: 'var(--radius-md)'
+                    display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                    gap: 20,
                 }}>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Communities</div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>{data.subredditBreakdown?.length || 0}</div>
+                    <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                            <Zap size={15} color={buzz.color} />
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Buzz Level</span>
+                        </div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: buzz.color }}>{buzz.label}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: 2 }}>
+                            {data.totalMentions} mentions — {buzz.description}
+                        </div>
+                    </div>
+
+                    <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                            <Globe size={15} color={spread.color} />
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Spread</span>
+                        </div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: spread.color }}>{spread.label}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: 2 }}>
+                            {data.subredditBreakdown?.length || 0} communities — {spread.description}
+                        </div>
+                    </div>
+
+                    <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                            <TrendingUp size={15} color={momentum.color} />
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Momentum</span>
+                        </div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: momentum.color }}>{momentum.label}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: 2 }}>
+                            {momentum.description}
+                        </div>
+                    </div>
                 </div>
+
+                <div style={{
+                    fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 16,
+                    padding: '10px 14px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)',
+                    lineHeight: 1.5,
+                }}>{insight}</div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 24 }}>
                 {/* Subreddit Breakdown */}
                 <div style={{
                     background: 'var(--bg-secondary)', border: '1px solid var(--border)',
@@ -79,7 +157,7 @@ function ResultView({ data }: { data: any }) {
                                     transition: 'height 0.5s ease'
                                 }} />
                                 <span style={{ fontSize: '0.55rem', color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>
-                                    {t.month.slice(5)}
+                                    {new Date(t.month + '-01').toLocaleDateString('en-US', { month: 'short' })}
                                 </span>
                             </div>
                         ))}
@@ -115,7 +193,7 @@ function ResultView({ data }: { data: any }) {
                                 <span>by u/{p.author}</span>
                                 <span>{formatDate(p.created_utc)}</span>
                                 <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                                    <MessageSquare size={11} /> {p.score}
+                                    <MessageSquare size={11} /> {p.num_comments ?? 0}
                                 </span>
                             </div>
                         </div>
@@ -137,6 +215,14 @@ export function BrandMentions() {
                 { name: 'subreddit', label: 'Subreddit (optional)', placeholder: 'e.g. productivity', required: false }
             ]}
             apiEndpoint="/api/tools/brand-mentions"
+            submitLabel="Track Mentions"
+            loadingLabel="Searching..."
+            ctaHeading="Want real-time brand alerts?"
+            ctaDescription="OpinionDeck monitors brand mentions 24/7 and sends alerts when new conversations appear."
+            nextTools={[
+                { slug: 'pain-point-finder', label: 'Find pain points about this brand', paramMap: { brand: 'keyword' } },
+                { slug: 'opportunity-finder', label: 'Find marketing opportunities', paramMap: { brand: 'product' } },
+            ]}
             renderResult={(data) => <ResultView data={data} />}
         >
             <ToolSEO

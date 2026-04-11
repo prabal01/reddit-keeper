@@ -17,7 +17,7 @@ interface SubredditCompareResult {
 export async function getSubredditComparison(subreddits: string[]): Promise<SubredditCompareResult> {
     // Fetch stats for each subreddit in parallel (reuses sub-stats cache)
     const results = await Promise.all(
-        subreddits.map(sub => getSubredditStats(sub))
+        subreddits.map(sub => getSubredditStats(sub, true))
     );
 
     return {

@@ -7,7 +7,9 @@ import { logger } from '../../utils/logger.js';
 const pullPush = new PullPushService();
 
 const CACHE_TTL = 86400; // 24h
-const FREE_LIMIT = 3;
+const FREE_LIMIT = 5;
+const POSTS_TO_ANALYZE = 25;
+const BODY_EXCERPT_LENGTH = 200;
 
 const opportunitySchema: any = {
     type: SchemaType.OBJECT,
@@ -80,18 +82,49 @@ export async function getOpportunities(
         logger.warn({ err }, 'Opportunity-finder cache read failed');
     }
 
-    const submissions = await pullPush.searchSubmissions(product, subreddit, 50);
+    const submissions = await pullPush.searchSubmissions(product, subreddit, 100);
     if (submissions.length === 0) {
         throw new Error('NO_DATA');
     }
 
-    const topPosts = submissions
-        .sort((a, b) => (b.score || 0) - (a.score || 0))
-        .slice(0, 15);
+    // Filter out low-engagement noise (score <= 10 in PullPush = real score <= 1)
+    const filtered = submissions.filter(p => (p.score || 0) > 10);
 
-    const postsText = topPosts
-        .map((p, i) => `[${i}] "${p.title}" (r/${p.subreddit}, score: ${Math.round((p.score || 0) / 10)})`)
-        .join('\n');
+    // Mix selection: top by score + most recent for diversity
+    const byScore = [...filtered].sort((a, b) => (b.score || 0) - (a.score || 0));
+    const byRecent = [...filtered].sort((a, b) => (b.created_utc || 0) - (a.created_utc || 0));
+
+    const selectedIds = new Set<string>();
+    const selected: typeof submissions = [];
+
+    // Top 15 by score
+    for (const post of byScore) {
+        if (selected.length >= 15) break;
+        if (!selectedIds.has(post.id)) {
+            selectedIds.add(post.id);
+            selected.push(post);
+        }
+    }
+    // Top 10 most recent (deduplicated)
+    for (const post of byRecent) {
+        if (selected.length >= POSTS_TO_ANALYZE) break;
+        if (!selectedIds.has(post.id)) {
+            selectedIds.add(post.id);
+            selected.push(post);
+        }
+    }
+
+    const postsText = selected
+        .map((p, i) => {
+            const score = Math.round((p.score || 0) / 10);
+            let text = `[${i}] "${p.title}" (r/${p.subreddit}, score: ${score})`;
+            if (p.selftext) {
+                const excerpt = p.selftext.slice(0, BODY_EXCERPT_LENGTH).replace(/\n/g, ' ').trim();
+                if (excerpt) text += `\nBody: ${excerpt}`;
+            }
+            return text;
+        })
+        .join('\n\n');
 
     const prompt = `You are a marketing opportunity analyst. Analyze these Reddit posts and find threads where "${product}" (or a product like it) could genuinely help people.
 
@@ -117,12 +150,12 @@ Only include posts with relevanceScore >= 40. Sort by relevanceScore descending.
     }
 
     const opportunities: Opportunity[] = (parsed.opportunities || [])
-        .filter(o => o.postIndex >= 0 && o.postIndex < topPosts.length)
+        .filter(o => o.postIndex >= 0 && o.postIndex < selected.length)
         .sort((a, b) => b.relevanceScore - a.relevanceScore)
         .map(o => ({
-            title: topPosts[o.postIndex].title,
-            url: topPosts[o.postIndex].url,
-            subreddit: topPosts[o.postIndex].subreddit || subreddit,
+            title: selected[o.postIndex].title,
+            url: selected[o.postIndex].url,
+            subreddit: selected[o.postIndex].subreddit || subreddit,
             relevanceScore: Math.min(100, Math.max(0, o.relevanceScore)),
             intentType: o.intentType,
             snippet: o.snippet,

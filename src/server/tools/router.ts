@@ -87,7 +87,8 @@ router.post('/best-time', tier1Limiter, async (req: Request, res: Response) => {
     if (!subreddit) return void res.status(400).json({ error: "That doesn't look like a valid subreddit name. It should be letters, numbers, or underscores." });
 
     try {
-        const result = await getBestTimeToPost(subreddit);
+        const timezoneOffset = typeof req.body?.timezoneOffset === 'number' ? req.body.timezoneOffset : undefined;
+        const result = await getBestTimeToPost(subreddit, timezoneOffset);
         res.json(result);
     } catch (err: any) {
         if (err.message === 'NO_DATA') {
@@ -108,7 +109,7 @@ router.post('/subreddit-stats', tier1Limiter, async (req: Request, res: Response
     if (!subreddit) return void res.status(400).json({ error: "That doesn't look like a valid subreddit name." });
 
     try {
-        const result = await getSubredditStats(subreddit);
+        const result = await getSubredditStats(subreddit, isAuthenticated(req));
         res.json(result);
     } catch (err: any) {
         if (err.message === 'NO_DATA') {

@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from 'react';
-import { Loader2, AlertCircle, ArrowRight, GitCompare, Trophy } from 'lucide-react';
+import { useState, useEffect, type FormEvent } from 'react';
+import { Loader2, AlertCircle, ArrowRight, TrendingUp, Activity, MessageSquare } from 'lucide-react';
 import { ToolSEO } from './ToolSEO';
 
 const dashboardUrl = (typeof window !== 'undefined' && (window as any).__PUBLIC_DASHBOARD_URL) || '/app';
@@ -14,26 +14,26 @@ interface ComparisonEntry {
     scoreDistribution: { range: string; count: number }[];
 }
 
-function MetricRow({ label, values, highlight }: { label: string; values: (string | number)[]; highlight: number }) {
-    return (
-        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', fontSize: '0.9rem' }}>
-            <div style={{
-                flex: '0 0 140px', padding: '12px 14px', fontWeight: 600,
-                color: 'var(--text-secondary)', background: 'var(--bg-tertiary)',
-            }}>{label}</div>
-            {values.map((val, i) => (
-                <div key={i} style={{
-                    flex: 1, padding: '12px 14px', textAlign: 'center',
-                    fontWeight: i === highlight ? 700 : 400,
-                    color: i === highlight ? '#22c55e' : 'var(--text-primary)',
-                    background: i === highlight ? 'rgba(34,197,94,0.04)' : 'transparent',
-                }}>
-                    {val}
-                    {i === highlight && <Trophy size={12} style={{ marginLeft: 6, verticalAlign: 'middle' }} />}
-                </div>
-            ))}
-        </div>
-    );
+function getEngagementLevel(avg: number): { label: string; color: string } {
+    if (avg >= 100) return { label: 'Very High', color: '#16a34a' };
+    if (avg >= 50) return { label: 'High', color: '#22c55e' };
+    if (avg >= 15) return { label: 'Moderate', color: '#fbbf24' };
+    if (avg >= 5) return { label: 'Low', color: '#fb923c' };
+    return { label: 'Very Low', color: '#ef4444' };
+}
+
+function getActivityLevel(ppd: number): { label: string; color: string } {
+    if (ppd >= 20) return { label: 'Very Active', color: '#16a34a' };
+    if (ppd >= 5) return { label: 'Active', color: '#22c55e' };
+    if (ppd >= 1) return { label: 'Moderate', color: '#fbbf24' };
+    return { label: 'Quiet', color: '#fb923c' };
+}
+
+function getDiscussionLevel(avg: number): { label: string; color: string } {
+    if (avg >= 50) return { label: 'Very Lively', color: '#16a34a' };
+    if (avg >= 20) return { label: 'Lively', color: '#22c55e' };
+    if (avg >= 8) return { label: 'Moderate', color: '#fbbf24' };
+    return { label: 'Quiet', color: '#fb923c' };
 }
 
 function ResultView({ data }: { data: { comparisons: ComparisonEntry[] } }) {
@@ -48,41 +48,104 @@ function ResultView({ data }: { data: { comparisons: ComparisonEntry[] } }) {
     const bestComments = comments.indexOf(Math.max(...comments));
     const bestPpd = ppd.indexOf(Math.max(...ppd));
 
+    // Generate insight text
+    const metrics = ['engagement', 'discussion', 'activity'];
+    const bestIndices = [bestScore, bestComments, bestPpd];
+    const winsByIdx: Record<number, string[]> = {};
+    bestIndices.forEach((idx, mi) => {
+        if (!winsByIdx[idx]) winsByIdx[idx] = [];
+        winsByIdx[idx].push(metrics[mi]);
+    });
+    const insight = Object.entries(winsByIdx)
+        .map(([idx, ms]) => `r/${comps[Number(idx)].subreddit} leads in ${ms.join(' and ')}`)
+        .join('. ') + '.';
+
     return (
         <div>
-            {/* Comparison Table */}
+            {/* Comparison Verdict */}
             <div style={{
                 background: 'var(--bg-secondary)', border: '1px solid var(--border)',
-                borderRadius: 'var(--radius-xl)', overflow: 'hidden', marginBottom: 24
+                borderRadius: 'var(--radius-xl)', padding: '24px 24px 20px', marginBottom: 20,
             }}>
-                {/* Header row */}
                 <div style={{
-                    display: 'flex', borderBottom: '2px solid var(--border)',
-                    background: 'var(--bg-tertiary)'
-                }}>
-                    <div style={{ flex: '0 0 140px', padding: '14px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <GitCompare size={16} color="var(--text-secondary)" />
-                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Metric</span>
-                    </div>
-                    {comps.map((c, i) => (
-                        <div key={i} style={{
-                            flex: 1, padding: '14px', textAlign: 'center',
-                            fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)'
-                        }}>
-                            r/{c.subreddit}
-                        </div>
-                    ))}
-                </div>
+                    fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)',
+                    textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 16,
+                }}>Comparison Verdict</div>
 
-                <MetricRow label="Avg Score" values={scores} highlight={bestScore} />
-                <MetricRow label="Avg Comments" values={comments} highlight={bestComments} />
-                <MetricRow label="Posts/Day" values={ppd} highlight={bestPpd} />
-                <MetricRow label="Sample Size" values={comps.map(c => c.sampleSize)} highlight={-1} />
+                {/* Insight */}
+                <div style={{
+                    fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 20,
+                    padding: '10px 14px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)',
+                    lineHeight: 1.5,
+                }}>{insight}</div>
+
+                {/* Per-subreddit cards */}
+                <div style={{
+                    display: 'grid', gridTemplateColumns: `repeat(${comps.length}, 1fr)`, gap: 16,
+                }}>
+                    {comps.map((c, i) => {
+                        const eng = getEngagementLevel(c.avgScore);
+                        const act = getActivityLevel(c.postsPerDay);
+                        const disc = getDiscussionLevel(c.avgComments);
+                        return (
+                            <div key={i} style={{
+                                padding: 16, background: 'var(--bg-tertiary)',
+                                borderRadius: 'var(--radius-md)',
+                            }}>
+                                <div style={{
+                                    fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)',
+                                    marginBottom: 14,
+                                }}>r/{c.subreddit}</div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                    <div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                                            <TrendingUp size={13} color={eng.color} />
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Engagement</span>
+                                        </div>
+                                        <span style={{ fontSize: '0.9rem', fontWeight: 600, color: eng.color }}>
+                                            {eng.label}
+                                        </span>
+                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', marginLeft: 6 }}>
+                                            ~{c.avgScore} upvotes
+                                        </span>
+                                    </div>
+
+                                    <div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                                            <MessageSquare size={13} color={disc.color} />
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Discussion</span>
+                                        </div>
+                                        <span style={{ fontSize: '0.9rem', fontWeight: 600, color: disc.color }}>
+                                            {disc.label}
+                                        </span>
+                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', marginLeft: 6 }}>
+                                            ~{c.avgComments} comments
+                                        </span>
+                                    </div>
+
+                                    <div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                                            <Activity size={13} color={act.color} />
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Activity</span>
+                                        </div>
+                                        <span style={{ fontSize: '0.9rem', fontWeight: 600, color: act.color }}>
+                                            {act.label}
+                                        </span>
+                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', marginLeft: 6 }}>
+                                            {c.postsPerDay} posts/day
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
 
             {/* Top Authors per subreddit */}
             <div style={{
-                display: 'grid', gridTemplateColumns: `repeat(${comps.length}, 1fr)`, gap: 16
+                display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 16
             }}>
                 {comps.map((c, i) => (
                     <div key={i} style={{
@@ -119,13 +182,31 @@ export function SubredditComparison() {
     const [error, setError] = useState<string | null>(null);
     const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
     const [result, setResult] = useState<any>(null);
+    const [fromDashboard, setFromDashboard] = useState(false);
+
+    // Check if user came from dashboard
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('ref') === 'dashboard') setFromDashboard(true);
+    }, []);
+
+    // Restore inputs from URL params
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const restored: string[] = [];
+        for (let i = 0; i < 3; i++) {
+            const val = params.get(`sub${i + 1}`);
+            if (val) restored.push(val);
+        }
+        if (restored.length >= 2) setSubs(restored);
+    }, []);
 
     // Rate limit countdown
-    useState(() => {
+    useEffect(() => {
         if (rateLimitCountdown <= 0) return;
         const t = setInterval(() => setRateLimitCountdown(c => c - 1), 1000);
         return () => clearInterval(t);
-    });
+    }, [rateLimitCountdown]);
 
     const addSub = () => { if (subs.length < 3) setSubs([...subs, '']); };
     const removeSub = (idx: number) => { if (subs.length > 2) setSubs(subs.filter((_, i) => i !== idx)); };
@@ -142,6 +223,11 @@ export function SubredditComparison() {
             setLoading(false);
             return;
         }
+
+        // Persist inputs in URL
+        const params = new URLSearchParams();
+        cleaned.forEach((s, i) => params.set(`sub${i + 1}`, s));
+        window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
 
         try {
             const resp = await fetch('/api/tools/subreddit-compare', {
@@ -189,6 +275,7 @@ export function SubredditComparison() {
                 background: 'var(--bg-secondary)', border: '1px solid var(--border)',
                 borderRadius: 'var(--radius-xl)', padding: 24, marginBottom: 24
             }}>
+                <input type="text" name="website_url" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
                     {subs.map((s, i) => (
                         <div key={i} style={{ flex: '1 1 160px', minWidth: 0, position: 'relative' }}>
@@ -263,7 +350,7 @@ export function SubredditComparison() {
             {result && <ResultView data={result} />}
 
             {/* Bottom CTA */}
-            {result && (
+            {result && !fromDashboard && (
                 <div style={{
                     textAlign: 'center', padding: '40px 24px',
                     background: 'var(--bg-secondary)', border: '1px solid var(--border)',
