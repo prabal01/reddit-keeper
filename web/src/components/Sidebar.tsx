@@ -1,13 +1,18 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { BRANDING } from '../constants/branding';
-import { Globe, Search, Star, History as HistoryIcon, ChevronDown, ChevronRight, X, Shield, Settings, Users, Wrench } from 'lucide-react';
+import { Globe, Star, ChevronDown, ChevronRight, Shield, Settings, Users, Wrench } from 'lucide-react';
 import { UsageProgress } from './UsageProgress';
 import { H1 } from './common/Typography';
 import { useAuth } from '../contexts/AuthContext';
 import "./Sidebar.css";
 
-export const Sidebar: React.FC = () => {
+interface SidebarProps {
+    isOpen?: boolean;
+    onClose?: () => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const [isToolsExpanded, setIsToolsExpanded] = useState(false);
@@ -30,7 +35,9 @@ export const Sidebar: React.FC = () => {
     };
 
     return (
-        <aside className="sidebar">
+        <>
+        {isOpen && <div className="sidebar-overlay" onClick={onClose} />}
+        <aside className={`sidebar ${isOpen ? 'sidebar--open' : ''}`}>
             <div className="sidebar-header">
                 <div className="w-full flex items-center">
                     <div 
@@ -175,6 +182,7 @@ export const Sidebar: React.FC = () => {
                     <Globe size={20} /> <span className="link-text">Back to Home</span>
                 </a>
             </div>
-        </aside >
+        </aside>
+        </>
     );
 };

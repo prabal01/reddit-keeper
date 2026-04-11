@@ -37,12 +37,14 @@ export function AdminPortal() {
             </div>
 
             {/* Tabs Navigation */}
-            <div style={{ 
-                display: 'flex', 
-                gap: '8px', 
-                marginBottom: '32px', 
+            <div className="admin-tabs-nav" style={{
+                display: 'flex',
+                gap: '8px',
+                marginBottom: '32px',
                 borderBottom: '1px solid rgba(255,255,255,0.05)',
-                paddingBottom: '1px' 
+                paddingBottom: '1px',
+                overflowX: 'auto',
+                WebkitOverflowScrolling: 'touch'
             }}>
                 {tabs.map(tab => (
                     <button

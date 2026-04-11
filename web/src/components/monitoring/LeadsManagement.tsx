@@ -283,10 +283,10 @@ export const LeadsManagement: React.FC<LeadsManagementProps> = ({ folderId }) =>
     ];
 
     return (
-        <div className={`leads-management-container ${folderId ? '' : 'max-w-6xl mx-auto py-10 px-8'}`}>
+        <div className={`leads-management-container ${folderId ? '' : 'max-w-6xl mx-auto py-6 px-4 md:py-10 md:px-8'}`}>
             {/* Header — only show full header in global view */}
             {!folderId && (
-            <div className="flex items-center justify-between mb-8 pb-8 border-b border-white/5">
+            <div className="flex items-center justify-between flex-wrap gap-4 mb-8 pb-8 border-b border-white/5">
                 <div className="flex items-center gap-5">
                     <div className="w-12 h-12 bg-orange-500/10 rounded-xl flex items-center justify-center text-orange-500 border border-orange-500/20">
                         <Users size={24} />
@@ -380,7 +380,7 @@ export const LeadsManagement: React.FC<LeadsManagementProps> = ({ folderId }) =>
 
             {/* Bulk Actions */}
             {hasSelection && (
-                <div className="mb-4 p-4 bg-orange-500/5 border border-orange-500/20 rounded-lg flex items-center justify-between">
+                <div className="mb-4 p-4 bg-orange-500/5 border border-orange-500/20 rounded-lg flex items-center justify-between flex-wrap gap-3">
                     <span className="text-sm text-orange-300">{selectedLeads.size} lead{selectedLeads.size !== 1 ? 's' : ''} selected</span>
                     <div className="flex items-center gap-2">
                         <button
@@ -434,11 +434,11 @@ export const LeadsManagement: React.FC<LeadsManagementProps> = ({ folderId }) =>
                                     </th>
                                     <th className="text-left px-4 py-3 text-[10px] font-black text-zinc-600 uppercase tracking-widest">Author</th>
                                     <th className="text-left px-4 py-3 text-[10px] font-black text-zinc-600 uppercase tracking-widest">Thread</th>
-                                    <th className="text-left px-4 py-3 text-[10px] font-black text-zinc-600 uppercase tracking-widest">Subreddit</th>
+                                    <th className="text-left px-4 py-3 text-[10px] font-black text-zinc-600 uppercase tracking-widest hidden md:table-cell">Subreddit</th>
                                     {!folderId && <th className="text-left px-4 py-3 text-[10px] font-black text-zinc-600 uppercase tracking-widest">Project</th>}
                                     <th className="text-center px-4 py-3 text-[10px] font-black text-zinc-600 uppercase tracking-widest">Score</th>
                                     <th className="text-left px-4 py-3 text-[10px] font-black text-zinc-600 uppercase tracking-widest">Status</th>
-                                    <th className="text-left px-4 py-3 text-[10px] font-black text-zinc-600 uppercase tracking-widest">Date</th>
+                                    <th className="text-left px-4 py-3 text-[10px] font-black text-zinc-600 uppercase tracking-widest hidden md:table-cell">Date</th>
                                     <th className="text-center px-4 py-3 text-[10px] font-black text-zinc-600 uppercase tracking-widest">Link</th>
                                 </tr>
                             </thead>
@@ -478,7 +478,7 @@ export const LeadsManagement: React.FC<LeadsManagementProps> = ({ folderId }) =>
                                                 {lead.postTitle.substring(0, 60)}{lead.postTitle.length > 60 ? '...' : ''}
                                             </a>
                                         </td>
-                                        <td className="px-4 py-3 text-zinc-400 text-xs">
+                                        <td className="px-4 py-3 text-zinc-400 text-xs hidden md:table-cell">
                                             {lead.postSubreddit ? `r/${lead.postSubreddit}` : '—'}
                                         </td>
                                         {!folderId && (
@@ -496,7 +496,7 @@ export const LeadsManagement: React.FC<LeadsManagementProps> = ({ folderId }) =>
                                                 {lead.status}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 text-zinc-500 text-xs">
+                                        <td className="px-4 py-3 text-zinc-500 text-xs hidden md:table-cell">
                                             {lead.createdAt
                                                 ? formatDistanceToNow(new Date(lead.createdAt * 1000), { addSuffix: true })
                                                 : lead.matchedAt
