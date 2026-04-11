@@ -38,7 +38,7 @@ export async function createDodoCheckoutSession(
         product_cart: [{ product_id: productId, quantity: 1 }],
         customer: { email },
         metadata: { userId, plan },
-        return_url: `${appUrl}/pricing?payment=success&plan=${plan}`,
+        return_url: `${appUrl}/pricing?checkout=success&plan=${plan}`,
     });
 
     logger.info({ userId, plan, session_id: (session as any).session_id }, 'Dodo checkout session created');
