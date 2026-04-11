@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFolders } from '../../contexts/FolderContext';
 import { MonitorCard } from './MonitorCard';
-import { LeadsManagement } from './LeadsManagement';
-import { Radar, Sparkles, Plus, Link as LinkIcon, Search, Globe, Zap, X, CheckCircle2, MessageSquare, Loader2, AlertCircle, Users } from 'lucide-react';
+import { Radar, Sparkles, Plus, Link as LinkIcon, Search, Globe, Zap, X, CheckCircle2, MessageSquare, Loader2, AlertCircle } from 'lucide-react';
 import { H2, Subtitle, Metadata } from '../common/Typography';
 import { UIButton } from '../common/UIButton';
 import { PageHeader } from '../common/PageHeader';
@@ -58,9 +57,6 @@ export const MonitoringDashboard: React.FC = () => {
     const [subredditError, setSubredditError] = useState(false);
     const [addingKeyword, setAddingKeyword] = useState(false);
     const [newKeywordInput, setNewKeywordInput] = useState('');
-
-    // Dashboard tabs
-    const [dashboardTab, setDashboardTab] = useState<'monitors' | 'leads'>('monitors');
 
     // Subreddit monitors (separate from folders)
     const [subredditMonitors, setSubredditMonitors] = useState<SubredditMonitor[]>([]);
@@ -124,7 +120,7 @@ export const MonitoringDashboard: React.FC = () => {
         };
 
         loadStats();
-    }, [activeMonitors.length]);
+    }, [activeMonitors.length, user]);
 
     // Fetch subreddit monitors
     useEffect(() => {
@@ -628,31 +624,7 @@ export const MonitoringDashboard: React.FC = () => {
                 </div>
             ) : (
                 <>
-                    {/* Tab Bar — show when monitors exist */}
-                    {hasAnyMonitors && (
-                        <div className="md-tab-bar">
-                            <button
-                                className={`md-tab ${dashboardTab === 'monitors' ? 'active' : ''}`}
-                                onClick={() => setDashboardTab('monitors')}
-                            >
-                                <Radar size={14} />
-                                Monitors
-                                <span className="md-tab-badge">{activeMonitors.length + subredditMonitors.length}</span>
-                            </button>
-                            <button
-                                className={`md-tab ${dashboardTab === 'leads' ? 'active' : ''}`}
-                                onClick={() => setDashboardTab('leads')}
-                            >
-                                <Users size={14} />
-                                Leads
-                            </button>
-                        </div>
-                    )}
-
-                    {/* Tab Content */}
-                    {dashboardTab === 'leads' && hasAnyMonitors ? (
-                        <LeadsManagement />
-                    ) : foldersLoading ? (
+                    {foldersLoading ? (
                         /* Skeleton loading */
                         <section className="md-monitors-section">
                             <div className="md-monitors-grid">

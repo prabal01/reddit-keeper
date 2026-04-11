@@ -19,6 +19,7 @@ import { InboxTab } from './folder/tabs/InboxTab';
 import { MarketMapTab } from './folder/tabs/MarketMapTab';
 import { StrategyTab } from './folder/tabs/StrategyTab';
 import { ConfigsTab } from './folder/tabs/ConfigsTab';
+import { LeadsManagement } from './monitoring/LeadsManagement';
 import type { Lead } from '../contexts/FolderContext';
 
 interface SavedThread {
@@ -64,7 +65,7 @@ export const FolderDetail: React.FC = () => {
     const [alerts, setAlerts] = useState<any[]>([]);
 
     // 3-Tab Dashboard + Configs panel state
-    const [activeTab, setActiveTab] = useState<'feed' | 'painmap' | 'strategy'>('feed');
+    const [activeTab, setActiveTab] = useState<'feed' | 'painmap' | 'leads' | 'strategy'>('feed');
     const [showConfigs, setShowConfigs] = useState(false);
 
     useEffect(() => {
@@ -339,6 +340,13 @@ export const FolderDetail: React.FC = () => {
                         )}
                     </button>
                     <button
+                        className={`folder-tab flex items-center gap-2 px-6 py-4 border-b-2 transition-all ${activeTab === 'leads' ? 'border-(--bg-accent) text-(--text-primary)' : 'border-transparent text-(--text-tertiary) hover:text-(--text-secondary)'}`}
+                        onClick={() => setActiveTab('leads')}
+                        title="All leads found by this monitor"
+                    >
+                        <span className="text-sm font-bold">Leads</span>
+                    </button>
+                    <button
                         className={`folder-tab flex items-center gap-2 px-6 py-4 border-b-2 transition-all ${activeTab === 'strategy' ? 'border-(--bg-accent) text-(--text-primary)' : 'border-transparent text-(--text-tertiary) hover:text-(--text-secondary)'}`}
                         onClick={() => setActiveTab('strategy')}
                         title="Settings for this monitor"
@@ -365,6 +373,10 @@ export const FolderDetail: React.FC = () => {
                         <MarketMapTab
                             patterns={patterns}
                         />
+                    )}
+
+                    {activeTab === 'leads' && folderId && (
+                        <LeadsManagement folderId={folderId} />
                     )}
 
                     {activeTab === 'strategy' && (
