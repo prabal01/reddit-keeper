@@ -10,6 +10,9 @@
         ],
         "app": [
           "opiniondeck-app"
+        ],
+        "admin": [
+          "opiniondeck-admin"
         ]
       }
     }
