@@ -9,7 +9,16 @@
                 "**/node_modules/**"
             ],
             "cleanUrls": true,
-            "trailingSlash": false
+            "trailingSlash": false,
+            "rewrites": [
+                {
+                    "source": "/api/**",
+                    "run": {
+                        "serviceId": "opiniondeck-backend",
+                        "region": "us-east1"
+                    }
+                }
+            ]
         },
         {
             "target": "app",
