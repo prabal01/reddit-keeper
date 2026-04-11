@@ -63,6 +63,6 @@ export function verifyDodoWebhookSignature(
         const wh = new Webhook(secret);
         return wh.verify(rawBody, headers);
     } catch (err) {
-        throw new Error('Invalid Dodo webhook signature');
+        throw new Error('Invalid Dodo webhook signature', { cause: err });
     }
 }

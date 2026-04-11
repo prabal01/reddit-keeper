@@ -24,9 +24,9 @@ const extractRedditId = (url: string) => url.match(/comments\/([a-z0-9]+)/)?.[1]
 
 // Helper to scrape and extract niche
 async function getProposeIntelligence(query: string) {
-    let activeQuery = query;
+    const activeQuery = query;
     let isUrl = false;
-    let websiteNiche: any = null;
+    let websiteNiche: any;
 
     // Simple URL Detection
     if (query.startsWith('http://') || query.startsWith('https://') || query.includes('.com') || query.includes('.io') || query.includes('.ai')) {

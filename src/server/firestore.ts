@@ -11,7 +11,7 @@ import { logger } from "./utils/logger.js";
 let db: Firestore;
 let auth: Auth;
 let storage: Storage;
-let initStatus = {
+const initStatus = {
     initialized: false,
     error: null as string | null,
     source: "none" as "env" | "file" | "none"
@@ -81,7 +81,7 @@ export function initFirebase(): void {
             console.error("❌ Firebase initialization failed:", errMsg(err));
             // In production, we want to know if this fails immediately.
             if (process.env.NODE_ENV === 'production') {
-                throw new Error("CRITICAL: Firebase initialization failed in production: " + errMsg(err));
+                throw new Error("CRITICAL: Firebase initialization failed in production: " + errMsg(err), { cause: err });
             }
         }
     }
@@ -559,7 +559,7 @@ export function resolveUserConfig(
 // ── User cache (60s TTL) ───────────────────────────────────────────
 
 const USER_CACHE_TTL = 60 * 1000;
-let userCache: Map<string, { user: UserDoc; cachedAt: number }> = new Map();
+const userCache: Map<string, { user: UserDoc; cachedAt: number }> = new Map();
 
 export async function getOrCreateUser(
     uid: string,
