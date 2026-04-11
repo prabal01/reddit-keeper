@@ -39,6 +39,16 @@ export const opportunityMatcherQueue = new Queue("opportunity-matcher", {
     }
 });
 
+export const reportGeneratorQueue = new Queue("report-generator", {
+    connection: sharedConnectionConfig,
+    defaultJobOptions: {
+        removeOnComplete: { count: 10, age: 3600 * 24 * 7 },
+        removeOnFail: { count: 50, age: 3600 * 24 * 7 },
+        attempts: 2,
+        backoff: { type: 'exponential', delay: 60000 }
+    }
+});
+
 // ── Shared Service Instances ──────────────────────────────────────
 
 const discoveryOrchestrator = new DiscoveryOrchestrator();
@@ -272,6 +282,97 @@ export const opportunityMatcherWorker = new Worker("opportunity-matcher", async 
     concurrency: 2, // Allow a few concurrent users to be matched
 });
 
+// ── Report Generator Worker ──────────────────────────────────────
+
+export const reportGeneratorWorker = new Worker("report-generator", async (job) => {
+    logger.info({ action: 'REPORT_GEN_START' }, `[Reports] Starting scheduled pain point report generation...`);
+
+    const { getDb, getFolderIntelligenceSignals, saveAnalysis, updateUserAicost, saveAggregatedInsights } = await import('../firestore.js');
+    const db = getDb();
+    if (!db) {
+        logger.error({ action: 'REPORT_GEN_NO_DB' }, '[Reports] Database not initialized');
+        return { generated: 0 };
+    }
+
+    // Find all folders with active monitoring
+    const foldersSnap = await db.collection('folders')
+        .where('is_monitoring_active', '==', true)
+        .get();
+
+    if (foldersSnap.empty) {
+        logger.info({ action: 'REPORT_GEN_NONE' }, '[Reports] No active monitoring folders found.');
+        return { generated: 0 };
+    }
+
+    let generated = 0;
+
+    for (const doc of foldersSnap.docs) {
+        const folder = { id: doc.id, ...doc.data() } as any;
+        const uid = folder.uid;
+        if (!uid) continue;
+
+        try {
+            const signals = await getFolderIntelligenceSignals(uid, folder.id);
+            const totalSignals = signals.painPoints.length + signals.triggers.length + signals.outcomes.length;
+            if (totalSignals === 0) {
+                logger.info({ folderId: folder.id, uid }, '[Reports] No signals for folder, skipping.');
+                continue;
+            }
+
+            const { ClusterEngine } = await import('../clustering.js');
+            const engine = new ClusterEngine(folder.id, uid);
+            const painPoints = await engine.aggregate(signals.painPoints, 'pain_point');
+            const triggers = await engine.aggregate(signals.triggers, 'switch_trigger');
+            const outcomes = await engine.aggregate(signals.outcomes, 'desired_outcome');
+
+            await saveAggregatedInsights(folder.id, [...painPoints, ...triggers, ...outcomes]);
+
+            const { synthesizeReport } = await import('../ai.js');
+            const uniqueThreadIds = new Set([
+                ...signals.painPoints.map((s: any) => s.thread_id),
+                ...signals.triggers.map((s: any) => s.thread_id),
+                ...signals.outcomes.map((s: any) => s.thread_id)
+            ]);
+            const totalThreads = uniqueThreadIds.size;
+            const totalComments = folder?.metrics?.commentsAnalyzed || 0;
+            const synthesisResult = await synthesizeReport({ painPoints, triggers, outcomes }, totalThreads, totalComments);
+
+            if (synthesisResult.usage) {
+                const inputTokens = synthesisResult.usage.promptTokenCount || 0;
+                const outputTokens = synthesisResult.usage.candidatesTokenCount || 0;
+                await updateUserAicost(uid, {
+                    totalInputTokens: inputTokens,
+                    totalOutputTokens: outputTokens,
+                    totalAiCost: (inputTokens / 1_000_000) * 0.0375 + (outputTokens / 1_000_000) * 0.15
+                });
+            }
+
+            const finalReport = {
+                ...synthesisResult.parsedResult,
+                metadata: {
+                    ...synthesisResult.parsedResult.metadata,
+                    total_threads: totalThreads,
+                    total_comments: totalComments,
+                    generated_at: new Date().toISOString(),
+                    scheduled: true
+                }
+            };
+
+            await saveAnalysis(uid, folder.id, finalReport, 'gemini-2.0-flash', synthesisResult.usage);
+            generated++;
+            logger.info({ folderId: folder.id, uid, action: 'REPORT_GEN_SUCCESS' }, `[Reports] Generated report for folder ${folder.id}`);
+        } catch (err: unknown) {
+            logger.error({ folderId: folder.id, uid, err: errMsg(err), action: 'REPORT_GEN_ERROR' }, `[Reports] Failed to generate report for folder ${folder.id}`);
+        }
+    }
+
+    logger.info({ action: 'REPORT_GEN_COMPLETE', generated }, `[Reports] Completed. Generated ${generated} reports.`);
+    return { generated };
+}, {
+    connection: sharedConnectionConfig,
+    concurrency: 1,
+});
+
 // ── Initialization ────────────────────────────────────────────────
 
 export async function initMonitoring() {
@@ -282,20 +383,31 @@ export async function initMonitoring() {
     for (const job of repeatableJobs) {
         await monitoringScraperQueue.removeRepeatableByKey(job.key);
     }
+    const repeatableReportJobs = await reportGeneratorQueue.getRepeatableJobs();
+    for (const job of repeatableReportJobs) {
+        await reportGeneratorQueue.removeRepeatableByKey(job.key);
+    }
 
     // Drain any waiting manual jobs to prevent "zombie" runs on restart
     await monitoringScraperQueue.drain();
     await opportunityMatcherQueue.drain();
+    await reportGeneratorQueue.drain();
 
-    // 3. Add the 8-hour sync (every 8 hours: 0 */8 * * *)
-    // Use a stable jobId for the repeatable job to prevent duplicates
+    // Add the 8-hour sync (every 8 hours: 0 */8 * * *)
     await monitoringScraperQueue.add("global-scrape-cycle", {}, {
         repeat: {
             pattern: '0 */8 * * *',
-            // prevents it from firing immediately if the server starts mid-window
-            immediately: false 
+            immediately: false
         }
     });
 
-    logger.info({ action: 'MONITORING_INIT_COMPLETE' }, "[Monitoring] Pipeline initialized. Background scrape scheduled for every 8 hours.");
+    // Add pain point report generation every 3 days at 6 AM UTC
+    await reportGeneratorQueue.add("scheduled-report", {}, {
+        repeat: {
+            pattern: '0 6 */3 * *',
+            immediately: false
+        }
+    });
+
+    logger.info({ action: 'MONITORING_INIT_COMPLETE' }, "[Monitoring] Pipeline initialized. Scrape every 8h, reports every 3 days.");
 }

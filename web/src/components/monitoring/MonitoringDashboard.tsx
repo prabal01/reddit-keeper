@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFolders } from '../../contexts/FolderContext';
 import { MonitorCard } from './MonitorCard';
-import { Radar, Sparkles, Plus, Link as LinkIcon, Search, Globe, Zap, X, CheckCircle2, MessageSquare } from 'lucide-react';
+import { LeadsManagement } from './LeadsManagement';
+import { Radar, Sparkles, Plus, Link as LinkIcon, Search, Globe, Zap, X, CheckCircle2, MessageSquare, Loader2, AlertCircle, Users } from 'lucide-react';
 import { H2, Subtitle, Metadata } from '../common/Typography';
 import { UIButton } from '../common/UIButton';
 import { PageHeader } from '../common/PageHeader';
@@ -34,11 +35,14 @@ export const MonitoringDashboard: React.FC = () => {
 
     const [query, setQuery] = useState('');
     const [monitorStats, setMonitorStats] = useState<Record<string, { leads: number; patterns: number; lastScan: string | null }>>({});
-    const [searchingStep, setSearchingStep] = useState(0);
 
     // Propose & Confirm State
     const [confirmStep, setConfirmStep] = useState<'input' | 'proposing' | 'review' | 'starting' | 'success'>('input');
     const [limitError, setLimitError] = useState<string | null>(null);
+    const [loadingError, setLoadingError] = useState<string | null>(null);
+    const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+    const [activeStep, setActiveStep] = useState(0);
+    const [showBrowseBanner, setShowBrowseBanner] = useState(false);
     const [proposedContext, setProposedContext] = useState<{
         isUrl: boolean;
         niche: string;
@@ -52,6 +56,11 @@ export const MonitoringDashboard: React.FC = () => {
     const [selectedSubreddits, setSelectedSubreddits] = useState<string[]>([]);
     const [newSubInput, setNewSubInput] = useState('');
     const [subredditError, setSubredditError] = useState(false);
+    const [addingKeyword, setAddingKeyword] = useState(false);
+    const [newKeywordInput, setNewKeywordInput] = useState('');
+
+    // Dashboard tabs
+    const [dashboardTab, setDashboardTab] = useState<'monitors' | 'leads'>('monitors');
 
     // Subreddit monitors (separate from folders)
     const [subredditMonitors, setSubredditMonitors] = useState<SubredditMonitor[]>([]);
@@ -68,26 +77,22 @@ export const MonitoringDashboard: React.FC = () => {
         [folders]
     );
 
-    // Dynamic deploy button label
-    const deployButtonLabel = useMemo(() => {
-        if (selectedSubreddits.length > 0) {
-            return `Deploy SEO + ${selectedSubreddits.length} Subreddit${selectedSubreddits.length > 1 ? 's' : ''}`;
-        }
-        return 'Deploy SEO Monitor';
-    }, [selectedSubreddits.length]);
+    // Dynamic deploy summary
+    const deploySummary = useMemo(() => {
+        const parts: string[] = [];
+        if (proposedContext?.suggested_keywords?.length) parts.push(`${proposedContext.suggested_keywords.length} SEO keywords`);
+        if (selectedSubreddits.length > 0) parts.push(`${selectedSubreddits.length} subreddit${selectedSubreddits.length > 1 ? 's' : ''}`);
+        return parts.length > 0 ? parts.join(' + ') : '';
+    }, [selectedSubreddits.length, proposedContext?.suggested_keywords?.length]);
 
-    // Cycle through searching steps during loading
+    // Background-friendly timeout — show browse banner after 15s
     useEffect(() => {
-        if (confirmStep !== 'proposing' && confirmStep !== 'starting') {
-            setSearchingStep(0);
+        if (confirmStep !== 'proposing') {
+            setShowBrowseBanner(false);
             return;
         }
-
-        const interval = setInterval(() => {
-            setSearchingStep(s => (s + 1) % 3);
-        }, 3000);
-
-        return () => clearInterval(interval);
+        const timer = setTimeout(() => setShowBrowseBanner(true), 15000);
+        return () => clearTimeout(timer);
     }, [confirmStep]);
 
     // Load stats for each active SEO monitor
@@ -150,6 +155,7 @@ export const MonitoringDashboard: React.FC = () => {
         const trimmed = query.trim();
         if (!trimmed) return;
         setLimitError(null);
+        setLoadingError(null);
 
         // Pre-check monitor limit before any API call
         if (config && activeMonitors.length >= config.monitorLimit) {
@@ -158,6 +164,8 @@ export const MonitoringDashboard: React.FC = () => {
         }
 
         setConfirmStep('proposing');
+        setCompletedSteps(new Set());
+        setActiveStep(0);
         setSubredditSuggestions([]);
         setSelectedSubreddits([]);
         setSubredditError(false);
@@ -168,33 +176,38 @@ export const MonitoringDashboard: React.FC = () => {
             const API_BASE = getApiBase();
             const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
 
-            // Run both API calls in parallel — subreddits are non-critical
-            const [proposeRes, suggestRes] = await Promise.all([
-                fetch(`${API_BASE}/discovery/propose`, {
-                    method: 'POST', headers, body: JSON.stringify({ query: trimmed })
-                }),
-                fetch(`${API_BASE}/monitoring/suggestions`, {
-                    method: 'POST', headers, body: JSON.stringify({ context: trimmed })
-                }).catch(() => null)
-            ]);
+            // Run both API calls in parallel but track progress independently
+            const proposePromise = fetch(`${API_BASE}/discovery/propose`, {
+                method: 'POST', headers, body: JSON.stringify({ query: trimmed })
+            });
+            const suggestPromise = fetch(`${API_BASE}/monitoring/suggestions`, {
+                method: 'POST', headers, body: JSON.stringify({ context: trimmed })
+            }).catch(() => null);
 
-            if (!proposeRes.ok) throw new Error('Failed to fetch proposals');
+            // Step 0 completes when propose resolves
+            const proposeRes = await proposePromise;
+            if (!proposeRes.ok) throw new Error('Failed to analyze your input. Please try again.');
             const proposeData = await proposeRes.json();
             setProposedContext(proposeData);
+            setCompletedSteps(prev => new Set([...prev, 0]));
+            setActiveStep(1);
 
+            // Step 1 completes when suggestions resolve
+            const suggestRes = await suggestPromise;
             if (suggestRes?.ok) {
                 const suggestData = await suggestRes.json();
                 const suggestions: SubredditSuggestion[] = suggestData.suggestions || [];
                 setSubredditSuggestions(suggestions);
-                // Auto-select first 3
                 setSelectedSubreddits(suggestions.slice(0, 3).map(s => s.name));
             } else {
                 setSubredditError(true);
             }
+            setCompletedSteps(prev => new Set([...prev, 1]));
 
             setConfirmStep('review');
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
+            setLoadingError(err?.message || 'Something went wrong. Please try again.');
             setConfirmStep('input');
         }
     };
@@ -202,6 +215,9 @@ export const MonitoringDashboard: React.FC = () => {
     const handleDeployAgent = async () => {
         if (!proposedContext) return;
         setConfirmStep('starting');
+        setLoadingError(null);
+        setCompletedSteps(new Set());
+        setActiveStep(0);
         try {
             const { getAuth } = await import('firebase/auth');
             const token = await getAuth().currentUser?.getIdToken();
@@ -228,6 +244,9 @@ export const MonitoringDashboard: React.FC = () => {
             }
             const data = await response.json();
 
+            setCompletedSteps(prev => new Set([...prev, 0]));
+            setActiveStep(1);
+
             // Also create subreddit monitor if subreddits selected (non-critical)
             if (selectedSubreddits.length > 0) {
                 await fetch(`${API_BASE}/monitoring/monitors`, {
@@ -239,6 +258,7 @@ export const MonitoringDashboard: React.FC = () => {
                     })
                 }).catch(err => console.warn('Subreddit monitor creation failed:', err));
             }
+            setCompletedSteps(prev => new Set([...prev, 1]));
 
             if (data.folderId) {
                 setConfirmStep('success');
@@ -247,8 +267,9 @@ export const MonitoringDashboard: React.FC = () => {
                     navigate(`/folders/${data.folderId}`);
                 }, 2500);
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
+            setLoadingError(err?.message || 'Failed to deploy monitor. Please try again.');
             setConfirmStep('review');
         }
     };
@@ -291,16 +312,26 @@ export const MonitoringDashboard: React.FC = () => {
                     Drop a URL or product idea to deploy high-velocity AI agents across Reddit & HN.
                 </Subtitle>
 
-                {/* Main Input Bar */}
-                {limitError && confirmStep === 'input' && (
+                {/* Error Messages */}
+                {confirmStep === 'input' && (limitError || loadingError) && (
                     <div className="md-limit-error fadeInUp text-center mb-4 flex flex-col items-center gap-2">
-                        <span className="text-red-400 text-sm">{limitError}</span>
-                        <button
-                            className="text-xs px-3 py-1.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30 transition-colors"
-                            onClick={openUpgradeModal}
-                        >
-                            Upgrade plan to add more monitors
-                        </button>
+                        {loadingError && (
+                            <div className="flex items-center gap-2 text-red-400 text-sm">
+                                <AlertCircle size={14} />
+                                <span>{loadingError}</span>
+                            </div>
+                        )}
+                        {limitError && (
+                            <>
+                                <span className="text-red-400 text-sm">{limitError}</span>
+                                <button
+                                    className="text-xs px-3 py-1.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30 transition-colors"
+                                    onClick={openUpgradeModal}
+                                >
+                                    Upgrade plan to add more monitors
+                                </button>
+                            </>
+                        )}
                     </div>
                 )}
                 {confirmStep === 'input' && (
@@ -337,42 +368,73 @@ export const MonitoringDashboard: React.FC = () => {
             {isLoading ? (
                 /* Loading State */
                 <div className="md-searching-state fadeInUp">
-                    <div className="md-searching-icon-wrapper">
-                        <Radar size={24} />
+                    <div className="md-searching-progress">
+                        <Loader2 size={20} className="md-searching-spinner" />
+                        <h3 className="md-searching-title">
+                            {confirmStep === 'proposing' ? 'Analyzing your input...' : 'Setting up your monitor...'}
+                        </h3>
                     </div>
-                    <h3 className="md-searching-title">
-                        {confirmStep === 'proposing' ? 'Extracting Market Context...' : 'Deploying Your Agents...'}
-                    </h3>
 
                     <div className="md-searching-steps">
-                        <div className={`md-step ${searchingStep === 0 ? 'active' : ''}`}>
-                            <div className="md-step-icon"><Globe size={16} /></div>
-                            <div className="md-step-info">
-                                <div className="md-step-name">Analyzing Source</div>
-                                <div className="md-step-desc">Parsing context from {query}...</div>
-                            </div>
-                        </div>
-
-                        <div className={`md-step ${searchingStep === 1 ? 'active' : ''}`}>
-                            <div className="md-step-icon"><Search size={16} /></div>
-                            <div className="md-step-info">
-                                <div className="md-step-name">Mapping Communities</div>
-                                <div className="md-step-desc">Identifying keywords & high-signal subreddits...</div>
-                            </div>
-                        </div>
-
-                        <div className={`md-step ${searchingStep === 2 ? 'active' : ''}`}>
-                            <div className="md-step-icon"><Zap size={16} /></div>
-                            <div className="md-step-info">
-                                <div className="md-step-name">Global Matching</div>
-                                <div className="md-step-desc">Connecting niche to real-time opportunities...</div>
-                            </div>
-                        </div>
+                        {confirmStep === 'proposing' ? (
+                            <>
+                                <div className={`md-step ${completedSteps.has(0) ? 'completed' : activeStep === 0 ? 'active' : ''}`}>
+                                    <div className="md-step-icon">
+                                        {completedSteps.has(0) ? <CheckCircle2 size={16} /> : <Globe size={16} />}
+                                    </div>
+                                    <div className="md-step-info">
+                                        <div className="md-step-name">Scanning URL & extracting context</div>
+                                    </div>
+                                </div>
+                                <div className={`md-step ${completedSteps.has(1) ? 'completed' : activeStep === 1 ? 'active' : ''}`}>
+                                    <div className="md-step-icon">
+                                        {completedSteps.has(1) ? <CheckCircle2 size={16} /> : <Search size={16} />}
+                                    </div>
+                                    <div className="md-step-info">
+                                        <div className="md-step-name">Finding relevant communities</div>
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className={`md-step ${completedSteps.has(0) ? 'completed' : activeStep === 0 ? 'active' : ''}`}>
+                                    <div className="md-step-icon">
+                                        {completedSteps.has(0) ? <CheckCircle2 size={16} /> : <Zap size={16} />}
+                                    </div>
+                                    <div className="md-step-info">
+                                        <div className="md-step-name">Creating monitor</div>
+                                    </div>
+                                </div>
+                                <div className={`md-step ${completedSteps.has(1) ? 'completed' : activeStep === 1 ? 'active' : ''}`}>
+                                    <div className="md-step-icon">
+                                        {completedSteps.has(1) ? <CheckCircle2 size={16} /> : <Radar size={16} />}
+                                    </div>
+                                    <div className="md-step-info">
+                                        <div className="md-step-name">Deploying agents</div>
+                                    </div>
+                                </div>
+                            </>
+                        )}
                     </div>
+
+                    {showBrowseBanner && (
+                        <div className="md-browse-banner fadeInUp">
+                            <p>We're finding the best threads for you. Feel free to browse — we'll notify you when ready.</p>
+                            <button onClick={() => { setShowBrowseBanner(false); setConfirmStep('input'); }}>
+                                Continue browsing
+                            </button>
+                        </div>
+                    )}
                 </div>
             ) : confirmStep === 'review' && proposedContext ? (
                 /* Review Step */
                 <div className="md-review-mission fadeInUp">
+                    {loadingError && (
+                        <div className="flex items-center gap-2 mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                            <AlertCircle size={14} />
+                            <span>{loadingError}</span>
+                        </div>
+                    )}
                     <div className="md-review-card premium-card">
                         <div className="md-review-header">
                             <div className="md-review-badge">Review Mission</div>
@@ -408,10 +470,41 @@ export const MonitoringDashboard: React.FC = () => {
                                         }}><X size={12} /></button>
                                     </div>
                                 ))}
-                                <button className="md-add-kw" onClick={() => {
-                                    const nextKw = prompt("Add new search keyword:");
-                                    if (nextKw) setProposedContext({...proposedContext, suggested_keywords: [...proposedContext.suggested_keywords, nextKw]});
-                                }}>+ Add</button>
+                                {addingKeyword ? (
+                                    <input
+                                        type="text"
+                                        className="md-add-kw-input"
+                                        placeholder="Type keyword..."
+                                        value={newKeywordInput}
+                                        onChange={(e) => setNewKeywordInput(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && newKeywordInput.trim()) {
+                                                const kw = newKeywordInput.trim();
+                                                if (!proposedContext.suggested_keywords.includes(kw)) {
+                                                    setProposedContext({...proposedContext, suggested_keywords: [...proposedContext.suggested_keywords, kw]});
+                                                }
+                                                setNewKeywordInput('');
+                                                setAddingKeyword(false);
+                                            } else if (e.key === 'Escape') {
+                                                setAddingKeyword(false);
+                                                setNewKeywordInput('');
+                                            }
+                                        }}
+                                        onBlur={() => {
+                                            if (newKeywordInput.trim()) {
+                                                const kw = newKeywordInput.trim();
+                                                if (!proposedContext.suggested_keywords.includes(kw)) {
+                                                    setProposedContext({...proposedContext, suggested_keywords: [...proposedContext.suggested_keywords, kw]});
+                                                }
+                                            }
+                                            setNewKeywordInput('');
+                                            setAddingKeyword(false);
+                                        }}
+                                        autoFocus
+                                    />
+                                ) : (
+                                    <button className="md-add-kw" onClick={() => setAddingKeyword(true)}>+ Add</button>
+                                )}
                             </div>
                         </div>
 
@@ -504,10 +597,15 @@ export const MonitoringDashboard: React.FC = () => {
 
                         <div className="md-review-actions">
                             <button className="btn-secondary" onClick={() => setConfirmStep('input')}>Go Back</button>
-                            <button className="md-deploy-btn" onClick={handleDeployAgent}>
-                                <Zap size={16} />
-                                <span>{deployButtonLabel}</span>
-                            </button>
+                            <div className="md-deploy-wrapper">
+                                <button className="md-deploy-btn" onClick={handleDeployAgent}>
+                                    <Zap size={16} />
+                                    <span>Launch Monitor</span>
+                                </button>
+                                {deploySummary && (
+                                    <p className="md-deploy-summary">{deploySummary}</p>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -528,72 +626,108 @@ export const MonitoringDashboard: React.FC = () => {
                         <div className="md-redirect-timer mt-3">Redirecting to project folder...</div>
                     </div>
                 </div>
-            ) : foldersLoading ? (
-                /* Skeleton loading */
-                <section className="md-monitors-section">
-                    <div className="md-monitors-grid">
-                        {[1, 2, 3].map(i => (
-                            <div key={i} className="w-full p-6 rounded-2xl bg-(--bg-secondary) border border-(--border-light) animate-pulse">
-                                <div className="flex justify-between mb-6">
-                                    <div className="h-3 w-24 rounded bg-(--border-light)" />
-                                    <div className="h-5 w-10 rounded-full bg-(--border-light)" />
-                                </div>
-                                <div className="h-5 w-40 rounded bg-(--border-light) mb-6" />
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="h-8 rounded bg-(--border-light)" />
-                                    <div className="h-8 rounded bg-(--border-light)" />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </section>
-            ) : hasAnyMonitors ? (
-                /* Active Monitors Grid — SEO + Subreddit */
-                <section className="md-monitors-section">
-                    <div className="md-section-header flex items-center justify-between mb-8">
-                        <H2 className="md-section-title mb-0">Active Intelligence Monitors</H2>
-                        <Badge variant="premium">{activeMonitors.length + subredditMonitors.length} RUNNING</Badge>
-                    </div>
-                    <div className="md-monitors-grid">
-                        {activeMonitors.map(folder => (
-                            <MonitorCard
-                                key={folder.id}
-                                folder={folder}
-                                leadCount={monitorStats[folder.id]?.leads}
-                                patternCount={monitorStats[folder.id]?.patterns}
-                                lastScanTime={monitorStats[folder.id]?.lastScan}
-                                monitorType="seo"
-                            />
-                        ))}
-                        {subredditMonitors.map(monitor => (
-                            <MonitorCard
-                                key={monitor.monitorId}
-                                folder={{
-                                    id: monitor.monitorId,
-                                    uid: monitor.uid,
-                                    name: monitor.name,
-                                    createdAt: monitor.createdAt,
-                                    threadCount: 0,
-                                    seed_keywords: monitor.subreddits.map(s => `r/${s}`)
-                                }}
-                                lastScanTime={monitor.lastMatchAt}
-                                monitorType="subreddit"
-                                onCardClick={() => navigate('/leads')}
-                            />
-                        ))}
-                    </div>
-                </section>
             ) : (
-                /* Empty State */
-                <section className="md-empty-state">
-                    <div className="md-empty-icon mx-auto mb-6">
-                        <Search size={32} />
-                    </div>
-                    <h3 className="md-empty-title">No active monitors</h3>
-                    <p className="md-empty-desc mx-auto">
-                        Deploy your first agent to start scanning Reddit.
-                    </p>
-                </section>
+                <>
+                    {/* Tab Bar — show when monitors exist */}
+                    {hasAnyMonitors && (
+                        <div className="md-tab-bar">
+                            <button
+                                className={`md-tab ${dashboardTab === 'monitors' ? 'active' : ''}`}
+                                onClick={() => setDashboardTab('monitors')}
+                            >
+                                <Radar size={14} />
+                                Monitors
+                                <span className="md-tab-badge">{activeMonitors.length + subredditMonitors.length}</span>
+                            </button>
+                            <button
+                                className={`md-tab ${dashboardTab === 'leads' ? 'active' : ''}`}
+                                onClick={() => setDashboardTab('leads')}
+                            >
+                                <Users size={14} />
+                                Leads
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Tab Content */}
+                    {dashboardTab === 'leads' && hasAnyMonitors ? (
+                        <LeadsManagement />
+                    ) : foldersLoading ? (
+                        /* Skeleton loading */
+                        <section className="md-monitors-section">
+                            <div className="md-monitors-grid">
+                                {[1, 2].map(i => (
+                                    <div key={i} className="w-full p-6 rounded-2xl bg-(--bg-secondary) border border-(--border-light) animate-pulse">
+                                        <div className="flex justify-between mb-4">
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-3 w-3 rounded bg-(--border-light)" />
+                                                <div className="h-3 w-20 rounded bg-(--border-light)" />
+                                            </div>
+                                            <div className="flex gap-1.5">
+                                                <div className="h-5 w-10 rounded-full bg-(--border-light)" />
+                                                <div className="h-5 w-10 rounded-full bg-(--border-light)" />
+                                            </div>
+                                        </div>
+                                        <div className="h-5 w-48 rounded bg-(--border-light) mb-6" />
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <div className="h-3 w-12 rounded bg-(--border-light) mb-2" />
+                                                <div className="h-6 w-8 rounded bg-(--border-light)" />
+                                            </div>
+                                            <div>
+                                                <div className="h-3 w-12 rounded bg-(--border-light) mb-2" />
+                                                <div className="h-6 w-8 rounded bg-(--border-light)" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    ) : hasAnyMonitors ? (
+                        /* Active Monitors Grid — SEO + Subreddit */
+                        <section className="md-monitors-section">
+                            <div className="md-monitors-grid">
+                                {activeMonitors.map(folder => (
+                                    <MonitorCard
+                                        key={folder.id}
+                                        folder={folder}
+                                        leadCount={monitorStats[folder.id]?.leads}
+                                        patternCount={monitorStats[folder.id]?.patterns}
+                                        lastScanTime={monitorStats[folder.id]?.lastScan}
+                                        monitorType="seo"
+                                    />
+                                ))}
+                                {subredditMonitors.map(monitor => (
+                                    <MonitorCard
+                                        key={monitor.monitorId}
+                                        folder={{
+                                            id: monitor.monitorId,
+                                            uid: monitor.uid,
+                                            name: monitor.name,
+                                            createdAt: monitor.createdAt,
+                                            threadCount: 0,
+                                            seed_keywords: monitor.subreddits.map(s => `r/${s}`)
+                                        }}
+                                        lastScanTime={monitor.lastMatchAt}
+                                        monitorType="subreddit"
+                                        onCardClick={() => navigate('/leads')}
+                                    />
+                                ))}
+                            </div>
+                        </section>
+                    ) : (
+                        /* Empty State */
+                        <section className="md-empty-state">
+                            <div className="md-empty-icon mx-auto mb-6">
+                                <Search size={32} />
+                            </div>
+                            <h3 className="md-empty-title">No active monitors</h3>
+                            <p className="md-empty-desc mx-auto">
+                                Deploy your first agent to start scanning Reddit.
+                            </p>
+                        </section>
+                    )}
+                </>
             )}
         </div>
     );

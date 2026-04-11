@@ -40,6 +40,7 @@ export const MonitoringView: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [showSettings, setShowSettings] = useState(false);
     const [syncing, setSyncing] = useState(false);
+    const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
     const fetchData = async () => {
         setLoading(true);
@@ -214,14 +215,23 @@ export const MonitoringView: React.FC = () => {
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 auto-rows-max">
-                                {opportunities.map(opp => (
+                                {opportunities.map(opp => {
+                                    const isExpanded = expandedCards.has(opp.id);
+                                    return (
                                     <div
                                         key={opp.id}
                                         className={`bg-slate-900 rounded-lg border transition-all hover:border-slate-700 ${
                                             opp.status === 'new' ? 'border-orange-500/40 ring-1 ring-orange-500/20' : 'border-slate-800'
                                         }`}
                                     >
-                                        <div className="p-3">
+                                        <div
+                                            className="p-3 cursor-pointer"
+                                            onClick={() => setExpandedCards(prev => {
+                                                const next = new Set(prev);
+                                                next.has(opp.id) ? next.delete(opp.id) : next.add(opp.id);
+                                                return next;
+                                            })}
+                                        >
                                             {/* Header */}
                                             <div className="flex items-start justify-between gap-2 mb-2">
                                                 <div className="flex-1 min-w-0">
@@ -250,45 +260,54 @@ export const MonitoringView: React.FC = () => {
                                                 {opp.createdAt ? <span className="ml-1.5">· {formatDistanceToNow(new Date(opp.createdAt * 1000), { addSuffix: true })}</span> : null}
                                             </p>
 
-                                            {/* Metrics */}
-                                            <div className="flex gap-4 mb-2 py-2 border-y border-slate-800 flex-shrink-0">
-                                                <div>
-                                                    <p className="text-xs text-slate-500 font-medium">LEADS</p>
-                                                    <p className="text-sm font-semibold text-white h-5">25</p>
+                                            {/* Match Reason */}
+                                            {opp.matchReason && (
+                                                <div className="mb-2 py-2 border-y border-slate-800">
+                                                    <p className="text-xs text-slate-500 font-medium mb-1">WHY IT MATCHED</p>
+                                                    <p className={`text-xs text-slate-300 leading-relaxed ${isExpanded ? '' : 'line-clamp-2'}`}>
+                                                        {opp.matchReason}
+                                                    </p>
                                                 </div>
-                                                <div>
-                                                    <p className="text-xs text-slate-500 font-medium">SIGNALS</p>
-                                                    <p className="text-sm font-semibold text-white h-5">3</p>
-                                                </div>
-                                            </div>
+                                            )}
 
-                                            {/* Last Updated */}
+                                            {/* Expanded Content */}
+                                            {isExpanded && opp.suggestedReply && (
+                                                <div className="mb-2 p-2 bg-slate-800/50 rounded">
+                                                    <p className="text-xs text-slate-500 font-medium mb-1">SUGGESTED REPLY</p>
+                                                    <p className="text-xs text-slate-300 leading-relaxed">{opp.suggestedReply}</p>
+                                                </div>
+                                            )}
+
+                                            {/* Timestamp */}
                                             <p className="text-xs text-slate-500 mb-2">
-                                                Last scan 2h ago
+                                                {opp.matchedAt
+                                                    ? `Matched ${formatDistanceToNow(new Date(opp.matchedAt), { addSuffix: true })}`
+                                                    : 'Recently matched'}
                                             </p>
+                                        </div>
 
-                                            {/* Actions */}
-                                            <div className="flex gap-2 mt-auto">
-                                                <a
-                                                    href={opp.postUrl}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    onClick={() => handleUpdateStatus(opp.id, 'seen')}
-                                                    className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold rounded transition-colors"
-                                                >
-                                                    <ExternalLink size={11} />
-                                                    View
-                                                </a>
-                                                <button
-                                                    onClick={() => handleUpdateStatus(opp.id, 'contacted')}
-                                                    className="flex-1 px-2 py-1.5 text-xs font-semibold text-slate-300 bg-zinc-800 hover:bg-zinc-700 rounded transition-colors"
-                                                >
-                                                    Done
-                                                </button>
-                                            </div>
+                                        {/* Actions — outside clickable area */}
+                                        <div className="flex gap-2 px-3 pb-3">
+                                            <button
+                                                onClick={() => handleUpdateStatus(opp.id, 'contacted')}
+                                                className="flex-1 px-2 py-1.5 text-xs font-semibold text-slate-300 bg-zinc-800 hover:bg-zinc-700 rounded transition-colors"
+                                            >
+                                                <CheckCircle2 size={11} className="inline mr-1" />
+                                                Done
+                                            </button>
+                                            <a
+                                                href={opp.postUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                onClick={(e) => { e.stopPropagation(); handleUpdateStatus(opp.id, 'seen'); }}
+                                                className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 text-orange-400 hover:text-orange-300 bg-orange-500/10 hover:bg-orange-500/20 text-xs font-semibold rounded transition-colors"
+                                            >
+                                                <ExternalLink size={11} />
+                                            </a>
                                         </div>
                                     </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </>
