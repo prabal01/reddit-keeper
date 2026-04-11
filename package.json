@@ -23,7 +23,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "secrets:sync": "gh secret set VITE_FIREBASE_API_KEY --body \"$(grep ^VITE_FIREBASE_API_KEY web/.env | cut -d= -f2 | tr -d '\"')\" && gh secret set VITE_FIREBASE_AUTH_DOMAIN --body \"$(grep ^VITE_FIREBASE_AUTH_DOMAIN web/.env | cut -d= -f2 | tr -d '\"')\" && gh secret set VITE_FIREBASE_PROJECT_ID --body \"$(grep ^VITE_FIREBASE_PROJECT_ID web/.env | cut -d= -f2 | tr -d '\"')\"",
+    "secrets:sync": "gh secret set --env-file .env",
+    "secrets:sync:web": "gh secret set --env-file web/.env",
+    "secrets:sync:admin": "gh secret set --env-file admin/.env",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix"
   },
