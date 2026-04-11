@@ -31,7 +31,8 @@ export class PullPushService {
         keyword: string,
         subreddit?: string,
         limit: number = 100,
-        after?: number
+        after?: number,
+        author?: string
     ): Promise<DiscoveryResult[]> {
         try {
             await this.enforceDelay();
@@ -39,6 +40,7 @@ export class PullPushService {
             let url = `${this.baseUrl}/reddit/search/submission/?q=${encodeURIComponent(keyword)}&size=${limit}`;
             if (subreddit) url += `&subreddit=${encodeURIComponent(subreddit)}`;
             if (after) url += `&after=${after}`;
+            if (author) url += `&author=${encodeURIComponent(author)}`;
 
             logger.info({ service: 'pullpush', action: 'SEARCH_SUBMISSIONS', keyword, subreddit }, `Searching submissions...`);
 
@@ -83,13 +85,15 @@ export class PullPushService {
     async searchComments(
         keyword: string,
         subreddit?: string,
-        limit: number = 100
+        limit: number = 100,
+        author?: string
     ): Promise<DiscoveryResult[]> {
         try {
             await this.enforceDelay();
 
             let url = `${this.baseUrl}/reddit/search/comment/?q=${encodeURIComponent(keyword)}&size=${limit}`;
             if (subreddit) url += `&subreddit=${encodeURIComponent(subreddit)}`;
+            if (author) url += `&author=${encodeURIComponent(author)}`;
 
             logger.info({ service: 'pullpush', action: 'SEARCH_COMMENTS', keyword }, `Searching comments...`);
 

@@ -1,0 +1,12 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+import { ThreadExplorer } from '../../components/tools/ThreadExplorer';
+---
+
+<ToolLayout
+    title="Reddit Thread Explorer — Free Tool | OpinionDeck"
+    description="Break down any Reddit thread with top comments, engagement stats, and conversation depth analysis. Free thread analysis tool."
+    tool="thread-explorer"
+>
+    <ThreadExplorer client:load />
+</ToolLayout>

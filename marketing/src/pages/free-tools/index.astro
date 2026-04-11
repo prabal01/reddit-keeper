@@ -1,0 +1,331 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+import { Clock, BarChart3, Search, Users, GitCompare, MessageSquare, AlertTriangle, Target, Compass, ArrowRight, Sparkles } from 'lucide-react';
+
+const tools = [
+    {
+        slug: 'best-time-to-post',
+        title: 'Best Time to Post',
+        description: 'Enter a subreddit → get a heatmap showing when high-scoring posts go live.',
+        cta: 'Find Best Times',
+        icon: 'Clock',
+        tag: 'Most Popular',
+    },
+    {
+        slug: 'subreddit-analyzer',
+        title: 'Subreddit Analyzer',
+        description: 'Enter a subreddit → see engagement stats, top contributors, and posting patterns.',
+        cta: 'Analyze Subreddit',
+        icon: 'BarChart3',
+    },
+    {
+        slug: 'brand-mentions',
+        title: 'Brand Mention Tracker',
+        description: 'Enter a brand name → see every Reddit post mentioning it, sorted by community.',
+        cta: 'Track Mentions',
+        icon: 'Search',
+    },
+    {
+        slug: 'subreddit-comparison',
+        title: 'Subreddit Comparison',
+        description: 'Enter 2-3 subreddits → see which community has higher engagement, faster growth.',
+        cta: 'Compare Now',
+        icon: 'GitCompare',
+    },
+    {
+        slug: 'user-activity',
+        title: 'User Activity Lookup',
+        description: 'Enter a username → see their top subreddits, posting frequency, and recent activity.',
+        cta: 'Look Up User',
+        icon: 'Users',
+    },
+    {
+        slug: 'thread-explorer',
+        title: 'Thread Explorer',
+        description: 'Paste a Reddit URL → get top comments, engagement breakdown, and conversation depth.',
+        cta: 'Explore Thread',
+        icon: 'MessageSquare',
+    },
+    {
+        slug: 'pain-point-finder',
+        title: 'Pain Point Finder',
+        description: 'Enter a topic + subreddit → AI extracts the specific frustrations people are sharing.',
+        cta: 'Find Pain Points',
+        icon: 'AlertTriangle',
+        tag: 'AI-Powered',
+    },
+    {
+        slug: 'opportunity-finder',
+        title: 'Opportunity Finder',
+        description: 'Describe your product + subreddit → AI finds threads where you could genuinely help.',
+        cta: 'Find Opportunities',
+        icon: 'Target',
+        tag: 'AI-Powered',
+    },
+    {
+        slug: 'subreddit-finder',
+        title: 'Subreddit Finder',
+        description: 'Describe your product → AI finds the communities where your audience hangs out.',
+        cta: 'Find Subreddits',
+        icon: 'Compass',
+        tag: 'AI-Powered',
+    },
+];
+---
+
+<ToolLayout
+    title="Free Reddit Marketing Tools | OpinionDeck"
+    description="9 free tools to research subreddits, track brand mentions, find the best time to post, and discover marketing opportunities on Reddit."
+    tool=""
+>
+    <div class="tools-hero">
+        <h1>Free Reddit Tools</h1>
+        <p>Research communities, track brands, and find opportunities — no signup needed.</p>
+    </div>
+
+    <div class="tools-grid">
+        {tools.map(tool => (
+            <a
+                href={`/free-tools/${tool.slug}`}
+                class="tool-card"
+            >
+                {tool.tag && (
+                    <span class:list={['badge-tag', { 'badge-ai': tool.tag === 'AI-Powered', 'badge-popular': tool.tag === 'Most Popular' }]}>
+                        {tool.tag === 'AI-Powered' && <Sparkles size={10} />}
+                        {tool.tag}
+                    </span>
+                )}
+                <div class="tool-icon">
+                    {tool.icon === 'Clock' && <Clock size={22} />}
+                    {tool.icon === 'BarChart3' && <BarChart3 size={22} />}
+                    {tool.icon === 'Search' && <Search size={22} />}
+                    {tool.icon === 'GitCompare' && <GitCompare size={22} />}
+                    {tool.icon === 'Users' && <Users size={22} />}
+                    {tool.icon === 'MessageSquare' && <MessageSquare size={22} />}
+                    {tool.icon === 'AlertTriangle' && <AlertTriangle size={22} />}
+                    {tool.icon === 'Target' && <Target size={22} />}
+                    {tool.icon === 'Compass' && <Compass size={22} />}
+                </div>
+                <h2 class="tool-title">{tool.title}</h2>
+                <p class="tool-desc">{tool.description}</p>
+                <span class="tool-cta">
+                    {tool.cta} <ArrowRight size={14} />
+                </span>
+            </a>
+        ))}
+    </div>
+
+    <!-- Bottom CTA -->
+    <div class="bottom-cta">
+        <h2>Want automated insights?</h2>
+        <p>OpinionDeck monitors Reddit 24/7 and finds opportunities for you automatically.</p>
+        <a href="/app" class="cta-btn">Try OpinionDeck Free</a>
+    </div>
+
+    <!-- SEO content -->
+    <div class="seo-content">
+        <h2>Reddit Marketing Tools for Founders and Marketers</h2>
+        <p>
+            Whether you're launching a new product, researching competitors, or trying to understand
+            your audience, these free tools give you the data you need. Analyze subreddit activity,
+            find the best time to post, track brand mentions, and discover communities where your
+            target customers hang out.
+        </p>
+        <p>
+            All tools are free to use with no signup required. Data comes from Reddit's public archives,
+            covering millions of posts and comments. Results are cached for fast repeat lookups.
+        </p>
+    </div>
+</ToolLayout>
+
+<style>
+    /* Override narrow tool-main container for the index grid */
+    :global(.tool-main) {
+        max-width: 1100px;
+    }
+
+    .tools-hero {
+        text-align: center;
+        padding: 48px 0 36px;
+    }
+
+    .tools-hero h1 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin: 0 0 12px;
+        letter-spacing: -0.02em;
+    }
+
+    .tools-hero p {
+        font-size: 1.1rem;
+        color: var(--text-secondary);
+        margin: 0;
+    }
+
+    .tools-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-bottom: 48px;
+    }
+
+    .tool-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        padding: 28px 24px;
+        text-decoration: none;
+        color: inherit;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    .tool-card:not(.coming-soon):hover {
+        transform: translateY(-3px);
+        border-color: var(--bg-accent);
+        box-shadow: var(--shadow-md);
+    }
+
+    .tool-card.coming-soon {
+        opacity: 0.55;
+        cursor: default;
+        pointer-events: none;
+    }
+
+    .tool-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: var(--radius-md);
+        background: rgba(255, 69, 0, 0.08);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--bg-accent);
+        margin-bottom: 16px;
+    }
+
+    .tool-title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0 0 8px;
+    }
+
+    .tool-desc {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        margin: 0 0 16px;
+        line-height: 1.5;
+        flex: 1;
+    }
+
+    .tool-cta {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--bg-accent);
+        transition: gap 0.2s;
+    }
+
+    .tool-card:hover .tool-cta {
+        gap: 10px;
+    }
+
+    .badge-tag {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        font-size: 0.6rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 3px 10px;
+        border-radius: var(--radius-full);
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        letter-spacing: 0.03em;
+    }
+
+    .badge-ai {
+        background: rgba(139, 92, 246, 0.1);
+        color: #8b5cf6;
+    }
+
+    .badge-popular {
+        background: rgba(34, 197, 94, 0.1);
+        color: #22c55e;
+    }
+
+    .bottom-cta {
+        text-align: center;
+        padding: 48px 32px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        margin-bottom: 48px;
+    }
+
+    .bottom-cta h2 {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0 0 8px;
+    }
+
+    .bottom-cta p {
+        font-size: 0.95rem;
+        color: var(--text-secondary);
+        margin: 0 0 24px;
+    }
+
+    .cta-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 28px;
+        background: var(--bg-accent);
+        color: #fff;
+        border-radius: var(--radius-sm);
+        font-weight: 600;
+        font-size: 0.95rem;
+        text-decoration: none;
+        transition: transform 0.2s;
+    }
+
+    .cta-btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .seo-content {
+        padding: 0 4px;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        line-height: 1.7;
+    }
+
+    .seo-content h2 {
+        font-size: 1.3rem;
+        color: var(--text-primary);
+        font-weight: 700;
+        margin-bottom: 12px;
+    }
+
+    @media (max-width: 768px) {
+        .tools-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .tools-hero h1 { font-size: 1.8rem; }
+        .tool-card { padding: 20px 18px; }
+    }
+
+    @media (max-width: 480px) {
+        .tools-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>

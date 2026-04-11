@@ -1,0 +1,12 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+import { UserActivity } from '../../components/tools/UserActivity';
+---
+
+<ToolLayout
+    title="Reddit User Activity Lookup — Free Tool | OpinionDeck"
+    description="See any Reddit user's posting history, top subreddits, and activity patterns. Free user research tool."
+    tool="user-activity"
+>
+    <UserActivity client:load />
+</ToolLayout>

@@ -1,0 +1,12 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+import { SubredditAnalyzer } from '../../components/tools/SubredditAnalyzer';
+---
+
+<ToolLayout
+    title="Subreddit Activity Analyzer — Free Tool | OpinionDeck"
+    description="Get a quick snapshot of any subreddit's engagement, top contributors, and posting patterns. Free Reddit analytics tool."
+    tool="subreddit-analyzer"
+>
+    <SubredditAnalyzer client:load />
+</ToolLayout>

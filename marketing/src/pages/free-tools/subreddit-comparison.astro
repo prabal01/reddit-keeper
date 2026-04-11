@@ -1,0 +1,12 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+import { SubredditComparison } from '../../components/tools/SubredditComparison';
+---
+
+<ToolLayout
+    title="Compare Subreddits Side by Side — Free Tool | OpinionDeck"
+    description="Compare 2-3 Reddit communities by engagement, posting frequency, and top contributors. Free subreddit comparison tool."
+    tool="subreddit-comparison"
+>
+    <SubredditComparison client:load />
+</ToolLayout>
