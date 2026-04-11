@@ -191,7 +191,7 @@ export class DiscoveryOrchestrator {
 
         // 4. Final Aggregation, Deduplication & Ranking
         const seenUrls = new Set<string>();
-        let finalResults = allResults
+        const finalResults = allResults
             .filter(r => {
                 if (seenUrls.has(r.url)) return false;
                 seenUrls.add(r.url);
@@ -481,7 +481,7 @@ export class DiscoveryOrchestrator {
             logger.warn({ err }, "Thread cache read error");
         }
 
-        let fullData: any = null;
+        let fullData: any;
         if (source === 'hn') {
             // Extract numeric ID from HN URL if provided
             let id = urlOrId;

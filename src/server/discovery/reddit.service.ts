@@ -147,7 +147,7 @@ export class RedditDiscoveryService implements IDiscoveryService {
         }
 
         const compLower = cleanCompetitor.toLowerCase();
-        let allResultsMap = new Map<string, DiscoveryResult>();
+        const allResultsMap = new Map<string, DiscoveryResult>();
         let scannedCount = 0;
 
         // For discovery (Reddit-wide search with no subreddit context), use PullPush
@@ -278,7 +278,7 @@ export class RedditDiscoveryService implements IDiscoveryService {
     async fetchFullThreadRecord(url: string, commentLimit = 500): Promise<any | null> {
         try {
             const parsedUrl = new URL(url);
-            let baseUrl = `${parsedUrl.origin}${parsedUrl.pathname}`;
+            const baseUrl = `${parsedUrl.origin}${parsedUrl.pathname}`;
             const jsonWithoutTrailing = baseUrl.replace(/\/$/, "");
             const jsonUrl = `${jsonWithoutTrailing}.json?limit=${commentLimit}`;
 

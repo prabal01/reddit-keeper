@@ -289,7 +289,7 @@ ${fallbackText}`;
 
         } catch (err: unknown) {
             logger.error({ err, url }, "Failed to scrape and summarize URL");
-            throw new Error(`Failed to extract context from URL: ${errMsg(err)}`);
+            throw new Error(`Failed to extract context from URL: ${errMsg(err)}`, { cause: err });
         }
     }
 

@@ -59,15 +59,12 @@ export const createRateLimiter = (limit: number, windowSeconds: number = 60) => 
 // ── Global rate limiter (200 req/min, plan-independent) ─────────────
 export const rateLimiterMiddleware = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        // @ts-ignore - req.user added by auth middleware
         const key = req.user ? `rate_limit:global:${req.user.uid}` : `rate_limit:global:ip:${req.ip}`;
 
         // Admin bypass
-        // @ts-ignore
         if (req.user && req.user.email) {
             const adminEmailsStr = process.env.ADMIN_EMAILS || "";
             const adminEmails = adminEmailsStr.split(",").map((e: string) => e.trim().toLowerCase());
-            // @ts-ignore
             if (adminEmails.includes(req.user.email.toLowerCase())) {
                 return next();
             }
@@ -105,7 +102,6 @@ export const rateLimiterMiddleware = async (req: Request, res: Response, next: N
 // Apply to endpoints that trigger AI inference, Reddit scraping, etc.
 export const expensiveOpLimiter = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        // @ts-ignore
         const uid = req.user?.uid;
         if (!uid) return next(); // auth middleware handles this
 

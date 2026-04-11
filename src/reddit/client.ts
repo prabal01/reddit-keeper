@@ -69,7 +69,7 @@ async function fetchWithRetry(
                 return await response.json();
             } catch (error: any) {
                 if (attempt === maxRetries) {
-                    throw new Error(`Fetcher Service failed after ${maxRetries} attempts: ${error.message}`);
+                    throw new Error(`Fetcher Service failed after ${maxRetries} attempts: ${error.message}`, { cause: error });
                 }
                 const waitMs = Math.pow(2, attempt) * 1000;
                 await sleep(waitMs);
