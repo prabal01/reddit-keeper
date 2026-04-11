@@ -1,5 +1,6 @@
-import React from 'react';
-import { X, Crown, Zap, ShieldCheck, Star } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Crown, Zap, ShieldCheck, Star, Loader2 } from 'lucide-react';
+import { createDodoCheckout } from '../lib/api';
 import './UpgradeModal.css';
 
 interface UpgradeModalProps {
@@ -8,11 +9,20 @@ interface UpgradeModalProps {
 }
 
 export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) => {
+    const [loading, setLoading] = useState<string | null>(null);
+
     if (!isOpen) return null;
 
-    const handleUpgrade = (plan: string) => {
-        window.location.href = `mailto:hello@opiniondeck.com?subject=Upgrade to ${plan}&body=Hi, I would like to upgrade to the ${plan} plan!`;
-        onClose();
+    const handleUpgrade = async (plan: 'starter' | 'professional') => {
+        setLoading(plan);
+        try {
+            await createDodoCheckout(plan);
+        } catch (err: any) {
+            console.error('Checkout failed:', err);
+            alert(err.message || 'Failed to start checkout. Please try again.');
+        } finally {
+            setLoading(null);
+        }
     };
 
     return (
@@ -63,9 +73,10 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) =
 
                         <button
                             className={`upgrade-submit-btn`}
-                            onClick={() => handleUpgrade('Starter')}
+                            onClick={() => handleUpgrade('starter')}
+                            disabled={loading === 'starter'}
                         >
-                            Upgrade to Starter
+                            {loading === 'starter' ? <><Loader2 size={16} className="animate-spin" /> Loading...</> : 'Upgrade to Starter'}
                         </button>
                     </div>
 
@@ -103,9 +114,10 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) =
 
                         <button
                             className={`upgrade-submit-btn`}
-                            onClick={() => handleUpgrade('Professional')}
+                            onClick={() => handleUpgrade('professional')}
+                            disabled={loading === 'professional'}
                         >
-                            Upgrade to Professional
+                            {loading === 'professional' ? <><Loader2 size={16} className="animate-spin" /> Loading...</> : 'Upgrade to Professional'}
                         </button>
                     </div>
                 </div>

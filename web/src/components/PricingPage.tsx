@@ -20,7 +20,7 @@ export function PricingPage() {
     const isTrial = plan === "free" || plan === "trial";
     const isStarter = plan === "starter";
     const isPro = plan === "pro" || plan === "professional";
-    const isEnterprise = plan === "enterprise";
+    const isPastDue = plan === "past_due";
     const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
 
     const handleUpgrade = async (targetPlan: 'starter' | 'professional') => {
@@ -41,6 +41,13 @@ export function PricingPage() {
             <Subtitle className="pricing-subtitle text-center mb-12">
                 Start with a free 3-day trial. Upgrade when it's working.
             </Subtitle>
+
+            {isPastDue && (
+                <div style={{ maxWidth: 600, margin: '0 auto 32px', padding: '16px 24px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 12, textAlign: 'center' }}>
+                    <p style={{ color: '#f87171', fontWeight: 600, marginBottom: 4 }}>Your payment is past due</p>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Please update your payment method or resubscribe to restore access.</p>
+                </div>
+            )}
 
             <div className="pricing-cards">
                 {/* Trial Plan */}

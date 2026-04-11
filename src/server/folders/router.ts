@@ -26,6 +26,7 @@ const arcticShiftService = new ArcticShiftService();
 const extractRedditId = (url: string) => url?.match(/comments\/([a-z0-9]+)/)?.[1] ?? null;
 import { authMiddleware } from '../middleware/auth.js';
 import { usageGuard } from '../middleware/usageGuard.js';
+import { expensiveOpLimiter } from '../middleware/rateLimiter.js';
 import { granularAnalysisQueue, syncQueue } from '../queues.js';
 import { countComments } from '../../reddit/tree-builder.js';
 import { logger } from '../utils/logger.js';
@@ -439,7 +440,7 @@ function redactAnalysis(data: any): any {
     return redacted;
 }
 
-router.post('/:id/analyze', authMiddleware, usageGuard('ANALYSIS'), async (req: Request, res: Response) => {
+router.post('/:id/analyze', authMiddleware, expensiveOpLimiter, usageGuard('ANALYSIS'), async (req: Request, res: Response) => {
     if (!req.user) return void res.status(401).json({ error: 'Unauthorized' });
     try {
         const folderId = req.params.id as string;

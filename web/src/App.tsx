@@ -174,7 +174,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 }
 
 function AppContent() {
-  const { getIdToken, loading, user, isUpgradeModalOpen, closeUpgradeModal } = useAuth();
+  const { getIdToken, loading, user, isUpgradeModalOpen, closeUpgradeModal, refreshPlan, refreshStats } = useAuth();
   const location = useLocation();
   const isLoginPage = location.pathname === "/login";
 
@@ -228,8 +228,15 @@ function AppContent() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("checkout") === "success") {
+      const plan = params.get("plan");
       // Clean URL
       window.history.replaceState({}, "", window.location.pathname);
+      // Refresh plan data and show success toast
+      import("react-hot-toast").then(({ default: toast }) => {
+        toast.success(plan ? `Upgraded to ${plan} plan!` : "Payment successful!", { duration: 5000 });
+      });
+      refreshPlan();
+      refreshStats();
     }
   }, []);
 

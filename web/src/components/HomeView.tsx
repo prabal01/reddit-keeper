@@ -15,7 +15,6 @@ import { useNavigate } from "react-router-dom";
 import { PremiumLoader, ButtonLoader } from "./PremiumLoader";
 import { FolderList } from "./FolderList";
 import { ExtensionModal } from "./ExtensionModal";
-import { BRANDING } from "../constants/branding";
 import { AlertTriangle, Check, X, Activity, FolderOpen, Clock, MessageSquare } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { MetricCard } from "./common/MetricCard";

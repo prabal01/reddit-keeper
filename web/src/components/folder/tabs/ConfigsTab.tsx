@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, Globe, Zap, X, AlertTriangle, ChevronRight } from 'lucide-react';
+import { Settings, Globe, Zap, X, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface ConfigsTabProps {

@@ -21,14 +21,17 @@ redis.on("connect", () => {
     console.log("[REDIS] Connected to Redis Cloud");
 });
 
-const WINDOW_SIZE_IN_SECONDS = 60;
-const FALLBACK_ANON_LIMIT = 15; // Increased from 5 to stop accidental lockouts during normal browsing
+// ── Rate limit constants (plan-independent) ─────────────────────────
+const GLOBAL_LIMIT = 200;           // 200 req/min for all authenticated users
+const GLOBAL_WINDOW = 60;           // 60 seconds
+const EXPENSIVE_OP_LIMIT = 10;      // 10 req/min for costly AI/scraping endpoints
+const EXPENSIVE_OP_WINDOW = 60;
 
 export const createRateLimiter = (limit: number, windowSeconds: number = 60) => {
     return async (req: Request, res: Response, next: NextFunction) => {
         try {
-            const key = req.user 
-                ? `rate_limit:user:${req.user.uid}` 
+            const key = req.user
+                ? `rate_limit:user:${req.user.uid}`
                 : `rate_limit:ip:${req.ip}`;
 
             const currentCount = await redis.incr(key);
@@ -53,11 +56,11 @@ export const createRateLimiter = (limit: number, windowSeconds: number = 60) => 
     };
 };
 
+// ── Global rate limiter (200 req/min, plan-independent) ─────────────
 export const rateLimiterMiddleware = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        // Use User ID if authenticated, otherwise IP
         // @ts-ignore - req.user added by auth middleware
-        const key = req.user ? `rate_limit:user:${req.user.uid}` : `rate_limit:ip:${req.ip}`;
+        const key = req.user ? `rate_limit:global:${req.user.uid}` : `rate_limit:global:ip:${req.ip}`;
 
         // Admin bypass
         // @ts-ignore
@@ -70,34 +73,22 @@ export const rateLimiterMiddleware = async (req: Request, res: Response, next: N
             }
         }
 
-        // Simple Fixed Window Counter
         const currentCount = await redis.incr(key);
 
         if (currentCount === 1) {
-            // Set expiration on first increment
-            await redis.expire(key, WINDOW_SIZE_IN_SECONDS);
+            await redis.expire(key, GLOBAL_WINDOW);
         }
 
-        // Determine the dynamic max limit
-        let dynamicLimit = FALLBACK_ANON_LIMIT;
-        // @ts-ignore
-        if (req.user && req.user.config && req.user.config.rateLimit) {
-            // @ts-ignore
-            dynamicLimit = req.user.config.rateLimit;
-        }
-
-        if (currentCount > dynamicLimit) {
-            // Safety Check: Ensure the key has a TTL. If it doesn't, it might be stuck indefinitely due to a race condition.
+        if (currentCount > GLOBAL_LIMIT) {
+            // Safety: ensure key has TTL
             const ttl = await redis.ttl(key);
             if (ttl === -1) {
-                await redis.expire(key, WINDOW_SIZE_IN_SECONDS);
+                await redis.expire(key, GLOBAL_WINDOW);
             }
 
             res.status(429).json({
                 error: "Too many requests",
-                message: req.user
-                    ? `You have exceeded your plan limit of ${dynamicLimit} requests per minute. Upgrade to Pro for higher limits.`
-                    : "You have exceeded the API limits.",
+                message: `Rate limit exceeded (${GLOBAL_LIMIT}/min). Please try again shortly.`,
             });
             return;
         }
@@ -105,7 +96,42 @@ export const rateLimiterMiddleware = async (req: Request, res: Response, next: N
         next();
     } catch (error) {
         console.error("[RateLimiter] Redis Error:", error);
-        // Fail open if Redis is down so users aren't blocked
+        // Fail open if Redis is down
+        next();
+    }
+};
+
+// ── Expensive operation limiter (10 req/min) ────────────────────────
+// Apply to endpoints that trigger AI inference, Reddit scraping, etc.
+export const expensiveOpLimiter = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        // @ts-ignore
+        const uid = req.user?.uid;
+        if (!uid) return next(); // auth middleware handles this
+
+        const key = `rate_limit:expensive:${uid}`;
+        const currentCount = await redis.incr(key);
+
+        if (currentCount === 1) {
+            await redis.expire(key, EXPENSIVE_OP_WINDOW);
+        }
+
+        if (currentCount > EXPENSIVE_OP_LIMIT) {
+            const ttl = await redis.ttl(key);
+            if (ttl === -1) {
+                await redis.expire(key, EXPENSIVE_OP_WINDOW);
+            }
+
+            res.status(429).json({
+                error: "Too many requests",
+                message: `This operation is limited to ${EXPENSIVE_OP_LIMIT} requests per minute. Please wait before retrying.`,
+            });
+            return;
+        }
+
+        next();
+    } catch (error) {
+        console.error("[RateLimiter] Redis Error:", error);
         next();
     }
 };

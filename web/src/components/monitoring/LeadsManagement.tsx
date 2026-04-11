@@ -38,14 +38,18 @@ interface FolderOption {
 
 const ITEMS_PER_PAGE = 25;
 
-export const LeadsManagement: React.FC = () => {
+interface LeadsManagementProps {
+    folderId?: string;
+}
+
+export const LeadsManagement: React.FC<LeadsManagementProps> = ({ folderId }) => {
     const { user, getIdToken } = useAuth();
     const [leads, setLeads] = useState<Lead[]>([]);
     const [folders, setFolders] = useState<FolderOption[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | 'new' | 'saved' | 'hidden' | 'dismissed'>('all');
-    const [folderFilter, setFolderFilter] = useState<string>('all');
+    const [folderFilter, setFolderFilter] = useState<string>(folderId || 'all');
     const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
     const [bulkUpdating, setBulkUpdating] = useState(false);
     const [bulkDeleting, setBulkDeleting] = useState(false);
@@ -58,62 +62,91 @@ export const LeadsManagement: React.FC = () => {
             const token = await getIdToken();
             const headers = { 'Authorization': `Bearer ${token}` };
 
-            const [oppRes, foldersRes] = await Promise.all([
-                fetch('/api/monitoring/opportunities', { headers }),
-                fetch('/api/folders', { headers })
-            ]);
+            // When scoped to a specific folder, only fetch that folder's leads
+            if (folderId) {
+                const [folderRes, folderLeadsRes] = await Promise.all([
+                    fetch(`/api/folders`, { headers }),
+                    fetch(`/api/folders/${folderId}/leads`, { headers })
+                ]);
+                const foldersData = await folderRes.json();
+                const folderLeadsData = await folderLeadsRes.json();
+                const folder = Array.isArray(foldersData) ? foldersData.find((f: any) => f.id === folderId) : null;
 
-            const oppData = await oppRes.json();
-            const foldersData = await foldersRes.json();
+                const mapped: Lead[] = (Array.isArray(folderLeadsData) ? folderLeadsData : []).map((fl: any) => ({
+                    id: fl.id,
+                    postId: fl.thread_id || fl.id,
+                    postTitle: fl.thread_title || 'Unknown Thread',
+                    postSubreddit: fl.subreddit || '',
+                    postAuthor: fl.author || '',
+                    postUrl: fl.thread_url || '#',
+                    relevanceScore: fl.relevance_score || 50,
+                    status: (fl.status === 'contacted' ? 'saved' : fl.status === 'ignored' ? 'dismissed' : 'new') as Lead['status'],
+                    createdAt: fl.saved_at ? Math.floor(new Date(fl.saved_at).getTime() / 1000) : Math.floor(Date.now() / 1000),
+                    matchedAt: fl.saved_at || new Date().toISOString(),
+                    folderId: folderId,
+                    folderName: folder?.name || 'Monitor'
+                }));
+                setLeads(mapped);
+                setFolders(folder ? [{ id: folder.id, name: folder.name }] : []);
+            } else {
+                // Global view — fetch all monitoring opportunities + all folder leads
+                const [oppRes, foldersRes] = await Promise.all([
+                    fetch('/api/monitoring/opportunities', { headers }),
+                    fetch('/api/folders', { headers })
+                ]);
 
-            const folderList: FolderOption[] = Array.isArray(foldersData)
-                ? foldersData.map((f: any) => ({ id: f.id, name: f.name }))
-                : [];
-            setFolders(folderList);
+                const oppData = await oppRes.json();
+                const foldersData = await foldersRes.json();
 
-            // Tag monitoring opportunities with a synthetic folder
-            const monitoringLeads: Lead[] = (Array.isArray(oppData) ? oppData : []).map((l: any) => ({
-                ...l,
-                folderId: 'monitoring',
-                folderName: 'Monitoring'
-            }));
+                const folderList: FolderOption[] = Array.isArray(foldersData)
+                    ? foldersData.map((f: any) => ({ id: f.id, name: f.name }))
+                    : [];
+                setFolders(folderList);
 
-            // Fetch leads from monitoring-active folders
-            const activeFolders = Array.isArray(foldersData)
-                ? foldersData.filter((f: any) => f.is_monitoring_active)
-                : [];
+                // Tag monitoring opportunities with a synthetic folder
+                const monitoringLeads: Lead[] = (Array.isArray(oppData) ? oppData : []).map((l: any) => ({
+                    ...l,
+                    folderId: 'monitoring',
+                    folderName: 'Monitoring'
+                }));
 
-            const folderLeadArrays = await Promise.all(
-                activeFolders.map((folder: any) =>
-                    fetch(`/api/folders/${folder.id}/leads`, { headers })
-                        .then(r => r.ok ? r.json() : [])
-                        .catch(() => [])
-                )
-            );
+                // Fetch leads from monitoring-active folders
+                const activeFolders = Array.isArray(foldersData)
+                    ? foldersData.filter((f: any) => f.is_monitoring_active)
+                    : [];
 
-            const existingIds = new Set(monitoringLeads.map(l => l.id));
-            const folderLeads: Lead[] = folderLeadArrays.flatMap((arr: any[], idx: number) => {
-                const folder = activeFolders[idx];
-                return (Array.isArray(arr) ? arr : []).flatMap((fl: any) => {
-                    if (existingIds.has(fl.id)) return [];
-                    return [{
-                        id: fl.id,
-                        postId: fl.thread_id || fl.id,
-                        postTitle: fl.thread_title || 'Unknown Thread',
-                        postSubreddit: fl.subreddit || '',
-                        postAuthor: fl.author || '',
-                        postUrl: fl.thread_url || '#',
-                        relevanceScore: fl.relevance_score || 50,
-                        status: (fl.status === 'contacted' ? 'saved' : fl.status === 'ignored' ? 'dismissed' : 'new') as Lead['status'],
-                        createdAt: fl.saved_at ? Math.floor(new Date(fl.saved_at).getTime() / 1000) : Math.floor(Date.now() / 1000),
-                        matchedAt: fl.saved_at || new Date().toISOString(),
-                        folderId: folder.id,
-                        folderName: folder.name
-                    }];
+                const folderLeadArrays = await Promise.all(
+                    activeFolders.map((folder: any) =>
+                        fetch(`/api/folders/${folder.id}/leads`, { headers })
+                            .then(r => r.ok ? r.json() : [])
+                            .catch(() => [])
+                    )
+                );
+
+                const existingIds = new Set(monitoringLeads.map(l => l.id));
+                const folderLeads: Lead[] = folderLeadArrays.flatMap((arr: any[], idx: number) => {
+                    const folder = activeFolders[idx];
+                    return (Array.isArray(arr) ? arr : []).flatMap((fl: any) => {
+                        if (existingIds.has(fl.id)) return [];
+                        return [{
+                            id: fl.id,
+                            postId: fl.thread_id || fl.id,
+                            postTitle: fl.thread_title || 'Unknown Thread',
+                            postSubreddit: fl.subreddit || '',
+                            postAuthor: fl.author || '',
+                            postUrl: fl.thread_url || '#',
+                            relevanceScore: fl.relevance_score || 50,
+                            status: (fl.status === 'contacted' ? 'saved' : fl.status === 'ignored' ? 'dismissed' : 'new') as Lead['status'],
+                            createdAt: fl.saved_at ? Math.floor(new Date(fl.saved_at).getTime() / 1000) : Math.floor(Date.now() / 1000),
+                            matchedAt: fl.saved_at || new Date().toISOString(),
+                            folderId: folder.id,
+                            folderName: folder.name
+                        }];
+                    });
                 });
-            });
 
-            setLeads([...monitoringLeads, ...folderLeads]);
+                setLeads([...monitoringLeads, ...folderLeads]);
+            }
         } catch (err) {
             console.error('Failed to fetch leads', err);
             setLeads([]);
@@ -157,7 +190,7 @@ export const LeadsManagement: React.FC = () => {
 
     const handleSelectLead = (leadId: string) => {
         const next = new Set(selectedLeads);
-        next.has(leadId) ? next.delete(leadId) : next.add(leadId);
+        if (next.has(leadId)) { next.delete(leadId); } else { next.add(leadId); }
         setSelectedLeads(next);
     };
 
@@ -250,8 +283,9 @@ export const LeadsManagement: React.FC = () => {
     ];
 
     return (
-        <div className="leads-management-container max-w-6xl mx-auto py-10 px-8">
-            {/* Header */}
+        <div className={`leads-management-container ${folderId ? '' : 'max-w-6xl mx-auto py-10 px-8'}`}>
+            {/* Header — only show full header in global view */}
+            {!folderId && (
             <div className="flex items-center justify-between mb-8 pb-8 border-b border-white/5">
                 <div className="flex items-center gap-5">
                     <div className="w-12 h-12 bg-orange-500/10 rounded-xl flex items-center justify-center text-orange-500 border border-orange-500/20">
@@ -271,6 +305,7 @@ export const LeadsManagement: React.FC = () => {
                     Export CSV
                 </button>
             </div>
+            )}
 
             {/* Newest 200 notice */}
             {leads.length >= 200 && (
@@ -302,7 +337,8 @@ export const LeadsManagement: React.FC = () => {
 
                 {/* Filter row */}
                 <div className="flex items-center gap-4 flex-wrap">
-                    {/* Project/Folder filter */}
+                    {/* Project/Folder filter — hidden when scoped to a folder */}
+                    {!folderId && (
                     <div className="flex items-center gap-2">
                         <FolderOpen size={12} className="text-zinc-600" />
                         <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Project</span>
@@ -317,6 +353,7 @@ export const LeadsManagement: React.FC = () => {
                             ))}
                         </select>
                     </div>
+                    )}
 
                     {/* Status filter */}
                     <div className="flex items-center gap-2">
@@ -398,7 +435,7 @@ export const LeadsManagement: React.FC = () => {
                                     <th className="text-left px-4 py-3 text-[10px] font-black text-zinc-600 uppercase tracking-widest">Author</th>
                                     <th className="text-left px-4 py-3 text-[10px] font-black text-zinc-600 uppercase tracking-widest">Thread</th>
                                     <th className="text-left px-4 py-3 text-[10px] font-black text-zinc-600 uppercase tracking-widest">Subreddit</th>
-                                    <th className="text-left px-4 py-3 text-[10px] font-black text-zinc-600 uppercase tracking-widest">Project</th>
+                                    {!folderId && <th className="text-left px-4 py-3 text-[10px] font-black text-zinc-600 uppercase tracking-widest">Project</th>}
                                     <th className="text-center px-4 py-3 text-[10px] font-black text-zinc-600 uppercase tracking-widest">Score</th>
                                     <th className="text-left px-4 py-3 text-[10px] font-black text-zinc-600 uppercase tracking-widest">Status</th>
                                     <th className="text-left px-4 py-3 text-[10px] font-black text-zinc-600 uppercase tracking-widest">Date</th>
@@ -444,11 +481,13 @@ export const LeadsManagement: React.FC = () => {
                                         <td className="px-4 py-3 text-zinc-400 text-xs">
                                             {lead.postSubreddit ? `r/${lead.postSubreddit}` : '—'}
                                         </td>
+                                        {!folderId && (
                                         <td className="px-4 py-3">
                                             <span className="text-[10px] font-semibold text-zinc-500 bg-white/5 px-2 py-0.5 rounded border border-white/10">
                                                 {lead.folderName || 'Monitoring'}
                                             </span>
                                         </td>
+                                        )}
                                         <td className="px-4 py-3 text-center">
                                             <span className="text-orange-400 font-bold text-xs">{lead.relevanceScore}%</span>
                                         </td>
