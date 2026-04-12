@@ -78,7 +78,7 @@ export function LoginView() {
     const isRegisterReady = authMode === 'register' && password.length >= 8 && email.length > 0;
 
     return (
-        <div className="login-container" style={{ display: 'flex', height: '100vh', background: '#0b0b12', overflow: 'hidden' }}>
+        <div className="login-container" style={{ display: 'flex', minHeight: '100vh', background: '#0b0b12', overflow: 'hidden' }}>
             {/* Left Panel */}
             <div className="login-brand-panel" style={{
                 flex: 1.2,

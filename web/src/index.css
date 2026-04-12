@@ -2609,6 +2609,8 @@ select:focus-visible {
     /* Login page responsive */
     .login-container {
         flex-direction: column !important;
+        height: auto !important;
+        min-height: 100vh;
     }
 
     .login-brand-panel {
@@ -2618,7 +2620,14 @@ select:focus-visible {
     .auth-panel {
         min-width: 100% !important;
         flex: 1 !important;
-        padding: 32px 24px !important;
+    }
+
+    /* Inner auth wrapper: remove full-height centering, use natural padding */
+    .auth-panel > div {
+        min-height: auto !important;
+        justify-content: flex-start !important;
+        padding: 48px 24px 48px !important;
+        max-width: 100% !important;
     }
 
     /* Admin portal responsive */
