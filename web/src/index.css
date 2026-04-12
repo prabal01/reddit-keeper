@@ -2630,6 +2630,18 @@ select:focus-visible {
         max-width: 100% !important;
     }
 
+    /* Show logo on mobile (hidden on desktop via media query reversal) */
+    .auth-mobile-logo {
+        display: flex !important;
+    }
+}
+
+/* Hide mobile logo on desktop where brand panel is visible */
+@media (min-width: 769px) {
+    .auth-mobile-logo {
+        display: none !important;
+    }
+
     /* Admin portal responsive */
     .admin-tabs-nav {
         scrollbar-width: none;

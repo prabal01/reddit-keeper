@@ -174,6 +174,13 @@ export function LoginView() {
                     boxSizing: 'border-box'
                 }}>
                     <div className="auth-card" style={{ textAlign: 'left', width: '100%' }}>
+                        {/* Logo — only visible on mobile (brand panel is hidden) */}
+                        <div className="auth-mobile-logo" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '32px' }}>
+                            <div style={{ background: 'white', padding: '8px', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
+                                <img src="/logo.svg" alt={BRANDING.NAME} style={{ width: '28px', height: '28px', display: 'block' }} />
+                            </div>
+                            <span style={{ fontSize: '1.3rem', fontWeight: '800', color: '#fff', letterSpacing: '-0.02em' }}>{BRANDING.NAME}</span>
+                        </div>
                         <div style={{ marginBottom: '24px' }}>
                             <h2 style={{ fontSize: '2rem', fontWeight: '800', margin: '0 0 12px', color: '#fff', letterSpacing: '-0.02em' }}>
                                 {authMode === 'register' ? 'Get Started Free' : authMode === 'login' ? 'Welcome Back' : 'Reset Password'}
